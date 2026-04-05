@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock APIs in 30 Seconds for Frontend Development — Kappafy</title>
+<meta name="description" content="Generate mock API endpoints from sample JSON data for frontend development. Build features without waiting for the backend.">
+<link rel="canonical" href="https://kappafy.com/blog/mock-apis-in-30-seconds.html">
+<meta property="og:title" content="Mock APIs in 30 Seconds for Frontend Development">
+<meta property="og:description" content="How to create mock APIs from JSON data for parallel frontend and backend development.">
+<meta property="og:url" content="https://kappafy.com/blog/mock-apis-in-30-seconds.html">
+<meta property="og:type" content="article">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Mock APIs in 30 Seconds for Frontend Development",
+  "datePublished": "2025-01-28",
+  "author": { "@type": "Organization", "name": "Kappafy" },
+  "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" }
+}
+</script>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+</nav>
+
+<article class="article">
+  <h1>Mock APIs in 30 Seconds for Frontend Development</h1>
+  <div class="meta">January 28, 2025 &middot; 9 min read</div>
+
+  <p>Every frontend developer has experienced this: the design is ready, the components are built, but the backend API is still two sprints away. You need data to test your UI, and you need it now. Mock APIs solve this by simulating backend responses so you can build, test, and demo features independently.</p>
+
+  <p>This article shows you how to create mock APIs from JSON data in seconds, with practical techniques that scale from quick prototypes to production-ready development workflows.</p>
+
+  <h2>Why Mock APIs Matter</h2>
+
+  <p>Mock APIs are not just a convenience — they are a productivity multiplier. Without them, frontend development is blocked by backend timelines. With them, both teams work in parallel using an agreed-upon data contract.</p>
+
+  <p>The benefits extend beyond unblocking:</p>
+
+  <ul>
+    <li><strong>Faster iteration</strong> — Change mock data instantly without deploying anything</li>
+    <li><strong>Edge case testing</strong> — Simulate errors, empty states, and large datasets that are hard to reproduce with real APIs</li>
+    <li><strong>Reliable demos</strong> — No network dependencies means demos always work</li>
+    <li><strong>Onboarding</strong> — New developers can run the app immediately without backend credentials</li>
+  </ul>
+
+  <h2>The 30-Second Approach</h2>
+
+  <p>Start with a sample of the JSON your API will return. If you are working from an API spec, extract the example response. If not, sketch the data structure yourself:</p>
+
+  <pre><code>{
+  "users": [
+    {
+      "id": 1,
+      "name": "Alice Johnson",
+      "email": "alice@company.com",
+      "role": "admin",
+      "avatar": "https://i.pravatar.cc/150?u=alice",
+      "created_at": "2025-01-15T09:30:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Bob Smith",
+      "email": "bob@company.com",
+      "role": "editor",
+      "avatar": "https://i.pravatar.cc/150?u=bob",
+      "created_at": "2025-01-20T14:00:00Z"
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "per_page": 20
+}</code></pre>
+
+  <p>Paste this into a tool like <a href="https://kappafy.com">Kappafy</a> and hit "Generate Mock Endpoints." You instantly get REST-style routes for your data: <code>GET /users</code>, <code>GET /users/:id</code>, <code>POST /users</code>, <code>PUT /users/:id</code>, and <code>DELETE /users/:id</code> with appropriate response bodies.</p>
+
+  <p>For teams working on machine learning projects alongside API development, platforms like <a href="https://heytensor.com">HeyTensor</a> offer similar rapid prototyping approaches for model endpoints.</p>
+
+  <h2>Method 1: Static JSON Files</h2>
+
+  <p>The simplest mock API is a JSON file served by your dev server. Most frontend frameworks support this out of the box:</p>
+
+  <pre><code>// Create /public/api/users.json with your mock data
+// Then fetch it in your component:
+
+async function fetchUsers() {
+  const response = await fetch('/api/users.json');
+  const data = await response.json();
+  return data.users;
+}</code></pre>
+
+  <p>Pros: Zero setup. Works with any framework. No extra dependencies.</p>
+  <p>Cons: Only supports GET. No dynamic behavior. Cannot simulate errors.</p>
+
+  <h2>Method 2: Service Worker Interception</h2>
+
+  <p>For more realistic mocking, intercept fetch requests with a service worker. This approach lets you simulate any HTTP method, add delays, and return different responses based on the request:</p>
+
+  <pre><code>// mock-sw.js — Service Worker for mock API
+const MOCK_DATA = {
+  users: [
+    { id: 1, name: "Alice Johnson", email: "alice@company.com" },
+    { id: 2, name: "Bob Smith", email: "bob@company.com" }
+  ]
+};
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Only intercept /api/* routes
+  if (!url.pathname.startsWith('/api/')) return;
+
+  // GET /api/users
+  if (url.pathname === '/api/users' &amp;&amp;
+      event.request.method === 'GET') {
+    event.respondWith(
+      new Response(JSON.stringify(MOCK_DATA.users), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200
+      })
+    );
+    return;
+  }
+
+  // GET /api/users/:id
+  const userMatch = url.pathname.match(/^\/api\/users\/(\d+)$/);
+  if (userMatch &amp;&amp; event.request.method === 'GET') {
+    const id = parseInt(userMatch[1]);
+    const user = MOCK_DATA.users.find(u => u.id === id);
+    const status = user ? 200 : 404;
+    const body = user || { error: 'User not found' };
+    event.respondWith(
+      new Response(JSON.stringify(body), {
+        headers: { 'Content-Type': 'application/json' },
+        status: status
+      })
+    );
+    return;
+  }
+});</code></pre>
+
+  <h2>Method 3: In-Memory Mock Store</h2>
+
+  <p>For the most realistic development experience, create an in-memory store that supports full CRUD operations:</p>
+
+  <pre><code>class MockStore {
+  constructor(initialData) {
+    this.data = [...initialData];
+    this.nextId = Math.max(...initialData.map(d => d.id)) + 1;
+  }
+
+  getAll() {
+    return [...this.data];
+  }
+
+  getById(id) {
+    return this.data.find(item => item.id === id) || null;
+  }
+
+  create(item) {
+    const newItem = { ...item, id: this.nextId++ };
+    this.data.push(newItem);
+    return newItem;
+  }
+
+  update(id, updates) {
+    const index = this.data.findIndex(item => item.id === id);
+    if (index === -1) return null;
+    this.data[index] = { ...this.data[index], ...updates };
+    return this.data[index];
+  }
+
+  delete(id) {
+    const index = this.data.findIndex(item => item.id === id);
+    if (index === -1) return false;
+    this.data.splice(index, 1);
+    return true;
+  }
+}
+
+// Usage
+const userStore = new MockStore([
+  { id: 1, name: "Alice", email: "alice@company.com" },
+  { id: 2, name: "Bob", email: "bob@company.com" }
+]);
+
+// In your API service layer, swap between mock and real:
+const api = {
+  getUsers: () => useMock
+    ? Promise.resolve(userStore.getAll())
+    : fetch('/api/users').then(r => r.json()),
+
+  createUser: (user) => useMock
+    ? Promise.resolve(userStore.create(user))
+    : fetch('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(user)
+      }).then(r => r.json())
+};</code></pre>
+
+  <h2>Simulating Real-World Conditions</h2>
+
+  <p>Mock APIs should simulate real API behavior, not just return data. Add these to make your mocks more realistic:</p>
+
+  <h3>Network Delay</h3>
+
+  <pre><code>function withDelay(data, ms) {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(data), ms || 200 + Math.random() * 300);
+  });
+}
+
+// Usage
+const users = await withDelay(userStore.getAll(), 500);</code></pre>
+
+  <h3>Error Simulation</h3>
+
+  <pre><code>function withRandomError(data, errorRate) {
+  errorRate = errorRate || 0.1; // 10% failure rate
+  return new Promise((resolve, reject) => {
+    if (Math.random() < errorRate) {
+      reject(new Error('Internal Server Error'));
+    } else {
+      resolve(data);
+    }
+  });
+}</code></pre>
+
+  <h3>Pagination</h3>
+
+  <pre><code>function paginate(data, page, perPage) {
+  page = page || 1;
+  perPage = perPage || 20;
+  var start = (page - 1) * perPage;
+  var end = start + perPage;
+  return {
+    data: data.slice(start, end),
+    total: data.length,
+    page: page,
+    per_page: perPage,
+    total_pages: Math.ceil(data.length / perPage)
+  };
+}</code></pre>
+
+  <h2>Transitioning from Mock to Real API</h2>
+
+  <p>The key to a smooth transition is abstraction. Never call mock functions directly from components. Instead, create an API service layer that can switch between mock and real:</p>
+
+  <pre><code>// api.js
+const USE_MOCK = process.env.NODE_ENV === 'development';
+
+export const api = {
+  async getUsers(page) {
+    if (USE_MOCK) {
+      return withDelay(paginate(mockUsers, page, 20));
+    }
+    const res = await fetch('/api/users?page=' + page);
+    return res.json();
+  }
+};</code></pre>
+
+  <p>When the real API is ready, you flip the flag. No component changes needed. Your UI code has been tested against realistic data shapes for weeks.</p>
+
+  <h2>Conclusion</h2>
+
+  <p>Mock APIs eliminate the dependency chain between frontend and backend teams. Start with a JSON sample of your expected data, generate the endpoint patterns, and build your UI with confidence that it will work when connected to the real API. The 30 seconds you spend setting up mocks saves days of blocked development time.</p>
+
+  <p>The techniques scale: static JSON for quick prototypes, service workers for realistic mocking, and in-memory stores for full CRUD development. Pick the approach that matches your project's complexity, and start building.</p>
+</article>
+
+<footer class="footer">
+  <p>&copy; 2025 Kappafy. Built by <a href="https://zovo.one">zovo.one</a> &middot; More tools: <a href="https://lochbot.com">Lochbot</a>, <a href="https://invokebot.com">InvokeBot</a></p>
+</footer>
+</body>
+</html>

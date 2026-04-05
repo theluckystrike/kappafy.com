@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Schema Design Patterns for Clean APIs — Kappafy</title>
+<meta name="description" content="Practical patterns for designing JSON schemas that are consistent, extensible, and easy for API clients to consume.">
+<link rel="canonical" href="https://kappafy.com/blog/json-schema-design-patterns.html">
+<meta property="og:title" content="JSON Schema Design Patterns for Clean APIs">
+<meta property="og:description" content="Design patterns for JSON schemas in REST APIs. Consistent, extensible, client-friendly.">
+<meta property="og:url" content="https://kappafy.com/blog/json-schema-design-patterns.html">
+<meta property="og:type" content="article">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "JSON Schema Design Patterns for Clean APIs",
+  "datePublished": "2025-03-05",
+  "author": { "@type": "Organization", "name": "Kappafy" },
+  "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" }
+}
+</script>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+</nav>
+
+<article class="article">
+  <h1>JSON Schema Design Patterns for Clean APIs</h1>
+  <div class="meta">March 5, 2025 &middot; 12 min read</div>
+
+  <p>The JSON schema you choose for your API determines how easy it is to build against, how gracefully it evolves over time, and how many support tickets you will field from confused developers. Good schema design is invisible — developers read the response and immediately understand the structure. Poor schema design creates friction in every integration.</p>
+
+  <p>This article covers practical design patterns that produce clean, consistent, and extensible JSON schemas for REST APIs.</p>
+
+  <h2>Pattern 1: Envelope Responses</h2>
+
+  <p>Wrap your data in a consistent envelope. Every response from your API should follow the same top-level structure:</p>
+
+  <pre><code>// Successful response
+{
+  "data": {
+    "id": 1,
+    "name": "Alice Johnson",
+    "email": "alice@company.com"
+  },
+  "meta": {
+    "request_id": "req_abc123",
+    "timestamp": "2025-03-05T10:30:00Z"
+  }
+}
+
+// Error response
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Email address is required",
+    "details": [
+      { "field": "email", "message": "cannot be blank" }
+    ]
+  },
+  "meta": {
+    "request_id": "req_def456",
+    "timestamp": "2025-03-05T10:30:01Z"
+  }
+}</code></pre>
+
+  <p>The envelope pattern gives clients a reliable structure to parse. They check for <code>data</code> or <code>error</code> at the top level. The <code>meta</code> object carries cross-cutting concerns like request IDs and timestamps without polluting the domain data.</p>
+
+  <blockquote>Anti-pattern: Returning raw arrays at the top level. This makes it impossible to add pagination metadata later without a breaking change.</blockquote>
+
+  <h2>Pattern 2: Consistent Naming Conventions</h2>
+
+  <p>Pick one naming convention and use it everywhere. The two common choices for JSON are:</p>
+
+  <ul>
+    <li><code>snake_case</code> — Common in Ruby, Python, and PHP ecosystems</li>
+    <li><code>camelCase</code> — Common in JavaScript and Java ecosystems</li>
+  </ul>
+
+  <p>What matters is consistency. Mixing conventions within the same API is the cardinal sin of schema design:</p>
+
+  <pre><code>// Bad: mixed conventions
+{
+  "user_name": "Alice",
+  "emailAddress": "alice@company.com",
+  "created-at": "2025-01-15"
+}
+
+// Good: consistent snake_case
+{
+  "user_name": "Alice",
+  "email_address": "alice@company.com",
+  "created_at": "2025-01-15"
+}</code></pre>
+
+  <p>For boolean fields, use positive naming: <code>is_active</code> instead of <code>is_not_disabled</code>. For dates, always use ISO 8601: <code>2025-03-05T10:30:00Z</code>.</p>
+
+  <h2>Pattern 3: Pagination</h2>
+
+  <p>Any endpoint that returns a list will eventually need pagination. Design for it from the start. Two proven patterns:</p>
+
+  <h3>Offset Pagination</h3>
+
+  <pre><code>{
+  "data": [
+    { "id": 1, "name": "Alice" },
+    { "id": 2, "name": "Bob" }
+  ],
+  "pagination": {
+    "total": 150,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 8
+  }
+}</code></pre>
+
+  <h3>Cursor Pagination</h3>
+
+  <pre><code>{
+  "data": [
+    { "id": 1, "name": "Alice" },
+    { "id": 2, "name": "Bob" }
+  ],
+  "pagination": {
+    "has_more": true,
+    "next_cursor": "eyJpZCI6MjB9",
+    "per_page": 20
+  }
+}</code></pre>
+
+  <p>Use offset pagination for small, static datasets where users need to jump to specific pages. Use cursor pagination for large, dynamic datasets (feeds, logs, search results) where consistent ordering matters. Tools like <a href="https://kappafy.com">Kappafy</a> help you visualize your pagination structure and verify the data contract before implementation.</p>
+
+  <h2>Pattern 4: Relationship Representation</h2>
+
+  <p>When resources reference other resources, you have three options. Each has trade-offs:</p>
+
+  <h3>Option A: ID References</h3>
+
+  <pre><code>{
+  "id": 1,
+  "title": "API Design Guide",
+  "author_id": 42
+}</code></pre>
+
+  <p>Minimal payload size. Requires a second request to get author details. Best for mobile apps and bandwidth-sensitive contexts.</p>
+
+  <h3>Option B: Embedded Objects</h3>
+
+  <pre><code>{
+  "id": 1,
+  "title": "API Design Guide",
+  "author": {
+    "id": 42,
+    "name": "Alice Johnson",
+    "avatar": "https://example.com/alice.jpg"
+  }
+}</code></pre>
+
+  <p>No extra requests needed. Increases payload size. Best for web dashboards where you always display related data together.</p>
+
+  <h3>Option C: Sideloading</h3>
+
+  <pre><code>{
+  "data": {
+    "id": 1,
+    "title": "API Design Guide",
+    "author_id": 42
+  },
+  "included": {
+    "users": {
+      "42": { "id": 42, "name": "Alice Johnson" }
+    }
+  }
+}</code></pre>
+
+  <p>Eliminates duplication when multiple resources reference the same entity. Used by JSON:API specification. Best for complex UIs with many related resources.</p>
+
+  <h2>Pattern 5: Null Handling</h2>
+
+  <p>Define a clear policy for null values. There are two valid approaches:</p>
+
+  <pre><code>// Approach 1: Include null fields
+{
+  "name": "Alice",
+  "phone": null,
+  "bio": null
+}
+
+// Approach 2: Omit null fields
+{
+  "name": "Alice"
+}</code></pre>
+
+  <p>Approach 1 is better for strongly typed clients (TypeScript, Swift, Kotlin) because the schema is consistent — clients always know which fields exist. Approach 2 produces smaller payloads but requires clients to handle missing fields defensively.</p>
+
+  <p>Whichever you choose, document it and apply it consistently across every endpoint.</p>
+
+  <h2>Pattern 6: Error Schema</h2>
+
+  <p>Errors deserve as much schema design attention as success responses. A well-structured error response includes:</p>
+
+  <pre><code>{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "You have exceeded the rate limit of 100 requests per minute",
+    "details": {
+      "limit": 100,
+      "window": "1m",
+      "retry_after": 32
+    },
+    "doc_url": "https://docs.api.com/errors/rate-limiting"
+  }
+}</code></pre>
+
+  <p>The <code>code</code> is machine-readable — clients switch on it programmatically. The <code>message</code> is human-readable — developers see it in logs. The <code>details</code> provide context-specific data. The <code>doc_url</code> links to documentation. Teams building robust error handling can use tools like <a href="https://abwex.com">Abwex</a> for automated error pattern testing and <a href="https://zovo.one">zovo.one</a> for the broader API development workflow.</p>
+
+  <h2>Pattern 7: Versioning in Schema</h2>
+
+  <p>Include a version indicator in your schema to support gradual migration:</p>
+
+  <pre><code>{
+  "api_version": "2025-03-01",
+  "data": {
+    "id": 1,
+    "name": "Alice Johnson"
+  }
+}</code></pre>
+
+  <p>Date-based versioning (Stripe's approach) communicates exactly when the schema was introduced. Semantic versioning also works but requires maintaining a changelog mapping versions to schema changes.</p>
+
+  <h2>Pattern 8: Extensibility with Reserved Keys</h2>
+
+  <p>Plan for extension by reserving top-level keys. A minimal extensible envelope:</p>
+
+  <pre><code>{
+  "data": {},
+  "meta": {},
+  "links": {},
+  "included": {}
+}</code></pre>
+
+  <p>Even if you only use <code>data</code> and <code>meta</code> today, reserving <code>links</code> (for HATEOAS) and <code>included</code> (for sideloading) means you can add them later without breaking existing clients.</p>
+
+  <h2>Validating Your Schema</h2>
+
+  <p>Design patterns are only valuable if enforced. Validate your JSON responses in tests:</p>
+
+  <pre><code>// JSON Schema for the user endpoint
+const userSchema = {
+  type: "object",
+  required: ["data", "meta"],
+  properties: {
+    data: {
+      type: "object",
+      required: ["id", "name", "email"],
+      properties: {
+        id: { type: "integer" },
+        name: { type: "string", minLength: 1 },
+        email: { type: "string", format: "email" },
+        role: { type: "string", enum: ["admin", "editor", "viewer"] },
+        created_at: { type: "string", format: "date-time" }
+      }
+    },
+    meta: {
+      type: "object",
+      properties: {
+        request_id: { type: "string" },
+        timestamp: { type: "string", format: "date-time" }
+      }
+    }
+  }
+};</code></pre>
+
+  <p>Run schema validation in your API test suite. Every endpoint should have a corresponding schema test that catches structural regressions before they reach production.</p>
+
+  <h2>Conclusion</h2>
+
+  <p>Clean JSON schema design is a multiplier. It reduces integration time for every API consumer, minimizes support burden, and makes your API a pleasure to work with. Start with an envelope pattern, enforce consistent naming, design pagination and errors with the same care as your success responses, and validate everything in tests.</p>
+
+  <p>The patterns in this article are not theoretical — they are extracted from APIs that serve millions of requests. Apply them to your next project, and your API consumers will thank you.</p>
+</article>
+
+<footer class="footer">
+  <p>&copy; 2025 Kappafy. Built by <a href="https://zovo.one">zovo.one</a> &middot; More tools: <a href="https://lochbot.com">Lochbot</a>, <a href="https://invokebot.com">InvokeBot</a></p>
+</footer>
+</body>
+</html>

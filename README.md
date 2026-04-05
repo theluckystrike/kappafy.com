@@ -20,9 +20,7 @@ Paste or upload your JSON data and the explorer parses it instantly. The tree vi
 
 - Vanilla JavaScript (no frameworks, no dependencies)
 - Client-side only — your data never leaves your browser
-- Part of the [Zovo Tools](https://zovo.one) open network
 
-## Related Tools
 
 - [Webhook Request Builder](https://invokebot.com) — fire API requests and explore the JSON responses here
 - [Claude API Playground](https://claudkit.com) — test AI API calls and parse the JSON output

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Kappafy — JSON Explorer &amp; Mock API Generator Blog</title>
+  <link href="https://kappafy.com/blog/" rel="alternate"/>
+  <link href="https://kappafy.com/blog/feed.xml" rel="self"/>
+  <id>https://kappafy.com/blog/</id>
+  <updated>2026-04-06T00:00:00Z</updated>
+  <author><name>Kappafy — JSON Explorer &amp; Mock API Generator</name></author>
+  <entry>
+    <title>Mock APIs in 30 Seconds for Frontend Development — Kappafy</title>
+    <link href="https://kappafy.com/blog/mock-apis-in-30-seconds.html" rel="alternate"/>
+    <id>https://kappafy.com/blog/mock-apis-in-30-seconds.html</id>
+    <updated>2026-04-06T00:00:00Z</updated>
+    <summary>Generate mock API endpoints from sample JSON data for frontend development. Build features without waiting for the backend.</summary>
+  </entry>
+  <entry>
+    <title>JSON Schema Design Patterns for Clean APIs — Kappafy</title>
+    <link href="https://kappafy.com/blog/json-schema-design-patterns.html" rel="alternate"/>
+    <id>https://kappafy.com/blog/json-schema-design-patterns.html</id>
+    <updated>2026-04-06T00:00:00Z</updated>
+    <summary>Practical patterns for designing JSON schemas that are consistent, extensible, and easy for API clients to consume.</summary>
+  </entry>
+</feed>

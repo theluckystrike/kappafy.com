@@ -12,9 +12,12 @@
 <meta property="og:url" content="https://kappafy.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kappafy">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Kappafy — JSON Explorer & Mock API Generator">
-<meta name="twitter:description" content="Paste JSON, explore visually, generate mock APIs. Free browser tool.">
+<meta name="twitter:description" content="Paste JSON, explore as a tree, see JSONPath, analyze stats, and generate mock REST endpoints. Free tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
 <link rel="stylesheet" href="/assets/style.css">
 <script type="application/ld+json">
 {
@@ -26,9 +29,28 @@
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Any",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "author": { "@type": "Organization", "name": "zovo.one", "url": "https://zovo.one" }
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "datePublished": "2026-04-05",
+  "dateModified": "2026-04-06",
+  "featureList": ["Collapsible JSON tree view", "JSONPath display for any node", "JSON statistics and analysis", "Mock REST API endpoint generation", "JSON prettify and minify", "Copy to clipboard"]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "What is a JSON explorer?", "acceptedAnswer": { "@type": "Answer", "text": "A JSON explorer is a visual tool that renders raw JSON data as an interactive, collapsible tree structure. Instead of reading nested brackets and braces, you navigate the hierarchy by expanding and collapsing nodes, seeing data types and values at each level." } },
+    { "@type": "Question", "name": "How do I generate mock APIs from JSON?", "acceptedAnswer": { "@type": "Answer", "text": "Paste your sample JSON data into Kappafy and click Generate Mock Endpoints. The tool analyzes your JSON structure and creates REST-style routes (GET, POST, PUT, DELETE) with appropriate response bodies based on your data shape." } },
+    { "@type": "Question", "name": "What is JSONPath?", "acceptedAnswer": { "@type": "Answer", "text": "JSONPath is a query language for JSON, similar to XPath for XML. It provides a way to reference specific nodes in a JSON document using dot notation and bracket syntax, like $.users[0].name. Kappafy shows the JSONPath for any node you click." } },
+    { "@type": "Question", "name": "Is Kappafy free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, Kappafy is completely free. It runs entirely in your browser with no sign-up required. Your JSON data never leaves your machine." } },
+    { "@type": "Question", "name": "Does Kappafy send my JSON data to a server?", "acceptedAnswer": { "@type": "Answer", "text": "No. All JSON parsing, tree rendering, statistics, and mock API generation happens client-side in your browser. No data is transmitted to any server." } },
+    { "@type": "Question", "name": "Can I prettify and minify JSON with Kappafy?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Kappafy includes one-click prettify (format with indentation) and minify (remove whitespace) functions. You can also copy the formatted or minified JSON to your clipboard." } }
+  ]
+}
+</script>
+<link rel="alternate" hreflang="en" href="https://kappafy.com/">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/">
 </head>
 <body>
 <nav class="nav">
@@ -47,6 +69,7 @@
 <section class="hero">
   <h1>JSON <span>Explorer</span> & Mock API</h1>
   <p>Paste JSON, explore it as a tree, see JSONPath for any node, analyze stats, and generate mock REST endpoints.</p>
+  <p class="byline">Built by <a href="/about.html">Michael Lip</a> — <a href="https://zovo.one/tools">Zovo Tools</a></p>
 </section>
 
 <div class="tool-container">
@@ -92,6 +115,55 @@
     </div>
   </div>
 </div>
+
+<section class="explainer-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>How Kappafy Works</h2>
+  <p>Kappafy is a free JSON explorer and mock API generator built for developers who work with JSON data daily. The tool turns raw JSON text into an interactive visual experience: paste your JSON, and Kappafy renders it as a collapsible tree where you can expand and collapse nested objects and arrays, see data types color-coded at each node, and click any value to see its full JSONPath expression. This is significantly faster than visually parsing nested brackets and braces in a text editor, especially for deeply nested API responses or complex configuration files.</p>
+  <p>The mock API generation feature analyzes your JSON structure and generates REST-style endpoint definitions. If your JSON contains an array of user objects, Kappafy creates GET /users, GET /users/:id, POST /users, PUT /users/:id, and DELETE /users/:id endpoints with example request and response bodies derived from your actual data. This gives frontend developers a concrete API contract to build against before the backend is ready, enabling parallel development workflows that save days of blocked time per sprint.</p>
+
+  <h3>Features</h3>
+  <p>Kappafy provides a collapsible tree view with color-coded data types (strings, numbers, booleans, null, objects, arrays) for quick visual scanning. The JSONPath display shows the exact path to any selected node, which you can copy and use in your code for data access. The statistics panel shows document structure metrics including total keys, nesting depth, array sizes, and type distribution. JSON prettify and minify functions let you format or compress JSON with one click. The mock API generator produces complete CRUD endpoint definitions from your data structure. For developers working on <a href="https://invokebot.com">webhook integrations</a>, Kappafy helps visualize the JSON payloads you receive. Teams using <a href="https://kappakit.com">KappaKit</a> for broader API development find Kappafy essential for rapid prototyping.</p>
+
+  <h3>Who Uses This</h3>
+  <p>Kappafy is used by frontend developers who need to understand API response structures, backend engineers debugging complex JSON payloads, QA engineers validating API responses against expected schemas, and technical writers documenting JSON data formats. Common use cases include exploring third-party API responses to understand their structure before integration, generating mock endpoints for frontend prototyping, finding the JSONPath expression needed to extract specific values from deeply nested objects, and quickly formatting or minifying JSON for different contexts.</p>
+
+  <h3>Privacy</h3>
+  <p>Everything runs in your browser. Your JSON data is never sent to any server — all parsing, tree rendering, statistics calculation, and mock API generation happens client-side in JavaScript. No tracking, no analytics, no data collection, and no account required. The source code is available on <a href="https://github.com/theluckystrike/kappafy.com">GitHub</a> for full transparency.</p>
+
+  <div class="last-updated"><time datetime="2026-04-06">Last updated: April 6, 2026</time></div>
+</section>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>What is a JSON explorer?</summary>
+    <p>A JSON explorer is a visual tool that renders raw JSON data as an interactive, collapsible tree structure. Instead of reading nested brackets and braces, you navigate the hierarchy by expanding and collapsing nodes, seeing data types and values at each level. Kappafy adds JSONPath display, statistics, and mock API generation on top of tree exploration.</p>
+  </details>
+  <details>
+    <summary>How do I generate mock APIs from JSON data?</summary>
+    <p>Paste your sample JSON data into Kappafy and click Parse, then click Generate Mock Endpoints. The tool analyzes your JSON structure and creates REST-style routes with appropriate response bodies. This lets frontend teams build against realistic API contracts without waiting for backend implementation.</p>
+  </details>
+  <details>
+    <summary>What is JSONPath and why is it useful?</summary>
+    <p>JSONPath is a query language for JSON, similar to XPath for XML. It provides a way to reference specific nodes using dot notation like $.users[0].name. Kappafy shows the JSONPath for any node you click, making it easy to copy the exact accessor you need for your code.</p>
+  </details>
+  <details>
+    <summary>Is Kappafy free to use?</summary>
+    <p>Yes, Kappafy is completely free with no sign-up, no account, and no usage limits. It runs entirely in your browser. Your JSON data never leaves your machine.</p>
+  </details>
+  <details>
+    <summary>Does Kappafy send my JSON data to a server?</summary>
+    <p>No. All JSON parsing, tree rendering, statistics, and mock API generation happens client-side in your browser. No data is transmitted to any external server. You can verify this by checking the network tab in your browser developer tools.</p>
+  </details>
+  <details>
+    <summary>Can I prettify and minify JSON with Kappafy?</summary>
+    <p>Yes. Kappafy includes one-click Prettify (format with consistent indentation) and Minify (remove all whitespace) functions. The Copy JSON button lets you copy the result to your clipboard instantly.</p>
+  </details>
+  <details>
+    <summary>What JSON statistics does Kappafy show?</summary>
+    <p>After parsing, Kappafy displays total keys, maximum nesting depth, array sizes, type distribution across all values, and overall document size. These statistics help you understand the complexity and structure of your JSON data at a glance.</p>
+  </details>
+</section>
 
 <footer>
     <div class="footer-inner">

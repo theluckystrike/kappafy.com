@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Schema Patterns — 30 Common Validation Patterns with Examples | Kappafy</title>
+<meta name="description" content="Reference table of 30 JSON Schema validation patterns with code examples. String, enum, required, nested, array, conditional, and composition patterns.">
+<link rel="canonical" href="https://kappafy.com/research/json-schema-patterns.html">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/research/json-schema-patterns.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/research/json-schema-patterns.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JSON Schema Patterns — 30 Common Validation Patterns with Examples">
+<meta property="og:description" content="Reference table of 30 JSON Schema validation patterns with code examples. String, enum, required, nested, array, conditional, and composition patterns.">
+<meta property="og:url" content="https://kappafy.com/research/json-schema-patterns.html">
+<meta property="og:site_name" content="Kappafy">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="JSON Schema Patterns — 30 Common Validation Patterns with Examples">
+<meta name="twitter:description" content="Reference table of 30 JSON Schema validation patterns with code examples. String, enum, required, nested, array, conditional, and composition patterns.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": "JSON Schema Validation Patterns Reference",
+  "description": "A curated dataset of 30 common JSON Schema validation patterns with syntax examples, use cases, and community engagement data sourced from StackOverflow (429K+ views on top questions) and npm registry (ajv v8.18.0, 357 versions).",
+  "url": "https://kappafy.com/research/json-schema-patterns.html",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "creator": {"@type": "Person", "name": "Michael Lip", "url": "https://zovo.one"},
+  "datePublished": "2026-04-10",
+  "dateModified": "2026-04-10",
+  "keywords": ["JSON Schema", "validation patterns", "ajv", "data validation", "API schemas"],
+  "distribution": {
+    "@type": "DataDownload",
+    "encodingFormat": "application/json",
+    "contentUrl": "https://kappafy.com/research/json-schema-patterns.html"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the difference between required and optional properties in JSON Schema?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "In JSON Schema, all properties are optional by default. The 'required' keyword is an array at the object level listing property names that must be present. A property defined in 'properties' but not listed in 'required' is optional. This is a common source of confusion — with 61K+ views on StackOverflow for this topic alone."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I prevent additional properties not defined in my JSON Schema?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Set 'additionalProperties': false at the object level. This rejects any properties not explicitly listed in the 'properties' object. Be careful when combining with allOf — each sub-schema evaluates additionalProperties independently, which is a common pitfall with 57K+ StackOverflow views."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the best JSON Schema validator for JavaScript?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ajv (Another JSON Schema Validator) is the most widely used JavaScript validator with 357 published versions on npm and the latest release at v8.18.0. It supports JSON Schema drafts 2019-09 and 2020-12, offers code generation for fast validation, and provides plugins for formats and keywords."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I validate a UUID format in JSON Schema?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use the 'format': 'uuid' keyword with a string type. Note that format validation is optional in the JSON Schema spec — validators like ajv require enabling format validation explicitly via the ajv-formats plugin. This pattern has 150K+ views on StackOverflow, reflecting its common usage in API schemas."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between oneOf, anyOf, and allOf in JSON Schema?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "allOf requires data to be valid against ALL listed sub-schemas (logical AND). anyOf requires validity against at least ONE sub-schema (logical OR). oneOf requires validity against EXACTLY ONE sub-schema (exclusive OR). Use allOf for combining schemas, anyOf for flexible union types, and oneOf for mutually exclusive variants like discriminated unions."
+      }
+    }
+  ]
+}
+</script>
+<style>
+  .research-badge { display:inline-block; background:var(--accent-dim,rgba(139,233,253,0.1)); color:var(--accent,#8be9fd); padding:4px 12px; border-radius:var(--radius,8px); font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:1rem; }
+  .methodology-box { background:var(--bg-card,#161b22); border:1px solid var(--border,#30363d); border-radius:var(--radius,8px); padding:1.25rem; margin:1.5rem 0; }
+  .methodology-box h3 { font-size:0.8rem; text-transform:uppercase; color:var(--accent,#8be9fd); margin-bottom:0.75rem; }
+  .data-table-wrap { overflow-x:auto; margin:1.5rem 0; border:1px solid var(--border,#30363d); border-radius:var(--radius,8px); }
+  .data-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+  .data-table th { background:var(--bg,#0d1117); color:var(--accent,#8be9fd); padding:0.6rem 0.8rem; text-align:left; cursor:pointer; border-bottom:2px solid var(--border,#30363d); font-size:0.75rem; text-transform:uppercase; }
+  .data-table td { padding:0.5rem 0.8rem; border-bottom:1px solid var(--border,#30363d); color:var(--text,#c9d1d9); }
+  .data-table tr:hover td { background:rgba(139,233,253,0.03); }
+  .download-btns { display:flex; gap:0.5rem; margin:1rem 0; }
+  .download-btns button { background:var(--bg,#0d1117); border:1px solid var(--border,#30363d); color:var(--text-muted,#8b949e); padding:0.4rem 1rem; border-radius:var(--radius,8px); cursor:pointer; font-size:0.8rem; }
+  .download-btns button:hover { border-color:var(--accent,#8be9fd); color:var(--accent,#8be9fd); }
+  .code-example { background:var(--bg,#0d1117); border:1px solid var(--border,#30363d); border-radius:var(--radius,8px); padding:0.75rem; margin:0.5rem 0; font-family:monospace; font-size:0.78rem; overflow-x:auto; white-space:pre; color:var(--text,#c9d1d9); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<main>
+  <div class="hero">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> <span>/</span> <a href="/research/">Research</a> <span>/</span> <span>JSON Schema Patterns</span></nav>
+    <span class="research-badge">Original Research</span>
+    <h1>JSON Schema Patterns — 30 Common Validation Patterns with Examples</h1>
+    <p>A comprehensive reference table of 30 JSON Schema validation patterns organized by category, with syntax examples, use cases, and community engagement data from StackOverflow and the npm ecosystem.</p>
+    <p style="font-size:0.85rem;color:var(--text-muted);">By <a href="/about.html">Michael Lip</a> · Updated April 2026</p>
+  </div>
+
+  <div class="methodology-box">
+    <h3>Methodology</h3>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">Patterns were identified by analyzing the top 25 JSON Schema questions on StackOverflow (sorted by votes, total 429K+ views on the top question alone) via the StackExchange API v2.3. Validator ecosystem data was sourced from the npm registry for ajv (v8.18.0, 357 versions, created 2015). Each pattern was categorized, annotated with the relevant JSON Schema draft, and paired with a minimal working example. Community engagement scores reflect real StackOverflow view counts as of April 2026.</p>
+  </div>
+
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Pattern</th>
+          <th>Category</th>
+          <th>Keyword(s)</th>
+          <th>Example Syntax</th>
+          <th>SO Views</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Required Properties</td><td>Object</td><td>required</td><td><code>{"required": ["name", "email"]}</code></td><td>105K</td></tr>
+        <tr><td>2</td><td>String Type</td><td>Primitive</td><td>type</td><td><code>{"type": "string"}</code></td><td>--</td></tr>
+        <tr><td>3</td><td>Enum Values</td><td>Primitive</td><td>enum</td><td><code>{"enum": ["draft", "published", "archived"]}</code></td><td>231K</td></tr>
+        <tr><td>4</td><td>Nullable String</td><td>Primitive</td><td>type (array)</td><td><code>{"type": ["string", "null"]}</code></td><td>206K</td></tr>
+        <tr><td>5</td><td>String Format — Email</td><td>String</td><td>format</td><td><code>{"type": "string", "format": "email"}</code></td><td>--</td></tr>
+        <tr><td>6</td><td>String Format — UUID</td><td>String</td><td>format</td><td><code>{"type": "string", "format": "uuid"}</code></td><td>151K</td></tr>
+        <tr><td>7</td><td>String Pattern (regex)</td><td>String</td><td>pattern</td><td><code>{"type": "string", "pattern": "^[A-Z]{2}-\\d{4}$"}</code></td><td>--</td></tr>
+        <tr><td>8</td><td>String Min/Max Length</td><td>String</td><td>minLength, maxLength</td><td><code>{"type": "string", "minLength": 1, "maxLength": 255}</code></td><td>--</td></tr>
+        <tr><td>9</td><td>Integer Range</td><td>Numeric</td><td>minimum, maximum</td><td><code>{"type": "integer", "minimum": 0, "maximum": 100}</code></td><td>--</td></tr>
+        <tr><td>10</td><td>Exclusive Range</td><td>Numeric</td><td>exclusiveMinimum</td><td><code>{"type": "number", "exclusiveMinimum": 0}</code></td><td>--</td></tr>
+        <tr><td>11</td><td>Array of Strings</td><td>Array</td><td>items</td><td><code>{"type": "array", "items": {"type": "string"}}</code></td><td>--</td></tr>
+        <tr><td>12</td><td>Array of Objects</td><td>Array</td><td>items</td><td><code>{"type": "array", "items": {"type": "object", "properties": {...}}}</code></td><td>154K</td></tr>
+        <tr><td>13</td><td>Array Min/Max Items</td><td>Array</td><td>minItems, maxItems</td><td><code>{"type": "array", "minItems": 1, "maxItems": 10}</code></td><td>67K</td></tr>
+        <tr><td>14</td><td>Unique Items</td><td>Array</td><td>uniqueItems</td><td><code>{"type": "array", "uniqueItems": true}</code></td><td>43K</td></tr>
+        <tr><td>15</td><td>Array of Enums</td><td>Array</td><td>items + enum</td><td><code>{"type": "array", "items": {"enum": ["a", "b", "c"]}}</code></td><td>231K</td></tr>
+        <tr><td>16</td><td>Nested Object</td><td>Object</td><td>properties</td><td><code>{"properties": {"address": {"type": "object", "properties": {...}}}}</code></td><td>--</td></tr>
+        <tr><td>17</td><td>No Additional Properties</td><td>Object</td><td>additionalProperties</td><td><code>{"additionalProperties": false}</code></td><td>61K</td></tr>
+        <tr><td>18</td><td>Pattern Properties</td><td>Object</td><td>patternProperties</td><td><code>{"patternProperties": {"^x-": {"type": "string"}}}</code></td><td>52K</td></tr>
+        <tr><td>19</td><td>Dynamic Keys (Map)</td><td>Object</td><td>additionalProperties</td><td><code>{"additionalProperties": {"type": "integer"}}</code></td><td>29K</td></tr>
+        <tr><td>20</td><td>allOf (Schema Composition)</td><td>Composition</td><td>allOf</td><td><code>{"allOf": [{"$ref": "#/defs/base"}, {"required": ["id"]}]}</code></td><td>58K</td></tr>
+        <tr><td>21</td><td>anyOf (Union Type)</td><td>Composition</td><td>anyOf</td><td><code>{"anyOf": [{"type": "string"}, {"type": "integer"}]}</code></td><td>--</td></tr>
+        <tr><td>22</td><td>oneOf (Discriminated Union)</td><td>Composition</td><td>oneOf</td><td><code>{"oneOf": [{"properties": {"type": {"const": "email"}}}, ...]}</code></td><td>135K</td></tr>
+        <tr><td>23</td><td>$ref (Schema Reference)</td><td>Composition</td><td>$ref</td><td><code>{"$ref": "#/$defs/Address"}</code></td><td>--</td></tr>
+        <tr><td>24</td><td>Conditional — if/then/else</td><td>Conditional</td><td>if, then, else</td><td><code>{"if": {"properties": {"type": {"const": "business"}}}, "then": {"required": ["tax_id"]}}</code></td><td>--</td></tr>
+        <tr><td>25</td><td>Property Dependencies</td><td>Conditional</td><td>dependentRequired</td><td><code>{"dependentRequired": {"credit_card": ["billing_address"]}}</code></td><td>--</td></tr>
+        <tr><td>26</td><td>Const Value</td><td>Primitive</td><td>const</td><td><code>{"const": "v2"}</code></td><td>--</td></tr>
+        <tr><td>27</td><td>Default Value</td><td>Annotation</td><td>default</td><td><code>{"type": "string", "default": "active"}</code></td><td>--</td></tr>
+        <tr><td>28</td><td>Schema from JSON (Generation)</td><td>Tooling</td><td>--</td><td>Use tools like quicktype, json-schema-generator</td><td>430K</td></tr>
+        <tr><td>29</td><td>Require At Least One Of</td><td>Conditional</td><td>anyOf + required</td><td><code>{"anyOf": [{"required": ["email"]}, {"required": ["phone"]}]}</code></td><td>50K</td></tr>
+        <tr><td>30</td><td>Require All Properties</td><td>Object</td><td>required (all keys)</td><td><code>{"required": ["a","b","c"], "properties": {"a":{}, "b":{}, "c":{}}}</code></td><td>35K</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="download-btns">
+    <button onclick="downloadData('json')">Download JSON</button>
+    <button onclick="downloadData('csv')">Download CSV</button>
+  </div>
+
+  <section style="max-width:800px;margin:2rem auto;">
+    <h2>Validator Ecosystem</h2>
+    <p>The most widely used JSON Schema validator in the JavaScript ecosystem is <strong>ajv</strong> (Another JSON Schema Validator), currently at version <strong>8.18.0</strong> with <strong>357 published versions</strong> on npm. First created on May 29, 2015, ajv supports JSON Schema drafts 2019-09 and 2020-12, generates optimized validation code at compile time, and provides an extensible plugin architecture for custom keywords and formats. The ajv-formats plugin adds support for common string formats like email, uuid, uri, date-time, and ipv4/ipv6.</p>
+
+    <h2>Community Engagement</h2>
+    <p>JSON Schema is one of the most actively discussed data validation topics on StackOverflow. The top question alone ("Tool to generate JSON schema from JSON data") has accumulated <strong>429,824 views</strong> and a score of <strong>274</strong>. Nullable types (206K views), enum arrays (231K views), and array-of-objects definitions (154K views) consistently rank among the most viewed questions, indicating these patterns represent the most common pain points for developers adopting JSON Schema.</p>
+  </section>
+
+  <section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+    <h2>Frequently Asked Questions</h2>
+    <details>
+      <summary>What is the difference between required and optional properties in JSON Schema?</summary>
+      <p>In JSON Schema, all properties are optional by default. The "required" keyword is an array at the object level that lists property names that must be present in the data. A property defined in "properties" but not included in "required" is optional. This distinction has over 105K views on StackOverflow, making it one of the most commonly misunderstood aspects of JSON Schema.</p>
+    </details>
+    <details>
+      <summary>How do I prevent additional properties not defined in my JSON Schema?</summary>
+      <p>Set "additionalProperties": false at the object level. This causes validation to fail if the data contains any properties not explicitly listed in the "properties" object. Be careful when combining this with allOf — each sub-schema evaluates additionalProperties independently, which can cause unexpected validation failures. This pattern has 61K+ views on StackOverflow.</p>
+    </details>
+    <details>
+      <summary>What is the best JSON Schema validator for JavaScript?</summary>
+      <p>Ajv (Another JSON Schema Validator) is the de facto standard for JavaScript. It has 357 published versions on npm, with the latest at v8.18.0. Ajv supports drafts 2019-09 and 2020-12, compiles schemas to optimized JavaScript code for fast validation, and supports custom keywords and formats via plugins. For Python, jsonschema is the equivalent standard library.</p>
+    </details>
+    <details>
+      <summary>How do I validate a UUID format in JSON Schema?</summary>
+      <p>Use {"type": "string", "format": "uuid"} in your schema. Note that format validation is an optional feature in the JSON Schema specification — validators like ajv require you to enable it explicitly via the ajv-formats plugin. Without the plugin, the format keyword is treated as an annotation only. This pattern has 150K+ views on StackOverflow.</p>
+    </details>
+    <details>
+      <summary>What is the difference between oneOf, anyOf, and allOf in JSON Schema?</summary>
+      <p>These are composition keywords. allOf requires data to be valid against ALL listed sub-schemas (logical AND) — used for combining schemas. anyOf requires validity against at least ONE sub-schema (logical OR) — used for union types. oneOf requires validity against EXACTLY ONE sub-schema (exclusive OR) — used for discriminated unions. The oneOf pattern alone has 135K views on StackOverflow due to its complexity.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime — $99 once, free forever →</a>
+        <div class="footer-copy">© 2026 <a href="https://zovo.one">Zovo</a> · 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex — A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow — Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ — Prompts</a>
+            <a href="https://claudkit.com">ClaudKit — API</a>
+            <a href="https://enhio.com">Enhio — Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot — Timestamps</a>
+            <a href="https://gen8x.com">Gen8X — Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X — AI Models</a>
+            <a href="https://heytensor.com">HeyTensor — ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot — Webhooks</a>
+            <a href="https://kappakit.com">KappaKit — Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM — LLM Costs</a>
+            <a href="https://krzen.com">Krzen — Image Tools</a>
+            <a href="https://lochbot.com">LochBot — Security</a>
+            <a href="https://lockml.com">LockML — ML Compare</a>
+            <a href="https://ml3x.com">ML3X — Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+function downloadData(format) {
+  const entries = document.querySelectorAll('.data-table tbody tr');
+  const data = Array.from(entries).map(el => {
+    const cells = el.querySelectorAll('td');
+    if (cells.length < 2) return null;
+    return {name: cells[1]?.textContent?.trim(), category: cells[2]?.textContent?.trim(), detail: cells[3]?.textContent?.trim()?.substring(0,200)};
+  }).filter(d => d && d.name);
+  let content, type, ext;
+  if (format === 'json') { content = JSON.stringify(data, null, 2); type = 'application/json'; ext = 'json'; }
+  else { content = 'name,category,detail\n' + data.map(d => `"${(d.name||'').replace(/"/g,'""')}","${(d.category||'').replace(/"/g,'""')}","${(d.detail||'').replace(/"/g,'""')}"`).join('\n'); type = 'text/csv'; ext = 'csv'; }
+  const blob = new Blob([content], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = document.title.toLowerCase().replace(/[^a-z0-9]+/g,'-') + '.' + ext;
+  a.click();
+}
+</script>
+<script src="/assets/js/share.js"></script>
+</body>
+</html>

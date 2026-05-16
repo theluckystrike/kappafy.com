@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to Simulate API Errors &amp; Timeouts for Testing — Complete Guide | Kappafy</title>
+<meta name="description" content="Learn how to simulate API errors, timeouts, 500 errors, and slow responses for robust frontend testing. Includes interactive error simulator, code examples, and integration guides for MSW, Playwright, and Jest.">
+<link rel="canonical" href="https://kappafy.com/guides/simulate-api-errors-timeouts.html">
+<meta property="og:title" content="How to Simulate API Errors & Timeouts for Testing — Complete Guide">
+<meta property="og:description" content="Interactive guide to simulating API failures including timeouts, 500 errors, 429 rate limits, and network errors. Build resilient frontends that handle every failure mode.">
+<meta property="og:url" content="https://kappafy.com/guides/simulate-api-errors-timeouts.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How to Simulate API Errors & Timeouts for Testing">
+<meta name="twitter:description" content="Interactive guide to simulating API failures including timeouts, 500 errors, 429 rate limits, and network errors.">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/guides/simulate-api-errors-timeouts.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/guides/simulate-api-errors-timeouts.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How to Simulate API Errors & Timeouts for Testing — Complete Guide",
+    "description": "Learn how to simulate API errors, timeouts, 500 errors, and slow responses for robust frontend testing. Includes interactive error simulator and integration guides.",
+    "datePublished": "2026-05-16",
+    "dateModified": "2026-05-16",
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://kappafy.com/guides/simulate-api-errors-timeouts.html"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Simulate API Errors and Timeouts",
+    "description": "Step-by-step guide to simulating API failures for frontend testing.",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "name": "Choose the failure type",
+        "text": "Select which API failure you want to simulate: timeout, HTTP 500, 503, 429, network error, or slow response."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Configure error parameters",
+        "text": "Set the response delay in milliseconds and the error rate percentage to control how often the failure occurs."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Generate the mock fetch code",
+        "text": "Use the generated wrapper function to intercept fetch() calls and inject the configured failure behavior."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Test in the browser",
+        "text": "Run the live demo to observe how your error handling code responds to the simulated failure."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Integrate into your test suite",
+        "text": "Copy the pattern into MSW handlers, Playwright fixtures, or Jest mocks for automated testing."
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I simulate a 500 error in a REST API?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Wrap your fetch() call with a function that randomly returns a Response object with status 500 and an error body. Set the probability to control how often the error occurs. In MSW, use HttpResponse.json({ error: 'Internal Server Error' }, { status: 500 }) in your handler."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I test API timeout handling in JavaScript?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use AbortController with a setTimeout to create a timeout wrapper around fetch(). For testing, create a mock that returns a Promise that never resolves (or resolves after a very long delay), which triggers your timeout logic. You can also use the interactive simulator on this page to generate the code."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between a timeout and a slow response?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A timeout occurs when the server never responds within the allowed window, causing the request to be aborted. A slow response eventually completes but takes much longer than expected (e.g., 5-30 seconds). Both need different handling strategies: timeouts should trigger retries or fallbacks, while slow responses may need loading states and user feedback."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I simulate rate limiting (429) in tests?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Return a Response with status 429 and include Retry-After and X-RateLimit-Remaining headers. Your handler should track request counts and start returning 429 after a threshold. This lets you test that your code respects rate limits and implements proper backoff."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use MSW to simulate network errors?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. MSW supports HttpResponse.error() which simulates a network-level failure (like DNS resolution failure or connection refused). This triggers the fetch() catch block rather than returning an HTTP response, letting you test your network error handling paths."
+        }
+      }
+    ]
+  }
+]
+</script>
+<style>
+  .simulator-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .simulator-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .sim-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .sim-controls { grid-template-columns: 1fr; }
+  }
+  .sim-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .sim-field select,
+  .sim-field input[type="range"],
+  .sim-field input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+  }
+  .sim-field select:focus,
+  .sim-field input:focus {
+    border-color: var(--accent);
+  }
+  .sim-field select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .sim-value {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+  .sim-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .sim-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .sim-result {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    display: none;
+  }
+  .sim-result.success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #86efac;
+    display: block;
+  }
+  .sim-result.error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    display: block;
+  }
+  .sim-result.pending {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: #c4b5fd;
+    display: block;
+  }
+  .error-badge {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 4px;
+  }
+  .badge-500 { background: #7f1d1d; color: #fca5a5; }
+  .badge-503 { background: #78350f; color: #fde047; }
+  .badge-429 { background: #713f12; color: #fde68a; }
+  .badge-timeout { background: #1e1b4b; color: #a5b4fc; }
+  .badge-network { background: #312e81; color: #c4b5fd; }
+  .badge-slow { background: #064e3b; color: #6ee7b7; }
+  .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .status-table th,
+  .status-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .status-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .status-table td code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .toc li {
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+  .toc a {
+    color: var(--text);
+  }
+  .toc a:hover {
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article">
+  <h1>How to Simulate API Errors &amp; Timeouts for Testing</h1>
+  <div class="meta">May 16, 2026 &middot; 14 min read</div>
+
+  <p>Your API works perfectly in development. Every request returns 200 OK, the data loads instantly, and your UI looks flawless. Then you ship to production and a third-party service goes down, a database query takes 30 seconds, or your CDN starts returning 503s. Your app? White screen. No error message. No retry. Just silence.</p>
+
+  <p>This is the most common failure mode in modern frontend applications: <strong>untested error paths</strong>. The fix is straightforward but systematically overlooked. You need to simulate API errors, timeouts, and degraded network conditions <em>before</em> your users encounter them. This guide covers every failure mode, gives you production-ready code patterns, and includes an interactive simulator to generate the exact mock code you need.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#why-test-errors">Why You Need to Test Error Handling</a></li>
+      <li><a href="#types-of-failures">Types of API Failures</a></li>
+      <li><a href="#simulator">Interactive API Error Simulator</a></li>
+      <li><a href="#frontend-patterns">Frontend Error Handling Patterns</a></li>
+      <li><a href="#testing-strategies">Testing Strategies Per Error Type</a></li>
+      <li><a href="#code-examples">Code Examples in JavaScript &amp; TypeScript</a></li>
+      <li><a href="#msw-integration">Integration with MSW</a></li>
+      <li><a href="#playwright-integration">Integration with Playwright</a></li>
+      <li><a href="#jest-integration">Integration with Jest</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="why-test-errors">Why You Need to Test Error Handling</h2>
+
+  <p>Every production API fails. The question is not <em>if</em> but <em>when</em> and <em>how</em>. According to incident reports from major cloud providers, the average web application experiences API failures roughly 0.1-1% of the time. For an app making 10,000 API calls per day, that translates to 10-100 failures daily. If any of those failures produce a broken UI, your users see it.</p>
+
+  <p>Testing only the happy path means you are testing only the scenario that needs the least testing. The real complexity lives in the failure modes:</p>
+
+  <ul>
+    <li><strong>Timeouts</strong> — The server accepts the connection but never responds. Your fetch call hangs indefinitely unless you handle it.</li>
+    <li><strong>Server errors (5xx)</strong> — The server crashes, returns a 500, or a load balancer serves a 502. Your UI needs to show something meaningful.</li>
+    <li><strong>Rate limiting (429)</strong> — You hit the API too fast. Without backoff logic, you hammer the server harder during the exact moment it is struggling.</li>
+    <li><strong>Network failures</strong> — DNS resolution fails, the connection is refused, or the user goes offline. The fetch() promise rejects entirely — there is no HTTP response to inspect.</li>
+    <li><strong>Slow responses</strong> — The API responds, but takes 5-30 seconds. Your loading states, skeleton screens, and user patience are tested.</li>
+  </ul>
+
+  <p>Each of these failures requires different handling code. If you have not tested them, you do not know if your code works. <a href="/">Kappafy's mock API generator</a> helps you set up the test data. This guide helps you break it on purpose.</p>
+
+  <h2 id="types-of-failures">Types of API Failures and HTTP Status Codes</h2>
+
+  <p>Understanding the taxonomy of API failures is essential before you start simulating them. Each failure type has different characteristics, different HTTP status codes, and requires different frontend handling strategies.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Failure Type</th>
+        <th>Status Code</th>
+        <th>Behavior</th>
+        <th>Retry Safe?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="error-badge badge-timeout">TIMEOUT</span></td>
+        <td>N/A (aborted)</td>
+        <td>Server never responds within the allowed time window</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><span class="error-badge badge-500">500</span></td>
+        <td><code>500</code></td>
+        <td>Internal Server Error — generic server-side crash</td>
+        <td>Yes (with backoff)</td>
+      </tr>
+      <tr>
+        <td><span class="error-badge badge-503">503</span></td>
+        <td><code>503</code></td>
+        <td>Service Unavailable — server is overloaded or in maintenance</td>
+        <td>Yes (check Retry-After)</td>
+      </tr>
+      <tr>
+        <td><span class="error-badge badge-429">429</span></td>
+        <td><code>429</code></td>
+        <td>Too Many Requests — rate limit exceeded</td>
+        <td>Yes (respect Retry-After)</td>
+      </tr>
+      <tr>
+        <td><span class="error-badge badge-network">NETWORK</span></td>
+        <td>N/A (no response)</td>
+        <td>DNS failure, connection refused, offline — fetch() rejects</td>
+        <td>Yes (if transient)</td>
+      </tr>
+      <tr>
+        <td><span class="error-badge badge-slow">SLOW</span></td>
+        <td><code>200</code> (delayed)</td>
+        <td>Server responds correctly but takes 5-30+ seconds</td>
+        <td>N/A (succeeds)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Notice that timeouts and network errors do not produce HTTP responses at all. This is a critical distinction. Code that only checks <code>response.status</code> will never handle these cases because the <code>response</code> object does not exist. You need both a <code>.then()</code> handler for HTTP errors and a <code>.catch()</code> handler for network-level failures.</p>
+
+  <h2 id="simulator">Interactive API Error Simulator</h2>
+
+  <p>Configure the failure type below, adjust the parameters, and generate working mock code. Use the <strong>Run Live Demo</strong> button to trigger the simulated failure directly in your browser and see exactly what your error handling would receive.</p>
+
+  <div class="simulator-panel">
+    <h3>API Error Simulator</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="errorType">Error Type</label>
+        <select id="errorType">
+          <option value="timeout">Timeout (no response)</option>
+          <option value="500">HTTP 500 — Internal Server Error</option>
+          <option value="503">HTTP 503 — Service Unavailable</option>
+          <option value="429">HTTP 429 — Too Many Requests</option>
+          <option value="network">Network Error (connection refused)</option>
+          <option value="slow">Slow Response (delayed success)</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="delayMs">Response Delay (ms)</label>
+        <input type="number" id="delayMs" value="3000" min="0" max="60000" step="100">
+        <div class="sim-value" id="delayLabel">3000 ms</div>
+      </div>
+      <div class="sim-field">
+        <label for="errorRate">Error Rate (%)</label>
+        <input type="range" id="errorRate" value="100" min="0" max="100" step="5">
+        <div class="sim-value" id="rateLabel">100%</div>
+      </div>
+      <div class="sim-field">
+        <label for="endpoint">Endpoint URL</label>
+        <input type="text" id="endpoint" value="https://api.example.com/users" style="font-family: var(--font-display); font-size: 12px;">
+      </div>
+    </div>
+
+    <div id="codeOutput" class="sim-output">// Select an error type and click "Generate Code"</div>
+
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="generateCode()">Generate Code</button>
+      <button class="btn" onclick="runDemo()">Run Live Demo</button>
+      <button class="btn btn-sm" onclick="copyCode()">Copy</button>
+    </div>
+
+    <div id="demoResult" class="sim-result"></div>
+  </div>
+
+  <h2 id="frontend-patterns">Frontend Error Handling Patterns</h2>
+
+  <p>Once you can simulate failures, you need patterns to handle them. These are the three most important patterns for production frontend applications, ordered from simplest to most robust.</p>
+
+  <h3>Pattern 1: Retry with Exponential Backoff</h3>
+
+  <p>The simplest and most universally useful pattern. When a request fails with a retryable error (5xx, timeout, network error), wait a short time and try again. Each subsequent retry waits longer, preventing you from overwhelming an already-stressed server.</p>
+
+  <pre><code>async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        options.timeout || 10000
+      );
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const waitMs = retryAfter
+          ? parseInt(retryAfter) * 1000
+          : Math.pow(2, attempt) * 1000;
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+
+      if (response.status >= 500 && attempt < maxRetries) {
+        await new Promise(r =>
+          setTimeout(r, Math.pow(2, attempt) * 1000)
+        );
+        continue;
+      }
+
+      return response;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      await new Promise(r =>
+        setTimeout(r, Math.pow(2, attempt) * 1000)
+      );
+    }
+  }
+}</code></pre>
+
+  <p>This function handles timeouts via <code>AbortController</code>, respects <code>Retry-After</code> headers from 429 responses, applies exponential backoff for server errors, and re-throws on network errors after all retries are exhausted. It covers roughly 90% of the error handling you will ever need.</p>
+
+  <h3>Pattern 2: Circuit Breaker</h3>
+
+  <p>When an API is consistently failing, retrying every request wastes resources and adds latency. A circuit breaker tracks failures and "opens" when the failure rate exceeds a threshold, immediately rejecting requests without attempting them. After a cooldown period, it lets one request through to test if the service has recovered.</p>
+
+  <pre><code>class CircuitBreaker {
+  constructor(options = {}) {
+    this.failureThreshold = options.failureThreshold || 5;
+    this.resetTimeout = options.resetTimeout || 30000;
+    this.state = 'CLOSED';   // CLOSED | OPEN | HALF_OPEN
+    this.failureCount = 0;
+    this.lastFailureTime = null;
+  }
+
+  async execute(fn) {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime > this.resetTimeout) {
+        this.state = 'HALF_OPEN';
+      } else {
+        throw new Error('Circuit breaker is OPEN — request rejected');
+      }
+    }
+
+    try {
+      const result = await fn();
+      this.onSuccess();
+      return result;
+    } catch (err) {
+      this.onFailure();
+      throw err;
+    }
+  }
+
+  onSuccess() {
+    this.failureCount = 0;
+    this.state = 'CLOSED';
+  }
+
+  onFailure() {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    if (this.failureCount >= this.failureThreshold) {
+      this.state = 'OPEN';
+    }
+  }
+}
+
+// Usage
+const breaker = new CircuitBreaker({
+  failureThreshold: 5,
+  resetTimeout: 30000
+});
+
+try {
+  const data = await breaker.execute(() =>
+    fetchWithRetry('https://api.example.com/users')
+  );
+} catch (err) {
+  // Show cached data or fallback UI
+}</code></pre>
+
+  <p>The circuit breaker is especially valuable when you depend on third-party APIs. If a payment provider is down, you do not want every page load to hang for 10 seconds waiting for a timeout. The circuit breaker fails immediately and shows a fallback.</p>
+
+  <h3>Pattern 3: Fallback Data</h3>
+
+  <p>The most user-friendly pattern. When an API fails, show stale data from a cache rather than an error message. Users prefer slightly outdated data to a broken page.</p>
+
+  <pre><code>async function fetchWithFallback(url, cacheKey) {
+  try {
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+
+    // Cache the successful response
+    localStorage.setItem(cacheKey, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+
+    return { data, source: 'live' };
+  } catch (err) {
+    // Try to serve cached data
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      return {
+        data,
+        source: 'cache',
+        age: Date.now() - timestamp
+      };
+    }
+
+    // No cache available — surface the error
+    throw err;
+  }
+}</code></pre>
+
+  <p>Combine all three patterns for maximum resilience: retry first, trip the circuit breaker if retries keep failing, and serve cached fallback data while the circuit is open.</p>
+
+  <h2 id="testing-strategies">Testing Strategies Per Error Type</h2>
+
+  <p>Each failure type requires a specific testing strategy. Here is how to approach each one methodically.</p>
+
+  <h3>Testing Timeouts</h3>
+
+  <p>Timeouts are the hardest failure to test because they require waiting. The key insight is that you do not need to wait for a real timeout — you can simulate one by creating a fetch that never resolves and an <code>AbortController</code> that fires immediately.</p>
+
+  <pre><code>// Test: timeout triggers abort and shows error UI
+function createTimeoutMock(timeoutMs) {
+  return function mockFetch() {
+    return new Promise((resolve, reject) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => {
+        controller.abort();
+        reject(new DOMException('The operation was aborted.', 'AbortError'));
+      }, timeoutMs);
+
+      // Simulate a request that never completes
+      // The abort will fire before this resolves
+      controller.signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+      });
+    });
+  };
+}</code></pre>
+
+  <p>Test that your UI shows a timeout message, offers a retry button, and does not leave any dangling loading states. A common bug: the loading spinner keeps spinning after a timeout because the catch block does not reset the loading flag.</p>
+
+  <h3>Testing 500 Errors</h3>
+
+  <p>Server errors are the easiest to simulate because they follow the normal HTTP response pattern. The key is to test the response body as well as the status code, because real 500 errors often return HTML error pages rather than JSON.</p>
+
+  <pre><code>// Simulate a 500 that returns HTML (like nginx default error page)
+function mock500() {
+  return Promise.resolve(new Response(
+    '&lt;html&gt;&lt;body&gt;&lt;h1&gt;500 Internal Server Error&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;',
+    {
+      status: 500,
+      statusText: 'Internal Server Error',
+      headers: { 'Content-Type': 'text/html' }
+    }
+  ));
+}
+
+// Test: your JSON parser should not crash on HTML responses
+try {
+  const response = await mock500();
+  const data = await response.json(); // This throws!
+} catch (err) {
+  // SyntaxError: Unexpected token '<'
+  // Your code needs to handle this gracefully
+}</code></pre>
+
+  <p>This catches a very common production bug: code that calls <code>response.json()</code> without first checking <code>response.ok</code> or the <code>Content-Type</code> header. The JSON parse throws a <code>SyntaxError</code>, which often produces a completely unhelpful error message in the UI.</p>
+
+  <h3>Testing 429 Rate Limits</h3>
+
+  <p>Rate limit testing requires verifying that your code respects the <code>Retry-After</code> header and does not retry immediately. The most important test: confirm your code does NOT hammer the server after receiving a 429.</p>
+
+  <pre><code>function mock429(retryAfterSeconds = 5) {
+  return Promise.resolve(new Response(
+    JSON.stringify({
+      error: 'Too Many Requests',
+      message: 'Rate limit exceeded. Try again later.',
+      retryAfter: retryAfterSeconds
+    }),
+    {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfterSeconds),
+        'X-RateLimit-Limit': '100',
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': String(Math.floor(Date.now() / 1000) + retryAfterSeconds)
+      }
+    }
+  ));
+}</code></pre>
+
+  <h3>Testing Network Errors</h3>
+
+  <p>Network errors are fundamentally different from HTTP errors because there is no <code>Response</code> object at all. The <code>fetch()</code> promise rejects with a <code>TypeError</code>. This is the failure mode that catches the most developers off guard.</p>
+
+  <pre><code>function mockNetworkError() {
+  return Promise.reject(new TypeError('Failed to fetch'));
+}
+
+// In your test:
+// Verify that your catch block handles TypeError specifically
+// Verify that you show "Check your internet connection" (not "500 error")
+// Verify that offline state is tracked globally</code></pre>
+
+  <h3>Testing Slow Responses</h3>
+
+  <p>Slow responses test your loading states, skeleton screens, and user patience. The request eventually succeeds, so error handling is not the issue — UX during the wait is.</p>
+
+  <pre><code>function mockSlowResponse(data, delayMs = 8000) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }));
+    }, delayMs);
+  });
+}</code></pre>
+
+  <p>Test that: (1) a loading indicator appears within 100ms, (2) the loading indicator is accessible (has an ARIA label), (3) the user can cancel the request, and (4) navigating away does not cause a "setState on unmounted component" error.</p>
+
+  <h2 id="code-examples">Complete Code Examples in JavaScript &amp; TypeScript</h2>
+
+  <p>Here is a production-ready API client that combines all the patterns above. This is the code you can copy directly into your project.</p>
+
+  <h3>TypeScript: Resilient API Client</h3>
+
+  <pre><code>interface FetchOptions extends RequestInit {
+  timeout?: number;
+  retries?: number;
+  fallbackData?: unknown;
+  cacheKey?: string;
+}
+
+interface ApiResponse&lt;T&gt; {
+  data: T;
+  source: 'live' | 'cache' | 'fallback';
+  status: number;
+  retryCount: number;
+}
+
+async function resilientFetch&lt;T&gt;(
+  url: string,
+  options: FetchOptions = {}
+): Promise&lt;ApiResponse&lt;T&gt;&gt; {
+  const {
+    timeout = 10000,
+    retries = 3,
+    fallbackData,
+    cacheKey,
+    ...fetchOptions
+  } = options;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt &lt;= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() =&gt; controller.abort(), timeout);
+
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After');
+          const waitMs = retryAfter
+            ? parseInt(retryAfter) * 1000
+            : Math.min(Math.pow(2, attempt) * 1000, 30000);
+          await delay(waitMs);
+          continue;
+        }
+        if (response.status &gt;= 500 &amp;&amp; attempt &lt; retries) {
+          await delay(Math.pow(2, attempt) * 1000);
+          continue;
+        }
+        throw new ApiError(response.status, await response.text());
+      }
+
+      const data: T = await response.json();
+
+      if (cacheKey) {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data, timestamp: Date.now()
+        }));
+      }
+
+      return { data, source: 'live', status: 200, retryCount: attempt };
+
+    } catch (err) {
+      lastError = err as Error;
+      if (attempt &lt; retries &amp;&amp; isRetryable(err)) {
+        await delay(Math.pow(2, attempt) * 1000);
+        continue;
+      }
+    }
+  }
+
+  // All retries exhausted — try cache
+  if (cacheKey) {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const { data } = JSON.parse(cached);
+      return {
+        data: data as T,
+        source: 'cache',
+        status: 0,
+        retryCount: retries
+      };
+    }
+  }
+
+  // Try static fallback
+  if (fallbackData !== undefined) {
+    return {
+      data: fallbackData as T,
+      source: 'fallback',
+      status: 0,
+      retryCount: retries
+    };
+  }
+
+  throw lastError;
+}
+
+function isRetryable(err: unknown): boolean {
+  if (err instanceof DOMException &amp;&amp; err.name === 'AbortError') return true;
+  if (err instanceof TypeError) return true; // Network error
+  if (err instanceof ApiError &amp;&amp; err.status &gt;= 500) return true;
+  return false;
+}
+
+function delay(ms: number): Promise&lt;void&gt; {
+  return new Promise(resolve =&gt; setTimeout(resolve, ms));
+}
+
+class ApiError extends Error {
+  constructor(public status: number, public body: string) {
+    super(\`API error \${status}\`);
+    this.name = 'ApiError';
+  }
+}</code></pre>
+
+  <p>This client gives you a single function that handles every failure mode discussed in this guide. The <code>source</code> field in the response tells your UI whether it is showing live data, cached data, or a static fallback, so you can display an appropriate banner.</p>
+
+  <h2 id="msw-integration">Integration with MSW (Mock Service Worker)</h2>
+
+  <p>MSW is the industry standard for mocking API requests in both browser and Node environments. It intercepts requests at the network level, which means your application code — including all middleware, interceptors, and retry logic — runs exactly as it would in production.</p>
+
+  <pre><code>// handlers.ts
+import { http, HttpResponse, delay } from 'msw';
+
+export const errorHandlers = [
+  // Simulate a 500 error
+  http.get('/api/users', async () => {
+    return HttpResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }),
+
+  // Simulate a timeout (request hangs for 30 seconds)
+  http.get('/api/users', async () => {
+    await delay(30000);
+    return HttpResponse.json({ users: [] });
+  }),
+
+  // Simulate rate limiting with Retry-After header
+  http.get('/api/users', async () => {
+    return HttpResponse.json(
+      { error: 'Too Many Requests' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': '5',
+          'X-RateLimit-Remaining': '0'
+        }
+      }
+    );
+  }),
+
+  // Simulate network error (connection refused)
+  http.get('/api/users', () => {
+    return HttpResponse.error();
+  }),
+
+  // Simulate intermittent failures (30% error rate)
+  http.get('/api/users', async () => {
+    if (Math.random() < 0.3) {
+      return HttpResponse.json(
+        { error: 'Server Error' },
+        { status: 500 }
+      );
+    }
+    await delay(200);
+    return HttpResponse.json({
+      users: [{ id: 1, name: 'Alice' }]
+    });
+  }),
+
+  // Simulate slow response with realistic delay
+  http.get('/api/users', async () => {
+    await delay(8000); // 8 seconds
+    return HttpResponse.json({
+      users: [{ id: 1, name: 'Alice' }]
+    });
+  })
+];</code></pre>
+
+  <p>To use these in your tests, set up the MSW server and swap handlers per test case. This lets you test each error scenario in isolation without changing your application code. If you are setting up <a href="/blog/mock-apis-in-30-seconds.html">mock APIs for development</a>, MSW handlers can reuse the same JSON fixtures.</p>
+
+  <pre><code>// test setup
+import { setupServer } from 'msw/node';
+import { errorHandlers } from './handlers';
+
+const server = setupServer();
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+test('shows error message on 500', async () => {
+  server.use(errorHandlers[0]); // 500 handler
+  render(&lt;UserList /&gt;);
+  expect(await screen.findByText(/something went wrong/i)).toBeVisible();
+});
+
+test('retries on timeout', async () => {
+  let requestCount = 0;
+  server.use(
+    http.get('/api/users', async () => {
+      requestCount++;
+      if (requestCount < 3) {
+        await delay(30000); // Timeout for first 2 attempts
+        return HttpResponse.json({});
+      }
+      return HttpResponse.json({
+        users: [{ id: 1, name: 'Alice' }]
+      });
+    })
+  );
+  render(&lt;UserList /&gt;);
+  expect(await screen.findByText('Alice')).toBeVisible();
+  expect(requestCount).toBe(3);
+});</code></pre>
+
+  <h2 id="playwright-integration">Integration with Playwright</h2>
+
+  <p>Playwright can intercept network requests at the browser level, making it ideal for end-to-end testing of error scenarios. You test the full user experience: loading states, error messages, retry buttons, and fallback UI.</p>
+
+  <pre><code>import { test, expect } from '@playwright/test';
+
+test('handles 500 error gracefully', async ({ page }) => {
+  // Intercept API calls and return 500
+  await page.route('**/api/users', route => {
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Internal Server Error' })
+    });
+  });
+
+  await page.goto('/dashboard');
+
+  // Verify error UI is shown
+  await expect(page.getByText('Unable to load users')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+});
+
+test('handles timeout with retry', async ({ page }) => {
+  let callCount = 0;
+
+  await page.route('**/api/users', async route => {
+    callCount++;
+    if (callCount === 1) {
+      // First request: simulate timeout by delaying 30s
+      await new Promise(r => setTimeout(r, 30000));
+      await route.abort('timedout');
+    } else {
+      // Subsequent requests: succeed
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ users: [{ id: 1, name: 'Alice' }] })
+      });
+    }
+  });
+
+  await page.goto('/dashboard');
+  await expect(page.getByText('Alice')).toBeVisible({ timeout: 15000 });
+});
+
+test('handles network offline', async ({ page, context }) => {
+  await page.goto('/dashboard');
+  await expect(page.getByText('Alice')).toBeVisible();
+
+  // Go offline
+  await context.setOffline(true);
+
+  // Trigger a refetch
+  await page.getByRole('button', { name: 'Refresh' }).click();
+
+  // Verify offline message
+  await expect(page.getByText(/offline|no connection/i)).toBeVisible();
+
+  // Come back online
+  await context.setOffline(false);
+  await page.getByRole('button', { name: 'Retry' }).click();
+  await expect(page.getByText('Alice')).toBeVisible();
+});</code></pre>
+
+  <h2 id="jest-integration">Integration with Jest</h2>
+
+  <p>For unit tests that do not need a browser, Jest's manual mocking works well. Mock the global <code>fetch</code> function to return exactly the failure you want to test.</p>
+
+  <pre><code>// __tests__/api-client.test.ts
+
+describe('API Client Error Handling', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  test('retries 3 times on 500 error', async () => {
+    const mockFetch = jest.fn()
+      .mockResolvedValueOnce(new Response('', { status: 500 }))
+      .mockResolvedValueOnce(new Response('', { status: 500 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ users: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      );
+
+    global.fetch = mockFetch;
+
+    const result = await resilientFetch('/api/users', {
+      retries: 3,
+      timeout: 5000
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(result.source).toBe('live');
+    expect(result.retryCount).toBe(2);
+  });
+
+  test('falls back to cache on network error', async () => {
+    localStorage.setItem('users-cache', JSON.stringify({
+      data: { users: [{ id: 1, name: 'Cached Alice' }] },
+      timestamp: Date.now()
+    }));
+
+    global.fetch = jest.fn()
+      .mockRejectedValue(new TypeError('Failed to fetch'));
+
+    const result = await resilientFetch('/api/users', {
+      retries: 0,
+      cacheKey: 'users-cache'
+    });
+
+    expect(result.source).toBe('cache');
+    expect(result.data.users[0].name).toBe('Cached Alice');
+  });
+
+  test('respects Retry-After header on 429', async () => {
+    const mockFetch = jest.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'Rate limited' }), {
+          status: 429,
+          headers: { 'Retry-After': '2' }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ users: [] }), { status: 200 })
+      );
+
+    global.fetch = mockFetch;
+
+    const fetchPromise = resilientFetch('/api/users');
+
+    // Advance timers past the Retry-After period
+    jest.advanceTimersByTime(2000);
+
+    const result = await fetchPromise;
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+});</code></pre>
+
+  <h2>Putting It All Together: A Testing Checklist</h2>
+
+  <p>Before shipping any feature that makes API calls, verify these scenarios. Each one should be a test in your suite, or at minimum manually verified using the simulator above.</p>
+
+  <ol>
+    <li><strong>Happy path</strong> — API returns 200 with expected data shape</li>
+    <li><strong>Empty state</strong> — API returns 200 with empty data (<code>[]</code>, <code>null</code>)</li>
+    <li><strong>Timeout</strong> — Request hangs for longer than your timeout threshold</li>
+    <li><strong>500 error</strong> — Server returns 500 with HTML body (not JSON)</li>
+    <li><strong>503 during deploy</strong> — Server returns 503 with Retry-After header</li>
+    <li><strong>429 rate limit</strong> — Server rejects request with rate limit headers</li>
+    <li><strong>Network offline</strong> — fetch() rejects with TypeError</li>
+    <li><strong>Slow response</strong> — Server responds after 10+ seconds</li>
+    <li><strong>Partial failure</strong> — One of multiple concurrent API calls fails</li>
+    <li><strong>Auth expired</strong> — Server returns 401, requiring token refresh</li>
+  </ol>
+
+  <p>Use <a href="/">Kappafy</a> to generate the mock data for your happy path, then use the simulator and code patterns in this guide to test everything that can go wrong. If you need to <a href="/answers/prettify-json-online.html">prettify JSON responses</a> for debugging, Kappafy handles that too.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <h3>How do I simulate a 500 error in a REST API?</h3>
+
+  <p>Wrap your <code>fetch()</code> call with a function that randomly returns a <code>Response</code> object with status 500 and an error body. Set the probability to control how often the error occurs. In MSW, use <code>HttpResponse.json({ error: 'Internal Server Error' }, { status: 500 })</code> in your handler. The interactive simulator above generates the exact code for your endpoint.</p>
+
+  <h3>How do I test API timeout handling in JavaScript?</h3>
+
+  <p>Use <code>AbortController</code> with a <code>setTimeout</code> to create a timeout wrapper around <code>fetch()</code>. For testing, create a mock that returns a Promise that never resolves (or resolves after a very long delay), which triggers your timeout logic. In Jest, use <code>jest.useFakeTimers()</code> to advance time without actually waiting.</p>
+
+  <h3>What is the difference between a timeout and a slow response?</h3>
+
+  <p>A timeout occurs when the server never responds within the allowed window, causing the request to be aborted. Your <code>catch</code> block receives an <code>AbortError</code>. A slow response eventually completes but takes much longer than expected (e.g., 5-30 seconds). The request succeeds with status 200. Both need different handling: timeouts should trigger retries or fallbacks, while slow responses need loading states, progress indicators, and possibly user-initiated cancellation.</p>
+
+  <h3>How do I simulate rate limiting (429) in tests?</h3>
+
+  <p>Return a <code>Response</code> with status 429 and include <code>Retry-After</code> and <code>X-RateLimit-Remaining</code> headers. Your handler should track request counts and start returning 429 after a threshold. Verify that your code reads the <code>Retry-After</code> header and waits the specified duration before retrying. The most critical test: confirm that your retry loop does NOT send requests during the backoff period.</p>
+
+  <h3>Can I use MSW to simulate network errors?</h3>
+
+  <p>Yes. MSW supports <code>HttpResponse.error()</code> which simulates a network-level failure (like DNS resolution failure or connection refused). This triggers the <code>fetch()</code> catch block with a <code>TypeError</code> rather than returning an HTTP response, letting you test your network error handling paths. This is different from returning an HTTP error status — the <code>response</code> object does not exist at all.</p>
+
+  <p class="reading-list">Related: <a href="/blog/mock-apis-in-30-seconds.html">Mock APIs in 30 Seconds</a> &middot; <a href="/answers/prettify-json-online.html">Prettify JSON Online</a> &middot; <a href="/">Kappafy JSON Explorer</a></p>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime — $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var errorTypeEl = document.getElementById('errorType');
+  var delayMsEl = document.getElementById('delayMs');
+  var errorRateEl = document.getElementById('errorRate');
+  var endpointEl = document.getElementById('endpoint');
+  var codeOutputEl = document.getElementById('codeOutput');
+  var demoResultEl = document.getElementById('demoResult');
+  var delayLabelEl = document.getElementById('delayLabel');
+  var rateLabelEl = document.getElementById('rateLabel');
+
+  delayMsEl.addEventListener('input', function() {
+    delayLabelEl.textContent = this.value + ' ms';
+  });
+
+  errorRateEl.addEventListener('input', function() {
+    rateLabelEl.textContent = this.value + '%';
+  });
+
+  errorTypeEl.addEventListener('change', function() {
+    var type = this.value;
+    if (type === 'timeout') {
+      delayMsEl.value = 10000;
+      delayLabelEl.textContent = '10000 ms';
+    } else if (type === 'slow') {
+      delayMsEl.value = 8000;
+      delayLabelEl.textContent = '8000 ms';
+    } else {
+      delayMsEl.value = 500;
+      delayLabelEl.textContent = '500 ms';
+    }
+  });
+
+  window.generateCode = function() {
+    var type = errorTypeEl.value;
+    var delay = parseInt(delayMsEl.value) || 3000;
+    var rate = parseInt(errorRateEl.value) || 100;
+    var url = endpointEl.value || 'https://api.example.com/users';
+    var rateDecimal = (rate / 100).toFixed(2);
+    var code = '';
+
+    if (type === 'timeout') {
+      code = '// Simulate API Timeout\n'
+        + '// The request hangs until AbortController fires\n\n'
+        + 'async function fetchWithTimeoutSimulation(url) {\n'
+        + '  const shouldTimeout = Math.random() < ' + rateDecimal + ';\n\n'
+        + '  if (shouldTimeout) {\n'
+        + '    // Simulate a request that never responds\n'
+        + '    return new Promise((_, reject) => {\n'
+        + '      setTimeout(() => {\n'
+        + '        reject(new DOMException(\n'
+        + '          \'The operation was aborted.\',\n'
+        + '          \'AbortError\'\n'
+        + '        ));\n'
+        + '      }, ' + delay + ');\n'
+        + '    });\n'
+        + '  }\n\n'
+        + '  return fetch(url);\n'
+        + '}\n\n'
+        + '// Usage:\n'
+        + 'try {\n'
+        + '  const response = await fetchWithTimeoutSimulation(\n'
+        + '    \'' + url + '\'\n'
+        + '  );\n'
+        + '  const data = await response.json();\n'
+        + '  console.log(\'Success:\', data);\n'
+        + '} catch (err) {\n'
+        + '  if (err.name === \'AbortError\') {\n'
+        + '    console.error(\'Request timed out after ' + delay + 'ms\');\n'
+        + '  } else {\n'
+        + '    console.error(\'Request failed:\', err.message);\n'
+        + '  }\n'
+        + '}';
+    } else if (type === '500') {
+      code = '// Simulate HTTP 500 — Internal Server Error\n\n'
+        + 'async function fetchWith500Simulation(url) {\n'
+        + '  const shouldFail = Math.random() < ' + rateDecimal + ';\n\n'
+        + '  if (shouldFail) {\n'
+        + '    await new Promise(r => setTimeout(r, ' + delay + '));\n'
+        + '    return new Response(\n'
+        + '      JSON.stringify({\n'
+        + '        error: \'Internal Server Error\',\n'
+        + '        message: \'An unexpected error occurred\',\n'
+        + '        timestamp: new Date().toISOString()\n'
+        + '      }),\n'
+        + '      {\n'
+        + '        status: 500,\n'
+        + '        statusText: \'Internal Server Error\',\n'
+        + '        headers: { \'Content-Type\': \'application/json\' }\n'
+        + '      }\n'
+        + '    );\n'
+        + '  }\n\n'
+        + '  return fetch(url);\n'
+        + '}\n\n'
+        + '// Usage:\n'
+        + 'const response = await fetchWith500Simulation(\n'
+        + '  \'' + url + '\'\n'
+        + ');\n'
+        + 'if (!response.ok) {\n'
+        + '  const error = await response.json();\n'
+        + '  console.error(\'Server error:\', response.status, error.message);\n'
+        + '} else {\n'
+        + '  const data = await response.json();\n'
+        + '  console.log(\'Success:\', data);\n'
+        + '}';
+    } else if (type === '503') {
+      code = '// Simulate HTTP 503 — Service Unavailable\n\n'
+        + 'async function fetchWith503Simulation(url) {\n'
+        + '  const shouldFail = Math.random() < ' + rateDecimal + ';\n\n'
+        + '  if (shouldFail) {\n'
+        + '    await new Promise(r => setTimeout(r, ' + delay + '));\n'
+        + '    return new Response(\n'
+        + '      JSON.stringify({\n'
+        + '        error: \'Service Unavailable\',\n'
+        + '        message: \'The server is temporarily unable to handle the request\'\n'
+        + '      }),\n'
+        + '      {\n'
+        + '        status: 503,\n'
+        + '        statusText: \'Service Unavailable\',\n'
+        + '        headers: {\n'
+        + '          \'Content-Type\': \'application/json\',\n'
+        + '          \'Retry-After\': \'30\'\n'
+        + '        }\n'
+        + '      }\n'
+        + '    );\n'
+        + '  }\n\n'
+        + '  return fetch(url);\n'
+        + '}\n\n'
+        + '// Usage:\n'
+        + 'const response = await fetchWith503Simulation(\n'
+        + '  \'' + url + '\'\n'
+        + ');\n'
+        + 'if (response.status === 503) {\n'
+        + '  const retryAfter = response.headers.get(\'Retry-After\');\n'
+        + '  console.log(\'Service unavailable. Retry after\', retryAfter, \'seconds\');\n'
+        + '} else if (response.ok) {\n'
+        + '  const data = await response.json();\n'
+        + '  console.log(\'Success:\', data);\n'
+        + '}';
+    } else if (type === '429') {
+      code = '// Simulate HTTP 429 — Too Many Requests (Rate Limited)\n\n'
+        + 'let requestCount = 0;\n\n'
+        + 'async function fetchWith429Simulation(url) {\n'
+        + '  requestCount++;\n'
+        + '  const shouldRateLimit = Math.random() < ' + rateDecimal + ';\n\n'
+        + '  if (shouldRateLimit) {\n'
+        + '    await new Promise(r => setTimeout(r, ' + delay + '));\n'
+        + '    return new Response(\n'
+        + '      JSON.stringify({\n'
+        + '        error: \'Too Many Requests\',\n'
+        + '        message: \'Rate limit exceeded. Slow down.\',\n'
+        + '        retryAfter: 5\n'
+        + '      }),\n'
+        + '      {\n'
+        + '        status: 429,\n'
+        + '        statusText: \'Too Many Requests\',\n'
+        + '        headers: {\n'
+        + '          \'Content-Type\': \'application/json\',\n'
+        + '          \'Retry-After\': \'5\',\n'
+        + '          \'X-RateLimit-Limit\': \'100\',\n'
+        + '          \'X-RateLimit-Remaining\': \'0\',\n'
+        + '          \'X-RateLimit-Reset\': String(\n'
+        + '            Math.floor(Date.now() / 1000) + 5\n'
+        + '          )\n'
+        + '        }\n'
+        + '      }\n'
+        + '    );\n'
+        + '  }\n\n'
+        + '  return fetch(url);\n'
+        + '}\n\n'
+        + '// Usage:\n'
+        + 'const response = await fetchWith429Simulation(\n'
+        + '  \'' + url + '\'\n'
+        + ');\n'
+        + 'if (response.status === 429) {\n'
+        + '  const retryAfter = response.headers.get(\'Retry-After\');\n'
+        + '  console.warn(\'Rate limited! Retry after\', retryAfter, \'s\');\n'
+        + '  // Wait and retry:\n'
+        + '  // await new Promise(r => setTimeout(r, retryAfter * 1000));\n'
+        + '}';
+    } else if (type === 'network') {
+      code = '// Simulate Network Error (connection refused / offline)\n\n'
+        + 'async function fetchWithNetworkErrorSimulation(url) {\n'
+        + '  const shouldFail = Math.random() < ' + rateDecimal + ';\n\n'
+        + '  if (shouldFail) {\n'
+        + '    await new Promise(r => setTimeout(r, ' + delay + '));\n'
+        + '    throw new TypeError(\'Failed to fetch\');\n'
+        + '  }\n\n'
+        + '  return fetch(url);\n'
+        + '}\n\n'
+        + '// Usage:\n'
+        + 'try {\n'
+        + '  const response = await fetchWithNetworkErrorSimulation(\n'
+        + '    \'' + url + '\'\n'
+        + '  );\n'
+        + '  const data = await response.json();\n'
+        + '  console.log(\'Success:\', data);\n'
+        + '} catch (err) {\n'
+        + '  if (err instanceof TypeError) {\n'
+        + '    console.error(\'Network error — check your connection\');\n'
+        + '    // No Response object exists — this is NOT an HTTP error\n'
+        + '  } else {\n'
+        + '    console.error(\'Unexpected error:\', err);\n'
+        + '  }\n'
+        + '}';
+    } else if (type === 'slow') {
+      code = '// Simulate Slow API Response (' + delay + 'ms delay)\n\n'
+        + 'async function fetchWithSlowSimulation(url) {\n'
+        + '  const shouldBeSlow = Math.random() < ' + rateDecimal + ';\n\n'
+        + '  if (shouldBeSlow) {\n'
+        + '    // Artificially delay the response\n'
+        + '    await new Promise(r => setTimeout(r, ' + delay + '));\n'
+        + '  }\n\n'
+        + '  // Eventually responds with 200 OK\n'
+        + '  return new Response(\n'
+        + '    JSON.stringify({\n'
+        + '      users: [{ id: 1, name: \'Alice\' }],\n'
+        + '      _meta: { responseTime: ' + delay + ' }\n'
+        + '    }),\n'
+        + '    {\n'
+        + '      status: 200,\n'
+        + '      headers: { \'Content-Type\': \'application/json\' }\n'
+        + '    }\n'
+        + '  );\n'
+        + '}\n\n'
+        + '// Usage:\n'
+        + 'console.time(\'api-call\');\n'
+        + 'const response = await fetchWithSlowSimulation(\n'
+        + '  \'' + url + '\'\n'
+        + ');\n'
+        + 'console.timeEnd(\'api-call\');\n'
+        + 'const data = await response.json();\n'
+        + 'console.log(\'Data received after delay:\', data);';
+    }
+
+    codeOutputEl.textContent = code;
+    demoResultEl.className = 'sim-result';
+    demoResultEl.style.display = 'none';
+  };
+
+  window.runDemo = function() {
+    var type = errorTypeEl.value;
+    var delay = parseInt(delayMsEl.value) || 3000;
+    var rate = parseInt(errorRateEl.value) || 100;
+    var rateDecimal = rate / 100;
+
+    demoResultEl.className = 'sim-result pending';
+    demoResultEl.style.display = 'block';
+    var startTime = Date.now();
+    demoResultEl.textContent = 'Simulating ' + type + ' error... (' + delay + 'ms delay)';
+
+    var shouldFail = Math.random() < rateDecimal;
+
+    if (!shouldFail) {
+      setTimeout(function() {
+        var elapsed = Date.now() - startTime;
+        demoResultEl.className = 'sim-result success';
+        demoResultEl.textContent = 'SUCCESS (did not trigger — error rate check passed)\n'
+          + 'Status: 200 OK\n'
+          + 'Time: ' + elapsed + 'ms\n'
+          + 'Body: { "users": [{"id": 1, "name": "Alice"}] }';
+      }, 200);
+      return;
+    }
+
+    if (type === 'timeout') {
+      setTimeout(function() {
+        var elapsed = Date.now() - startTime;
+        demoResultEl.className = 'sim-result error';
+        demoResultEl.textContent = 'TIMEOUT — AbortError\n'
+          + 'Error: The operation was aborted.\n'
+          + 'Time: ' + elapsed + 'ms\n'
+          + 'No Response object received.\n'
+          + 'Your catch block should handle: err.name === \'AbortError\'';
+      }, delay);
+    } else if (type === '500') {
+      setTimeout(function() {
+        var elapsed = Date.now() - startTime;
+        demoResultEl.className = 'sim-result error';
+        demoResultEl.textContent = 'HTTP 500 — Internal Server Error\n'
+          + 'Status: 500\n'
+          + 'Time: ' + elapsed + 'ms\n'
+          + 'Headers: Content-Type: application/json\n'
+          + 'Body: {\n'
+          + '  "error": "Internal Server Error",\n'
+          + '  "message": "An unexpected error occurred",\n'
+          + '  "timestamp": "' + new Date().toISOString() + '"\n'
+          + '}';
+      }, delay);
+    } else if (type === '503') {
+      setTimeout(function() {
+        var elapsed = Date.now() - startTime;
+        demoResultEl.className = 'sim-result error';
+        demoResultEl.textContent = 'HTTP 503 — Service Unavailable\n'
+          + 'Status: 503\n'
+          + 'Time: ' + elapsed + 'ms\n'
+          + 'Headers: Retry-After: 30\n'
+          + 'Body: {\n'
+          + '  "error": "Service Unavailable",\n'
+          + '  "message": "The server is temporarily unable to handle the request"\n'
+          + '}\n'
+          + 'Action: Wait 30 seconds, then retry';
+      }, delay);
+    } else if (type === '429') {
+      setTimeout(function() {
+        var elapsed = Date.now() - startTime;
+        demoResultEl.className = 'sim-result error';
+        demoResultEl.textContent = 'HTTP 429 — Too Many Requests\n'
+          + 'Status: 429\n'
+          + 'Time: ' + elapsed + 'ms\n'
+          + 'Headers:\n'
+          + '  Retry-After: 5\n'
+          + '  X-RateLimit-Limit: 100\n'
+          + '  X-RateLimit-Remaining: 0\n'
+          + '  X-RateLimit-Reset: ' + (Math.floor(Date.now() / 1000) + 5) + '\n'
+          + 'Body: {\n'
+          + '  "error": "Too Many Requests",\n'
+          + '  "message": "Rate limit exceeded. Slow down."\n'
+          + '}\n'
+          + 'Action: Wait 5 seconds before retrying';
+      }, delay);
+    } else if (type === 'network') {
+      setTimeout(function() {
+        var elapsed = Date.now() - startTime;
+        demoResultEl.className = 'sim-result error';
+        demoResultEl.textContent = 'NETWORK ERROR — TypeError\n'
+          + 'Error: Failed to fetch\n'
+          + 'Time: ' + elapsed + 'ms\n'
+          + 'No Response object received.\n'
+          + 'No HTTP status code available.\n'
+          + 'Your catch block receives a TypeError instance.\n'
+          + 'Likely causes: DNS failure, connection refused, CORS, offline';
+      }, delay);
+    } else if (type === 'slow') {
+      demoResultEl.textContent = 'Waiting for slow response... (' + delay + 'ms)';
+      setTimeout(function() {
+        var elapsed = Date.now() - startTime;
+        demoResultEl.className = 'sim-result success';
+        demoResultEl.textContent = 'SLOW RESPONSE — Eventually succeeded\n'
+          + 'Status: 200 OK\n'
+          + 'Time: ' + elapsed + 'ms (delayed by ' + delay + 'ms)\n'
+          + 'Body: {\n'
+          + '  "users": [{"id": 1, "name": "Alice"}],\n'
+          + '  "_meta": {"responseTime": ' + delay + '}\n'
+          + '}\n'
+          + 'The data arrived, but your user waited ' + (delay / 1000).toFixed(1) + ' seconds.';
+      }, delay);
+    }
+  };
+
+  window.copyCode = function() {
+    var text = codeOutputEl.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = document.querySelector('.sim-btn-row .btn-sm');
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = orig; }, 1500);
+      });
+    }
+  };
+
+  // Auto-generate on load
+  generateCode();
+})();
+</script>
+</body>
+</html>

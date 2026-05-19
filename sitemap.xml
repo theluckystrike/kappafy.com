@@ -98,4 +98,81 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/answers/api-authentication-comparison.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/answers/api-error-handling-patterns.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/answers/index.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/blog/index.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/guides/index.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/guides/webhook-testing-suite.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/index.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/research/graphql-vs-rest-analyzer.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/research/index.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/tools/api-documentation-generator.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <!-- Sprint 7 Auto-Added -->
+  <url>
+    <loc>https://kappafy.com/tools/json-schema-validator.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>

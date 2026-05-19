@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webhook Testing Suite with Request Inspection and Replay | Kappafy</title>
+<meta name="description" content="Test webhook endpoints with configurable payloads, headers, and signatures. Inspect request details, validate HMAC signatures, simulate delivery failures, and replay requests. Free browser-based webhook testing tool.">
+<link rel="canonical" href="https://kappafy.com/guides/webhook-testing-suite.html">
+<meta property="og:title" content="Webhook Testing Suite with Request Inspection and Replay">
+<meta property="og:description" content="Test webhook endpoints with payload inspection, HMAC signature validation, delivery simulation, and request replay. Free browser-based tool.">
+<meta property="og:url" content="https://kappafy.com/guides/webhook-testing-suite.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Webhook Testing Suite with Request Inspection and Replay">
+<meta name="twitter:description" content="Test webhooks with payload inspection, HMAC validation, and request replay. Free browser-based testing tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/guides/webhook-testing-suite.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/guides/webhook-testing-suite.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Webhook Testing Suite",
+    "url": "https://kappafy.com/guides/webhook-testing-suite.html",
+    "description": "Test webhook endpoints with configurable payloads, headers, and signatures. Inspect request details, validate HMAC signatures, simulate delivery failures, and replay requests.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "featureList": ["Webhook payload builder", "HMAC signature generator", "Request inspection log", "Delivery simulation", "Retry timing calculator", "Event type templates"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do webhooks work and when should I use them?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Webhooks are HTTP POST callbacks that a server sends to your endpoint when an event occurs, inverting the traditional request-response model. Instead of your application polling an API repeatedly asking 'did anything change?', the API pushes notifications to your URL when events happen. Use webhooks when you need real-time event notifications (payment completed, user signed up, deployment finished), when polling would be wasteful (checking every second for rare events), or when you need to trigger automated workflows in response to external system changes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I verify that a webhook request is authentic?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Verify webhook authenticity using HMAC signature validation. The webhook provider computes an HMAC-SHA256 hash of the request body using a shared secret, then includes the hash in a header (commonly X-Hub-Signature-256 or X-Webhook-Signature). Your endpoint recomputes the HMAC using the same secret and compares the result using a timing-safe comparison function to prevent timing attacks. If the signatures match, the request is authentic. Additionally, validate the timestamp header to prevent replay attacks by rejecting requests older than 5 minutes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What should a webhook endpoint return?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Return a 200 OK status as quickly as possible, ideally within 3-5 seconds. Process the webhook payload asynchronously after returning the response. Most webhook providers interpret any 2xx status as successful delivery and any other status as failure, triggering retry attempts. If your processing takes longer than the provider's timeout (typically 10-30 seconds), the provider will retry, causing duplicate deliveries. Use a queue-based architecture: receive the webhook, enqueue the payload, return 200, then process from the queue with proper deduplication."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I handle webhook retry and deduplication?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Most webhook providers retry failed deliveries with exponential backoff, typically 3-5 attempts over hours or days. Your endpoint must handle duplicate deliveries by implementing idempotency. Store the webhook event ID (provided by most platforms) in a database with a unique constraint. Before processing, check if the event ID already exists. If it does, return 200 without reprocessing. This deduplication is critical because network issues can cause the provider to retry even when your endpoint processed successfully but the 200 response was lost in transit."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I test webhooks during local development?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use a tunneling service to expose your local endpoint to the internet. ngrok, Cloudflare Tunnels, or localtunnel create a public URL that forwards requests to your local server. Register this URL as the webhook endpoint during development. For testing without a real provider, use this tool to construct and preview webhook payloads locally, then use curl or a script to POST them to your local endpoint. Some providers (Stripe, GitHub) also offer webhook event replay from their dashboards, letting you re-send real events to your development endpoint."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://kappafy.com/guides/"},{"@type":"ListItem","position":3,"name":"Webhook Testing Suite"}]}</script>
+<style>
+  .sim-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 24px 0; }
+  .sim-panel h3 { font-family: var(--font-display); font-size: 15px; margin-bottom: 16px; color: var(--accent); }
+  .sim-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .sim-controls { grid-template-columns: 1fr; } .log-grid { grid-template-columns: 1fr !important; } }
+  .sim-field label { display: block; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 500; }
+  .sim-field select, .sim-field input[type="number"], .sim-field input[type="text"], .sim-field textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text);
+    font-family: var(--font-display); font-size: 13px; padding: 8px 10px; outline: none; box-sizing: border-box;
+  }
+  .sim-field textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
+  .sim-field select:focus, .sim-field input:focus, .sim-field textarea:focus { border-color: var(--accent); }
+  .sim-field select option { background: var(--bg); color: var(--text); }
+  .sim-output { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: var(--font-display); font-size: 12px; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; color: var(--text); max-height: 500px; overflow-y: auto; margin-top: 12px; }
+  .sim-btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .log-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .log-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; }
+  .log-card .l-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .log-card .l-value { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--accent); }
+  .log-card .l-unit { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .request-log { margin: 8px 0; }
+  .request-log-item { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin: 6px 0; font-family: var(--font-display); font-size: 12px; cursor: pointer; transition: border-color 0.2s; }
+  .request-log-item:hover { border-color: var(--accent); }
+  .request-log-item .log-header { display: flex; justify-content: space-between; align-items: center; }
+  .request-log-item .log-method { font-weight: 700; color: #3b82f6; }
+  .request-log-item .log-status { font-weight: 600; }
+  .request-log-item .log-status.s-ok { color: #22c55e; }
+  .request-log-item .log-status.s-fail { color: #ef4444; }
+  .request-log-item .log-time { color: var(--text-muted); font-size: 11px; }
+  .request-log-item .log-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); white-space: pre-wrap; font-size: 11px; line-height: 1.5; }
+  .request-log-item.expanded .log-detail { display: block; }
+  .sig-result { margin-top: 12px; padding: 12px 16px; border-radius: var(--radius); font-family: var(--font-display); font-size: 12px; line-height: 1.6; display: none; }
+  .sig-result.pass { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #86efac; display: block; }
+  .sig-result.fail { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; display: block; }
+  .toc { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 24px 0; }
+  .toc h3 { font-size: 14px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  .status-table th, .status-table td { padding: 10px 14px; border: 1px solid var(--border); text-align: left; }
+  .status-table th { background: var(--bg-card); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); }
+  .status-table td code { background: var(--bg-card); padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+  .author-bio { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 32px 0; display: flex; gap: 16px; align-items: flex-start; }
+  .author-bio .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--bg); flex-shrink: 0; }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span>Webhook Testing Suite</span>
+  </nav>
+
+  <h1>Webhook Testing Suite with Request Inspection and Replay</h1>
+  <div class="meta">May 25, 2026 &middot; 15 min read</div>
+
+  <p>Webhooks are the event-driven backbone of modern API integrations. When a payment completes in Stripe, a commit pushes to GitHub, or a message arrives in Slack, webhooks deliver real-time notifications to your application without polling. But testing webhooks is notoriously difficult: the payloads arrive asynchronously from external services, signature validation requires shared secrets and cryptographic verification, and debugging delivery failures requires inspecting headers and bodies that your application may have already discarded. This testing suite provides the tools you need to build, inspect, validate, and replay webhook requests entirely in your browser.</p>
+
+  <p>Build webhook payloads from templates for common providers (Stripe, GitHub, Slack, Shopify), generate HMAC signatures using your secret key, simulate delivery with configurable success and failure rates, and inspect a log of all simulated requests with full headers and bodies. The signature validator verifies HMAC-SHA256 signatures so you can test your endpoint's verification logic before connecting to a live provider. Every operation runs locally with no data transmitted to external servers.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#builder">Webhook Payload Builder</a></li>
+      <li><a href="#signature">Signature Generator and Validator</a></li>
+      <li><a href="#inspector">Request Inspector</a></li>
+      <li><a href="#how-webhooks-work">How Webhooks Work</a></li>
+      <li><a href="#security">Webhook Security Best Practices</a></li>
+      <li><a href="#reliability">Reliable Webhook Consumption</a></li>
+      <li><a href="#retry-patterns">Provider Retry Patterns</a></li>
+      <li><a href="#local-testing">Local Development Testing</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="builder">Webhook Payload Builder</h2>
+
+  <p>Select a webhook provider template or build a custom payload. Each template produces a realistic event payload matching the provider's actual format, including metadata fields like event IDs, timestamps, and API versions. Click <strong>Build Payload</strong> to generate the complete HTTP request with headers and body.</p>
+
+  <div class="sim-panel">
+    <h3>Event Configuration</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="webhookProvider">Provider Template</label>
+        <select id="webhookProvider" onchange="updateEventTypes()">
+          <option value="stripe">Stripe</option>
+          <option value="github">GitHub</option>
+          <option value="slack">Slack</option>
+          <option value="shopify">Shopify</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="eventType">Event Type</label>
+        <select id="eventType">
+          <option value="payment_intent.succeeded">payment_intent.succeeded</option>
+          <option value="customer.created">customer.created</option>
+          <option value="invoice.paid">invoice.paid</option>
+          <option value="charge.failed">charge.failed</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="webhookUrl">Target URL</label>
+        <input type="text" id="webhookUrl" value="https://example.com/webhooks" placeholder="https://your-app.com/webhooks">
+      </div>
+      <div class="sim-field">
+        <label for="webhookSecret">Signing Secret</label>
+        <input type="text" id="webhookSecret" value="whsec_test_secret_key_123" placeholder="whsec_...">
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="buildPayload()">Build Payload</button>
+      <button class="btn" onclick="randomizePayload()">Randomize Data</button>
+      <button class="btn btn-sm" onclick="copyPayload()">Copy Payload</button>
+    </div>
+    <div id="payloadOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="signature">Signature Generator and Validator</h2>
+
+  <p>Generate HMAC-SHA256 signatures for webhook payloads, or validate an existing signature against a payload. This tests your signature verification logic without connecting to a live provider. Enter the payload body and signing secret to compute the signature, or enter all three to validate.</p>
+
+  <div class="sim-panel">
+    <h3>HMAC Signature Tools</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="sigPayload">Payload Body</label>
+        <textarea id="sigPayload" style="min-height:100px;" placeholder='{"event": "test"}'></textarea>
+      </div>
+      <div class="sim-field">
+        <label for="sigSecret">Signing Secret</label>
+        <input type="text" id="sigSecret" value="whsec_test_secret_key_123">
+      </div>
+    </div>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="sigAlgo">Algorithm</label>
+        <select id="sigAlgo">
+          <option value="SHA-256" selected>HMAC-SHA256</option>
+          <option value="SHA-1">HMAC-SHA1</option>
+          <option value="SHA-384">HMAC-SHA384</option>
+          <option value="SHA-512">HMAC-SHA512</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="sigExpected">Expected Signature (for validation)</label>
+        <input type="text" id="sigExpected" placeholder="Leave empty to generate, fill to validate">
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="computeSignature()">Generate Signature</button>
+      <button class="btn" onclick="validateSignature()">Validate Signature</button>
+      <button class="btn btn-sm" onclick="copySig()">Copy Signature</button>
+    </div>
+    <div id="sigResult" class="sig-result"></div>
+    <div id="sigOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="inspector">Request Inspector</h2>
+
+  <p>Simulate webhook deliveries and inspect each request in the log. Configure the delivery simulation with success and failure rates, then click <strong>Simulate Deliveries</strong> to generate a batch of webhook requests. Click any log entry to expand the full request details including headers, body, timing, and status.</p>
+
+  <div class="sim-panel">
+    <h3>Delivery Simulation</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="simCount">Number of Deliveries</label>
+        <input type="number" id="simCount" value="10" min="1" max="50">
+      </div>
+      <div class="sim-field">
+        <label for="simFailRate">Failure Rate (%)</label>
+        <input type="number" id="simFailRate" value="20" min="0" max="100">
+      </div>
+      <div class="sim-field">
+        <label for="simMinLatency">Min Latency (ms)</label>
+        <input type="number" id="simMinLatency" value="50" min="1" max="10000">
+      </div>
+      <div class="sim-field">
+        <label for="simMaxLatency">Max Latency (ms)</label>
+        <input type="number" id="simMaxLatency" value="2000" min="10" max="30000">
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="simulateDeliveries()">Simulate Deliveries</button>
+      <button class="btn" onclick="clearLog()">Clear Log</button>
+    </div>
+    <div id="logCards" style="display:none;">
+      <div class="log-grid" id="logGrid"></div>
+    </div>
+    <div id="requestLog" class="request-log"></div>
+  </div>
+
+  <h2 id="how-webhooks-work">How Webhooks Work</h2>
+
+  <p>A webhook is an HTTP POST request sent from a provider to your application when an event occurs. The lifecycle is: (1) you register a URL with the provider, (2) an event occurs in the provider's system, (3) the provider constructs a JSON payload describing the event, (4) the provider computes an HMAC signature using a shared secret, (5) the provider sends an HTTP POST to your URL with the payload and signature header, (6) your endpoint verifies the signature, processes the event, and returns a 2xx status.</p>
+
+  <p>If your endpoint returns a non-2xx status or times out, the provider marks the delivery as failed and queues it for retry. Most providers retry 3-5 times with exponential backoff over a period of hours to days. Some providers (Stripe, GitHub) offer a webhook dashboard where you can see delivery attempts, response codes, and response bodies for debugging. The provider eventually stops retrying after exhausting its retry budget and either sends a failure notification email or marks the endpoint as disabled.</p>
+
+  <h2 id="security">Webhook Security Best Practices</h2>
+
+  <p>Webhook endpoints are publicly accessible URLs that accept POST requests from the internet. Without verification, an attacker can send forged webhook payloads to your endpoint to trigger unauthorized actions like creating fake orders or granting fraudulent access. The defense is HMAC signature validation: the provider includes a signature header computed from the payload and a shared secret that only you and the provider know.</p>
+
+  <p>The verification process must use a constant-time comparison function (crypto.timingSafeEqual in Node.js, hmac.compare_digest in Python) to prevent timing attacks that could leak the expected signature byte by byte. Additionally, validate the timestamp header (included by Stripe, GitHub, and most providers) to reject requests older than 5 minutes, preventing replay attacks where an attacker captures a valid webhook and resends it later. Finally, use HTTPS for your webhook URL to encrypt the payload in transit and prevent man-in-the-middle inspection.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>// Node.js webhook signature verification
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const timestamp = signature.split(',')[0].split('=')[1];
+  const sig = signature.split(',')[1].split('=')[1];
+
+  // Reject requests older than 5 minutes
+  const age = Math.floor(Date.now() / 1000) - parseInt(timestamp);
+  if (age > 300) throw new Error('Webhook too old');
+
+  // Compute expected signature
+  const signedPayload = timestamp + '.' + payload;
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+
+  // Timing-safe comparison
+  if (!crypto.timingSafeEqual(
+    Buffer.from(sig), Buffer.from(expected)
+  )) {
+    throw new Error('Invalid signature');
+  }
+
+  return JSON.parse(payload);
+}</code></pre>
+
+  <h2 id="reliability">Reliable Webhook Consumption</h2>
+
+  <p>The golden rule of webhook consumption is: acknowledge fast, process later. Your endpoint should validate the signature, enqueue the event for processing, and return 200 within 3 seconds. This decouples receipt from processing and prevents the provider's delivery timeout from interfering with your business logic. The processing happens asynchronously from the queue with proper error handling, retries, and dead letter queues for permanently failed events.</p>
+
+  <p>Implement idempotency using the event ID that every major provider includes in the payload. Store processed event IDs in a database with a unique constraint. Before processing, check the constraint. If the insert fails (duplicate), return success without reprocessing. This handles the two causes of duplicate deliveries: provider retries due to timeout (your endpoint processed the event but did not return 200 fast enough) and provider retries due to network errors (the 200 response was lost in transit). Both scenarios are common in production and will create duplicate side effects without idempotency.</p>
+
+  <h2 id="retry-patterns">Provider Retry Patterns</h2>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Max Retries</th>
+        <th>Backoff Strategy</th>
+        <th>Total Window</th>
+        <th>Signature Header</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>Stripe</code></td><td>8</td><td>Exponential</td><td>~3 days</td><td>Stripe-Signature</td></tr>
+      <tr><td><code>GitHub</code></td><td>3</td><td>10-minute intervals</td><td>~30 min</td><td>X-Hub-Signature-256</td></tr>
+      <tr><td><code>Slack</code></td><td>3</td><td>Exponential</td><td>~1 hour</td><td>X-Slack-Signature</td></tr>
+      <tr><td><code>Shopify</code></td><td>19</td><td>Exponential</td><td>~48 hours</td><td>X-Shopify-Hmac-Sha256</td></tr>
+      <tr><td><code>Twilio</code></td><td>2</td><td>Fixed 10 min</td><td>~20 min</td><td>X-Twilio-Signature</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="local-testing">Local Development Testing</h2>
+
+  <p>Testing webhooks locally requires exposing your development server to the internet. The recommended approach is a tunneling service: ngrok, Cloudflare Tunnels, or localtunnel create a public URL (e.g., https://abc123.ngrok.io) that forwards requests to localhost:3000. Register this URL as your webhook endpoint in the provider's dashboard. When the provider sends a webhook, it reaches the tunnel, forwards to your local server, and you can debug with breakpoints and console logs in your IDE.</p>
+
+  <p>For unit testing without external dependencies, use this tool to build realistic payloads, compute signatures, and copy the curl commands to replay against your local endpoint. Mock the signature verification in tests by either using a known secret and pre-computed signature, or by injecting a verification function that always returns true in the test environment. Integration tests should verify the full flow: receive webhook, verify signature, enqueue event, process from queue, and verify the side effect (database record created, email sent, etc.).</p>
+
+  <p>A robust testing strategy covers four scenarios: (1) valid payload with correct signature, (2) valid payload with incorrect signature (should reject), (3) valid payload with expired timestamp (should reject), and (4) duplicate event ID (should accept but not re-process). These four tests cover the critical verification and idempotency paths that protect your application in production.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>How do webhooks work and when should I use them?</summary>
+    <p>Webhooks are HTTP POST callbacks sent to your endpoint when an event occurs. Instead of polling, the API pushes notifications to your URL. Use them for real-time event notifications, when polling would be wasteful, or when you need to trigger workflows from external system changes.</p>
+  </details>
+  <details>
+    <summary>How do I verify that a webhook request is authentic?</summary>
+    <p>Verify using HMAC signature validation. The provider computes an HMAC-SHA256 of the body using a shared secret and includes the hash in a header. Recompute the HMAC with the same secret and compare using a timing-safe function. Also validate the timestamp to prevent replay attacks.</p>
+  </details>
+  <details>
+    <summary>What should a webhook endpoint return?</summary>
+    <p>Return 200 OK within 3-5 seconds. Process asynchronously after returning. Most providers treat any 2xx as success and anything else as failure, triggering retries. Use a queue: receive, enqueue, return 200, then process with deduplication.</p>
+  </details>
+  <details>
+    <summary>How do I handle webhook retry and deduplication?</summary>
+    <p>Store the webhook event ID with a unique constraint. Before processing, check for duplicates. If the ID exists, return 200 without reprocessing. This handles both provider retries and network-level duplicate deliveries.</p>
+  </details>
+  <details>
+    <summary>How do I test webhooks during local development?</summary>
+    <p>Use ngrok, Cloudflare Tunnels, or localtunnel to expose your local server. Register the tunnel URL as the webhook endpoint. For unit testing, use known payloads with pre-computed signatures and test all four scenarios: valid, bad signature, expired timestamp, and duplicate event.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/guides/circuit-breaker-pattern.html" class="related-card">Circuit Breaker Pattern Guide</a>
+      <a href="/answers/api-error-handling-patterns.html" class="related-card">API Error Handling Patterns</a>
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/answers/api-authentication-comparison.html" class="related-card">API Authentication Comparison</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var requestLog = [];
+
+  var eventTypes = {
+    stripe: ['payment_intent.succeeded', 'customer.created', 'invoice.paid', 'charge.failed', 'subscription.updated'],
+    github: ['push', 'pull_request.opened', 'issues.opened', 'release.published', 'workflow_run.completed'],
+    slack: ['message', 'app_mention', 'reaction_added', 'channel_created', 'team_join'],
+    shopify: ['orders/create', 'orders/paid', 'products/update', 'customers/create', 'carts/update'],
+    custom: ['custom.event']
+  };
+
+  window.updateEventTypes = function() {
+    var provider = document.getElementById('webhookProvider').value;
+    var select = document.getElementById('eventType');
+    select.innerHTML = '';
+    var types = eventTypes[provider] || ['custom.event'];
+    for (var i = 0; i < types.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = types[i];
+      opt.textContent = types[i];
+      select.appendChild(opt);
+    }
+  };
+
+  function generatePayload(provider, eventType) {
+    var id = 'evt_' + Math.random().toString(36).substring(2, 15);
+    var ts = Math.floor(Date.now() / 1000);
+
+    if (provider === 'stripe') {
+      return {
+        id: id,
+        object: 'event',
+        api_version: '2024-06-20',
+        created: ts,
+        type: eventType,
+        data: {
+          object: {
+            id: 'pi_' + Math.random().toString(36).substring(2, 15),
+            object: 'payment_intent',
+            amount: Math.floor(Math.random() * 50000) + 500,
+            currency: 'usd',
+            status: eventType.indexOf('succeeded') >= 0 ? 'succeeded' : 'failed',
+            customer: 'cus_' + Math.random().toString(36).substring(2, 12),
+            created: ts
+          }
+        },
+        livemode: false,
+        pending_webhooks: 1,
+        request: { id: 'req_' + Math.random().toString(36).substring(2, 12), idempotency_key: null }
+      };
+    } else if (provider === 'github') {
+      return {
+        action: eventType.split('.')[1] || 'completed',
+        sender: { login: 'developer', id: 12345, avatar_url: 'https://github.com/developer.png' },
+        repository: { id: 67890, name: 'my-api', full_name: 'developer/my-api', private: false },
+        installation: { id: 111, node_id: 'MDIzOk' }
+      };
+    } else if (provider === 'slack') {
+      return {
+        token: 'Jhj5dZrVaK7ZwHHjRyZWjbDl',
+        team_id: 'T061EG9R6',
+        event: { type: eventType, user: 'U123ABC456', text: 'Hello from webhook test', ts: ts + '.000000', channel: 'C123ABC456' },
+        type: 'event_callback',
+        event_id: id,
+        event_time: ts
+      };
+    } else if (provider === 'shopify') {
+      return {
+        id: Math.floor(Math.random() * 900000000) + 100000000,
+        email: 'customer@example.com',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        total_price: (Math.random() * 500 + 10).toFixed(2),
+        currency: 'USD',
+        financial_status: 'paid',
+        name: '#' + Math.floor(Math.random() * 9000 + 1000)
+      };
+    }
+    return { event: eventType, data: { message: 'Custom webhook event' }, timestamp: ts };
+  }
+
+  window.buildPayload = function() {
+    var provider = document.getElementById('webhookProvider').value;
+    var eventType = document.getElementById('eventType').value;
+    var url = document.getElementById('webhookUrl').value;
+    var secret = document.getElementById('webhookSecret').value;
+
+    var payload = generatePayload(provider, eventType);
+    var body = JSON.stringify(payload, null, 2);
+    var ts = Math.floor(Date.now() / 1000);
+
+    var output = 'POST ' + url + '\n';
+    output += 'Content-Type: application/json\n';
+    output += 'User-Agent: ' + provider.charAt(0).toUpperCase() + provider.slice(1) + '-Webhook/1.0\n';
+    output += 'X-Webhook-ID: ' + (payload.id || 'wh_' + Math.random().toString(36).substring(2, 12)) + '\n';
+    output += 'X-Webhook-Timestamp: ' + ts + '\n';
+
+    if (secret) {
+      output += 'X-Webhook-Signature: sha256=[computed from body + secret]\n';
+    }
+    output += '\n' + body;
+
+    output += '\n\n--- curl command ---\n';
+    output += "curl -X POST '" + url + "' \\\n";
+    output += "  -H 'Content-Type: application/json' \\\n";
+    output += "  -d '" + JSON.stringify(payload).replace(/'/g, "'\\''") + "'";
+
+    document.getElementById('payloadOutput').textContent = output;
+    document.getElementById('payloadOutput').style.display = 'block';
+    document.getElementById('sigPayload').value = JSON.stringify(payload);
+  };
+
+  window.randomizePayload = function() {
+    buildPayload();
+  };
+
+  window.computeSignature = async function() {
+    var payload = document.getElementById('sigPayload').value.trim();
+    var secret = document.getElementById('sigSecret').value.trim();
+    var algo = document.getElementById('sigAlgo').value;
+
+    if (!payload || !secret) {
+      document.getElementById('sigResult').className = 'sig-result fail';
+      document.getElementById('sigResult').textContent = 'Enter both payload and secret to compute signature.';
+      return;
+    }
+
+    try {
+      var enc = new TextEncoder();
+      var key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: algo }, false, ['sign']);
+      var sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
+      var hex = Array.from(new Uint8Array(sig)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+
+      var output = 'Algorithm: HMAC-' + algo + '\n';
+      output += 'Signature: ' + hex + '\n';
+      output += 'Header: X-Webhook-Signature: sha256=' + hex + '\n\n';
+      output += 'Payload length: ' + payload.length + ' bytes\n';
+      output += 'Secret length: ' + secret.length + ' chars';
+
+      document.getElementById('sigOutput').textContent = output;
+      document.getElementById('sigOutput').style.display = 'block';
+      document.getElementById('sigResult').className = 'sig-result pass';
+      document.getElementById('sigResult').textContent = 'Signature computed: ' + hex.substring(0, 32) + '...';
+    } catch (e) {
+      document.getElementById('sigResult').className = 'sig-result fail';
+      document.getElementById('sigResult').textContent = 'Error computing signature: ' + e.message;
+    }
+  };
+
+  window.validateSignature = async function() {
+    var payload = document.getElementById('sigPayload').value.trim();
+    var secret = document.getElementById('sigSecret').value.trim();
+    var expected = document.getElementById('sigExpected').value.trim();
+    var algo = document.getElementById('sigAlgo').value;
+
+    if (!payload || !secret || !expected) {
+      document.getElementById('sigResult').className = 'sig-result fail';
+      document.getElementById('sigResult').textContent = 'Enter payload, secret, and expected signature to validate.';
+      return;
+    }
+
+    try {
+      var enc = new TextEncoder();
+      var key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: algo }, false, ['sign']);
+      var sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
+      var computed = Array.from(new Uint8Array(sig)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+
+      var clean = expected.replace(/^sha256=/, '').trim();
+      if (computed === clean) {
+        document.getElementById('sigResult').className = 'sig-result pass';
+        document.getElementById('sigResult').textContent = 'VALID - Signature matches. The payload is authentic.';
+      } else {
+        document.getElementById('sigResult').className = 'sig-result fail';
+        document.getElementById('sigResult').textContent = 'INVALID - Signature mismatch.\n\nExpected: ' + clean.substring(0, 32) + '...\nComputed: ' + computed.substring(0, 32) + '...';
+      }
+    } catch (e) {
+      document.getElementById('sigResult').className = 'sig-result fail';
+      document.getElementById('sigResult').textContent = 'Error: ' + e.message;
+    }
+  };
+
+  window.simulateDeliveries = function() {
+    var count = parseInt(document.getElementById('simCount').value) || 10;
+    var failRate = parseInt(document.getElementById('simFailRate').value) || 20;
+    var minLat = parseInt(document.getElementById('simMinLatency').value) || 50;
+    var maxLat = parseInt(document.getElementById('simMaxLatency').value) || 2000;
+    var provider = document.getElementById('webhookProvider').value;
+    var eventType = document.getElementById('eventType').value;
+
+    var successes = 0;
+    var failures = 0;
+    var totalLatency = 0;
+
+    for (var i = 0; i < count; i++) {
+      var failed = Math.random() * 100 < failRate;
+      var latency = Math.round(minLat + Math.random() * (maxLat - minLat));
+      var status = failed ? (Math.random() > 0.5 ? 500 : 503) : 200;
+      var payload = generatePayload(provider, eventType);
+
+      if (failed) failures++;
+      else successes++;
+      totalLatency += latency;
+
+      requestLog.push({
+        id: 'del_' + Math.random().toString(36).substring(2, 10),
+        timestamp: new Date(Date.now() - (count - i) * 1000).toISOString(),
+        method: 'POST',
+        status: status,
+        latency: latency,
+        eventType: eventType,
+        payload: payload,
+        retries: failed ? Math.floor(Math.random() * 3) : 0
+      });
+    }
+
+    var avgLatency = Math.round(totalLatency / count);
+    var grid = document.getElementById('logGrid');
+    grid.innerHTML =
+      '<div class="log-card"><div class="l-label">Delivered</div><div class="l-value">' + successes + '</div><div class="l-unit">of ' + count + '</div></div>' +
+      '<div class="log-card"><div class="l-label">Failed</div><div class="l-value">' + failures + '</div><div class="l-unit">' + Math.round(failures / count * 100) + '% rate</div></div>' +
+      '<div class="log-card"><div class="l-label">Avg Latency</div><div class="l-value">' + avgLatency + '</div><div class="l-unit">ms</div></div>';
+    document.getElementById('logCards').style.display = 'block';
+
+    renderLog();
+  };
+
+  function renderLog() {
+    var container = document.getElementById('requestLog');
+    var html = '';
+    var items = requestLog.slice(-20).reverse();
+
+    for (var i = 0; i < items.length; i++) {
+      var r = items[i];
+      var statusClass = r.status >= 200 && r.status < 300 ? 's-ok' : 's-fail';
+      html += '<div class="request-log-item" onclick="this.classList.toggle(\'expanded\')">';
+      html += '<div class="log-header">';
+      html += '<span><span class="log-method">' + r.method + '</span> ' + r.eventType + '</span>';
+      html += '<span><span class="log-status ' + statusClass + '">' + r.status + '</span> <span class="log-time">' + r.latency + 'ms</span></span>';
+      html += '</div>';
+      html += '<div class="log-detail">';
+      html += 'Delivery ID: ' + r.id + '\n';
+      html += 'Timestamp: ' + r.timestamp + '\n';
+      html += 'Status: ' + r.status + '\n';
+      html += 'Latency: ' + r.latency + 'ms\n';
+      html += 'Retries: ' + r.retries + '\n\n';
+      html += 'Payload:\n' + JSON.stringify(r.payload, null, 2);
+      html += '</div>';
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  }
+
+  window.clearLog = function() {
+    requestLog = [];
+    document.getElementById('logCards').style.display = 'none';
+    document.getElementById('requestLog').innerHTML = '';
+  };
+
+  window.copyPayload = function() {
+    var text = document.getElementById('payloadOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.querySelector('.sim-btn-row .btn-sm');
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+  window.copySig = function() {
+    var text = document.getElementById('sigOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btns = document.querySelectorAll('.sim-btn-row .btn-sm');
+      var btn = btns[btns.length - 1];
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

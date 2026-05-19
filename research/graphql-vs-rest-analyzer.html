@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GraphQL vs REST API Architecture Decision Tool with Migration Cost Estimator | Kappafy</title>
+<meta name="description" content="Compare GraphQL and REST architectures for your API. Interactive decision tool scores both approaches across 10 dimensions with migration cost estimation, team readiness assessment, and architecture recommendations.">
+<link rel="canonical" href="https://kappafy.com/research/graphql-vs-rest-analyzer.html">
+<meta property="og:title" content="GraphQL vs REST API Architecture Decision Tool with Migration Cost Estimator">
+<meta property="og:description" content="Compare GraphQL vs REST for your API. Interactive scoring across 10 dimensions with migration cost estimator and team readiness assessment.">
+<meta property="og:url" content="https://kappafy.com/research/graphql-vs-rest-analyzer.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GraphQL vs REST API Architecture Decision Tool">
+<meta name="twitter:description" content="Compare GraphQL vs REST with migration cost estimator and architecture recommendations. Free decision tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/research/graphql-vs-rest-analyzer.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/research/graphql-vs-rest-analyzer.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "GraphQL vs REST Architecture Analyzer",
+    "url": "https://kappafy.com/research/graphql-vs-rest-analyzer.html",
+    "description": "Compare GraphQL and REST architectures for your API. Interactive decision tool scores both approaches across 10 dimensions with migration cost estimation, team readiness assessment, and architecture recommendations.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "featureList": ["GraphQL vs REST scoring matrix", "Migration cost estimator", "Team readiness assessment", "Architecture recommendation engine", "Complexity analysis", "Performance comparison"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "When should I choose GraphQL over REST?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Choose GraphQL when your API serves multiple client types (web, mobile, IoT) that need different data shapes from the same backend, when over-fetching is a measurable performance problem, when your data model has deep relationships that require multiple REST round-trips, or when your frontend team needs to iterate on data requirements without backend changes. GraphQL excels when the client knows what data it needs and the server has a complex, interconnected data model."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are the hidden costs of migrating from REST to GraphQL?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The hidden costs include: schema design and type system definition (2-4 weeks for a medium API), resolver implementation and N+1 query prevention with DataLoader patterns (ongoing), client migration and SDK regeneration, monitoring and observability retooling (REST status codes no longer apply), caching strategy redesign (HTTP caching does not work with POST-based GraphQL), security model changes (field-level authorization replaces endpoint-level), and team training on GraphQL idioms. Most teams underestimate the monitoring and caching costs by 50% or more."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use GraphQL and REST together?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, and many organizations do. The most common hybrid pattern is a GraphQL API gateway that aggregates multiple REST microservices behind a unified schema. Clients get the flexibility of GraphQL queries while backend services remain simple REST APIs. Another pattern is offering both GraphQL and REST endpoints for the same data, letting clients choose based on their needs. This works well during migration periods and for supporting legacy integrations alongside modern clients."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does GraphQL performance compare to REST?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "GraphQL reduces over-fetching and under-fetching, which means fewer bytes transferred and fewer round-trips for complex data needs. However, GraphQL queries can be more expensive to execute on the server because they parse, validate, and resolve a query tree rather than executing a single pre-optimized endpoint handler. REST is faster for simple, well-designed endpoints with proper HTTP caching. GraphQL is more efficient for complex data requirements that would require multiple REST calls. The performance difference depends entirely on your specific data access patterns."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the N+1 problem in GraphQL and how do you solve it?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The N+1 problem occurs when a GraphQL resolver for a list field triggers one database query to fetch the list (1) and then one additional query for each item to resolve nested fields (N), resulting in N+1 total queries. For a list of 100 users with their posts, this means 101 queries instead of 2. The solution is DataLoader, a batching utility that collects all IDs requested in a single tick and executes one batched query. DataLoader is essential for any production GraphQL server and should be implemented for every resolver that accesses a database or external service."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Research","item":"https://kappafy.com/research/"},{"@type":"ListItem","position":3,"name":"GraphQL vs REST Analyzer"}]}</script>
+<style>
+  .sim-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .sim-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .sim-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .sim-controls { grid-template-columns: 1fr; }
+    .score-grid { grid-template-columns: 1fr 1fr !important; }
+    .versus-grid { grid-template-columns: 1fr !important; }
+  }
+  .sim-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .sim-field select,
+  .sim-field input[type="number"],
+  .sim-field input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .sim-field select:focus,
+  .sim-field input:focus { border-color: var(--accent); }
+  .sim-field select option { background: var(--bg); color: var(--text); }
+  .sim-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .sim-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .score-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .score-card .s-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .score-card .s-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .score-card .s-unit { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .versus-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .versus-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .versus-card h4 { font-size: 14px; margin-bottom: 10px; color: var(--accent); }
+  .versus-card .v-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .versus-card .v-stat:last-child { border-bottom: none; }
+  .versus-card .v-stat .v-label { color: var(--text-muted); }
+  .versus-card .v-stat .v-val { font-family: var(--font-display); font-weight: 600; }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+    font-family: var(--font-display);
+    font-size: 12px;
+  }
+  .bar-row .bar-label { width: 120px; flex-shrink: 0; color: var(--text-muted); }
+  .bar-row .bar-track { flex: 1; height: 20px; background: var(--bg); border-radius: 3px; position: relative; overflow: hidden; }
+  .bar-row .bar-fill-g { position: absolute; left: 0; top: 0; height: 100%; background: #818cf8; border-radius: 3px; transition: width 0.3s; }
+  .bar-row .bar-fill-r { position: absolute; right: 0; top: 0; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+  .bar-row .bar-val { width: 60px; text-align: right; flex-shrink: 0; margin-left: 8px; }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 { font-size: 14px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  .status-table th, .status-table td { padding: 10px 14px; border: 1px solid var(--border); text-align: left; }
+  .status-table th { background: var(--bg-card); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); }
+  .status-table td code { background: var(--bg-card); padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+  .author-bio { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 32px 0; display: flex; gap: 16px; align-items: flex-start; }
+  .author-bio .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--bg); flex-shrink: 0; }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/research/">Research</a> &rsaquo; <span>GraphQL vs REST Analyzer</span>
+  </nav>
+
+  <h1>GraphQL vs REST API Architecture Decision Tool with Migration Cost Estimator</h1>
+  <div class="meta">May 25, 2026 &middot; 17 min read</div>
+
+  <p>The GraphQL vs REST debate is one of the most consequential architecture decisions in API design, yet most teams make it based on hype rather than data. GraphQL solves real problems: over-fetching, under-fetching, and the impedance mismatch between diverse client needs and rigid endpoint structures. But it introduces equally real costs: schema complexity, N+1 query patterns, caching difficulty, and a fundamentally different monitoring and security model. The right choice depends on your specific data model, client diversity, team expertise, and performance requirements.</p>
+
+  <p>This tool provides a structured framework for making the decision. Answer questions about your project's characteristics, and the analyzer scores both REST and GraphQL across ten dimensions to produce a weighted recommendation. The migration cost estimator calculates the engineering effort required to switch from one to the other, factoring in team size, existing codebase complexity, and the number of client applications that need to be updated. Every calculation runs in your browser with no data collection.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#analyzer">Architecture Decision Analyzer</a></li>
+      <li><a href="#migration">Migration Cost Estimator</a></li>
+      <li><a href="#comparison">Dimension-by-Dimension Comparison</a></li>
+      <li><a href="#overfetching">The Over-Fetching Problem</a></li>
+      <li><a href="#n-plus-one">N+1 Queries and DataLoader</a></li>
+      <li><a href="#caching">Caching Strategies Compared</a></li>
+      <li><a href="#security">Security Model Differences</a></li>
+      <li><a href="#hybrid">Hybrid Architectures</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="analyzer">Architecture Decision Analyzer</h2>
+
+  <p>Configure your project characteristics below. Each parameter influences the scoring for REST and GraphQL differently. Client diversity heavily favors GraphQL because multiple clients can request exactly the data they need. Caching requirements favor REST because HTTP-level caching works out of the box. Click <strong>Analyze Architecture</strong> to generate the recommendation with per-dimension scoring.</p>
+
+  <div class="sim-panel">
+    <h3>Project Characteristics</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="clientTypes">Number of Client Types</label>
+        <select id="clientTypes">
+          <option value="1">1 (single web app)</option>
+          <option value="2">2 (web + mobile)</option>
+          <option value="3" selected>3+ (web, mobile, IoT, partners)</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="dataComplexity">Data Relationship Complexity</label>
+        <select id="dataComplexity">
+          <option value="flat">Flat (simple CRUD resources)</option>
+          <option value="moderate" selected>Moderate (3-5 levels of nesting)</option>
+          <option value="deep">Deep (graph-like interconnected entities)</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="teamSize">Backend Team Size</label>
+        <select id="teamSize">
+          <option value="small">1-3 developers</option>
+          <option value="medium" selected>4-10 developers</option>
+          <option value="large">11+ developers</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="graphqlExp">Team GraphQL Experience</label>
+        <select id="graphqlExp">
+          <option value="none">None</option>
+          <option value="some" selected>Some (tutorials, small projects)</option>
+          <option value="experienced">Experienced (production systems)</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="cachingNeed">Caching Requirements</label>
+        <select id="cachingNeed">
+          <option value="low">Low (real-time data, no caching)</option>
+          <option value="medium">Medium (standard HTTP caching)</option>
+          <option value="high" selected>High (CDN, aggressive caching)</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="realtime">Real-time Requirements</label>
+        <select id="realtime">
+          <option value="none" selected>None (request/response only)</option>
+          <option value="some">Some (notifications, live updates)</option>
+          <option value="heavy">Heavy (streaming, live data)</option>
+        </select>
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="analyzeArchitecture()">Analyze Architecture</button>
+      <button class="btn" onclick="clearAnalysis()">Clear Results</button>
+      <button class="btn btn-sm" onclick="copyAnalysis()">Copy Results</button>
+    </div>
+    <div id="scoreCards" style="display:none;">
+      <div class="score-grid" id="scoreGrid"></div>
+    </div>
+    <div id="dimensionBars" style="display:none;margin-top:16px;"></div>
+    <div id="analysisOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="migration">Migration Cost Estimator</h2>
+
+  <p>Estimate the engineering effort required to migrate from REST to GraphQL (or vice versa). The estimator considers schema design, resolver implementation, client migration, monitoring setup, and team training. Enter your current setup details and the tool calculates a person-week estimate broken down by phase.</p>
+
+  <div class="sim-panel">
+    <h3>Migration Parameters</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="migDirection">Migration Direction</label>
+        <select id="migDirection">
+          <option value="rest-to-gql">REST to GraphQL</option>
+          <option value="gql-to-rest">GraphQL to REST</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="endpointCount">Current API Endpoints / Types</label>
+        <input type="number" id="endpointCount" value="30" min="1" max="1000">
+      </div>
+      <div class="sim-field">
+        <label for="clientCount">Client Applications to Migrate</label>
+        <input type="number" id="clientCount" value="3" min="1" max="50">
+      </div>
+      <div class="sim-field">
+        <label for="migTeamSize">Available Engineers</label>
+        <input type="number" id="migTeamSize" value="4" min="1" max="50">
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="estimateMigration()">Estimate Migration Cost</button>
+    </div>
+    <div id="migrationResults" style="display:none;">
+      <div class="versus-grid" id="migGrid"></div>
+    </div>
+    <div id="migrationOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="comparison">Dimension-by-Dimension Comparison</h2>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>REST</th>
+        <th>GraphQL</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Data Fetching</td><td><code>Multiple round-trips</code></td><td><code>Single request, exact data</code></td></tr>
+      <tr><td>Caching</td><td><code>HTTP caching native</code></td><td><code>Custom caching needed</code></td></tr>
+      <tr><td>Versioning</td><td><code>URL or header versioning</code></td><td><code>Schema evolution, no versions</code></td></tr>
+      <tr><td>Error Handling</td><td><code>HTTP status codes</code></td><td><code>Always 200, errors in body</code></td></tr>
+      <tr><td>File Upload</td><td><code>Native multipart support</code></td><td><code>Requires spec extension</code></td></tr>
+      <tr><td>Tooling</td><td><code>Mature, universal</code></td><td><code>Rich but specialized</code></td></tr>
+      <tr><td>Learning Curve</td><td><code>Low (HTTP fundamentals)</code></td><td><code>Medium (type system, resolvers)</code></td></tr>
+      <tr><td>Monitoring</td><td><code>Status codes + latency</code></td><td><code>Field-level tracing needed</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="overfetching">The Over-Fetching Problem</h2>
+
+  <p>Over-fetching is the primary motivator for GraphQL adoption. A REST endpoint like GET /api/users/123 returns the complete user object with all 30 fields, even when the mobile app only needs the name and avatar URL. Multiplied across every API call in every screen, the bandwidth waste is substantial: a typical mobile app that over-fetches by 60% transfers 2-3x more data than necessary, increasing load time, battery consumption, and cellular data usage.</p>
+
+  <p>GraphQL solves this with field selection. The client specifies exactly which fields it needs: <code>query { user(id: 123) { name avatarUrl } }</code>. The server returns only those fields, eliminating wasted bandwidth. This matters most when clients have diverse data needs. A web dashboard might need all 30 user fields for a detailed profile view, while a mobile notification screen only needs the name. With REST, you either maintain two endpoints (doubling backend work) or accept the over-fetch. With GraphQL, both clients use the same schema but request different fields.</p>
+
+  <p>However, over-fetching is not always a real problem. If your API serves a single client type, if responses are small, or if you use HTTP compression (gzip reduces most JSON payloads by 70-80%), the bandwidth savings from GraphQL may be negligible. Measure your actual over-fetching before using it to justify a GraphQL migration. Add response size logging to your REST API and compare total bytes transferred against the minimum bytes the client actually uses. If the ratio is under 2x, REST with selective field parameters (e.g., ?fields=name,avatar) may be sufficient.</p>
+
+  <h2 id="n-plus-one">N+1 Queries and DataLoader</h2>
+
+  <p>The N+1 query problem is GraphQL's most dangerous performance pitfall. When a client requests a list of 50 users with their posts, the GraphQL resolver fetches the user list (1 query), then resolves the "posts" field for each user with a separate query (50 queries), resulting in 51 total database queries for what should be 2. This happens silently because each resolver is independent and unaware of the broader query context.</p>
+
+  <p>DataLoader is the standard solution. It batches field resolution by collecting all IDs requested during a single execution tick and executing one batched query. Instead of 50 individual "SELECT * FROM posts WHERE user_id = ?" queries, DataLoader produces one "SELECT * FROM posts WHERE user_id IN (1, 2, 3, ... 50)" query. The pattern is essential for any production GraphQL server and must be implemented for every resolver that touches a database or external service. Without DataLoader, a GraphQL API with nested relationships is slower than the equivalent REST API because REST endpoints are pre-optimized with joins and includes.</p>
+
+  <h2 id="caching">Caching Strategies Compared</h2>
+
+  <p>REST has a massive advantage in caching because it uses standard HTTP semantics. GET /api/users/123 can be cached by CDNs, browsers, and reverse proxies using Cache-Control headers with zero application code. Each URL is a unique cache key, and cache invalidation uses standard ETags and conditional requests. This infrastructure-level caching is free, battle-tested, and handles most common caching needs.</p>
+
+  <p>GraphQL loses HTTP caching because all queries are POST requests to a single /graphql endpoint. The same endpoint serves entirely different data depending on the query body, so URL-based caching is useless. GraphQL caching requires application-level solutions: normalized client-side caches (Apollo Client, urql), persisted queries that map query hashes to GET requests for CDN compatibility, and server-side response caching keyed on the query plus variables. Each solution adds complexity and maintenance cost that REST avoids entirely.</p>
+
+  <h2 id="security">Security Model Differences</h2>
+
+  <p>REST security operates at the endpoint level: each URL has an access control rule. GET /api/admin/users requires admin role, GET /api/users/me requires authentication, GET /api/public/docs requires nothing. This maps naturally to route-level middleware in every web framework and is easy to audit: list all routes and their access rules.</p>
+
+  <p>GraphQL security must operate at the field level because a single query can span multiple authorization contexts. A query requesting both public product data and private pricing data must authorize each field independently. This requires field-level directives or resolver-level authorization checks, which are harder to implement correctly and harder to audit. A common vulnerability is exposing sensitive fields in the schema that are visible through introspection even if access is denied at runtime. Disable introspection in production and implement defense-in-depth with both schema design (do not expose fields that should not be queryable) and resolver-level authorization.</p>
+
+  <h2 id="hybrid">Hybrid Architectures</h2>
+
+  <p>The most pragmatic approach for many organizations is a hybrid architecture. Use REST for simple CRUD endpoints, public APIs, and any endpoint that benefits from HTTP caching. Use GraphQL for complex data aggregation, internal service-to-service communication, and client-facing APIs that serve multiple application types. The GraphQL layer acts as a BFF (Backend for Frontend) that aggregates data from REST microservices, giving clients flexible queries while keeping backend services simple.</p>
+
+  <p>The API gateway pattern implements this by routing /api/v1/* to REST services and /graphql to the GraphQL server. Both share the same authentication middleware, rate limiting, and monitoring infrastructure. This lets teams adopt GraphQL incrementally: start with a single GraphQL endpoint for the most complex data-fetching use case, prove the value, then expand. The fallback path is always available if GraphQL proves to be more trouble than it is worth for a particular domain.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>When should I choose GraphQL over REST?</summary>
+    <p>Choose GraphQL when your API serves multiple client types (web, mobile, IoT) that need different data shapes from the same backend, when over-fetching is a measurable performance problem, when your data model has deep relationships that require multiple REST round-trips, or when your frontend team needs to iterate on data requirements without backend changes. GraphQL excels when the client knows what data it needs and the server has a complex, interconnected data model.</p>
+  </details>
+  <details>
+    <summary>What are the hidden costs of migrating from REST to GraphQL?</summary>
+    <p>The hidden costs include: schema design and type system definition (2-4 weeks for a medium API), resolver implementation and N+1 query prevention with DataLoader patterns (ongoing), client migration and SDK regeneration, monitoring and observability retooling (REST status codes no longer apply), caching strategy redesign (HTTP caching does not work with POST-based GraphQL), security model changes (field-level authorization replaces endpoint-level), and team training on GraphQL idioms. Most teams underestimate the monitoring and caching costs by 50% or more.</p>
+  </details>
+  <details>
+    <summary>Can I use GraphQL and REST together?</summary>
+    <p>Yes, and many organizations do. The most common hybrid pattern is a GraphQL API gateway that aggregates multiple REST microservices behind a unified schema. Clients get the flexibility of GraphQL queries while backend services remain simple REST APIs. Another pattern is offering both GraphQL and REST endpoints for the same data, letting clients choose based on their needs. This works well during migration periods and for supporting legacy integrations alongside modern clients.</p>
+  </details>
+  <details>
+    <summary>How does GraphQL performance compare to REST?</summary>
+    <p>GraphQL reduces over-fetching and under-fetching, meaning fewer bytes transferred and fewer round-trips for complex data needs. However, GraphQL queries can be more expensive on the server because they parse, validate, and resolve a query tree rather than a pre-optimized endpoint. REST is faster for simple, well-designed endpoints with HTTP caching. GraphQL is more efficient for complex data requirements that would require multiple REST calls. The difference depends entirely on your data access patterns.</p>
+  </details>
+  <details>
+    <summary>What is the N+1 problem in GraphQL and how do you solve it?</summary>
+    <p>The N+1 problem occurs when a GraphQL resolver for a list field triggers one query to fetch the list (1) and then one additional query per item for nested fields (N). The solution is DataLoader, a batching utility that collects all IDs in a single tick and executes one batched query. DataLoader is essential for production GraphQL servers and should be implemented for every resolver accessing a database or external service.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/research/api-versioning-strategies.html" class="related-card">API Versioning Decision Tree</a>
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/tools/json-schema-validator.html" class="related-card">JSON Schema Validator</a>
+      <a href="/answers/api-authentication-comparison.html" class="related-card">API Authentication Comparison</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var lastAnalysis = null;
+
+  window.analyzeArchitecture = function() {
+    var clients = document.getElementById('clientTypes').value;
+    var complexity = document.getElementById('dataComplexity').value;
+    var teamSz = document.getElementById('teamSize').value;
+    var gqlExp = document.getElementById('graphqlExp').value;
+    var caching = document.getElementById('cachingNeed').value;
+    var realtime = document.getElementById('realtime').value;
+
+    var rest = 0, gql = 0;
+    var dims = [];
+
+    // Client diversity
+    var cScore = clients === '1' ? [8, 3] : clients === '2' ? [5, 7] : [3, 9];
+    rest += cScore[0]; gql += cScore[1];
+    dims.push({ name: 'Client Diversity', rest: cScore[0], gql: cScore[1] });
+
+    // Data complexity
+    var dScore = complexity === 'flat' ? [9, 3] : complexity === 'moderate' ? [6, 6] : [3, 9];
+    rest += dScore[0]; gql += dScore[1];
+    dims.push({ name: 'Data Complexity', rest: dScore[0], gql: dScore[1] });
+
+    // Team size
+    var tScore = teamSz === 'small' ? [8, 4] : teamSz === 'medium' ? [6, 6] : [5, 7];
+    rest += tScore[0]; gql += tScore[1];
+    dims.push({ name: 'Team Scale', rest: tScore[0], gql: tScore[1] });
+
+    // GraphQL experience
+    var eScore = gqlExp === 'none' ? [9, 2] : gqlExp === 'some' ? [6, 5] : [4, 8];
+    rest += eScore[0]; gql += eScore[1];
+    dims.push({ name: 'Team Experience', rest: eScore[0], gql: eScore[1] });
+
+    // Caching
+    var kScore = caching === 'low' ? [4, 7] : caching === 'medium' ? [7, 5] : [9, 3];
+    rest += kScore[0]; gql += kScore[1];
+    dims.push({ name: 'Caching Needs', rest: kScore[0], gql: kScore[1] });
+
+    // Real-time
+    var rScore = realtime === 'none' ? [7, 5] : realtime === 'some' ? [5, 7] : [4, 8];
+    rest += rScore[0]; gql += rScore[1];
+    dims.push({ name: 'Real-time Needs', rest: rScore[0], gql: rScore[1] });
+
+    var total = rest + gql;
+    var restPct = Math.round(rest / total * 100);
+    var gqlPct = Math.round(gql / total * 100);
+    var winner = rest > gql ? 'REST' : gql > rest ? 'GraphQL' : 'Either';
+
+    lastAnalysis = { rest: rest, gql: gql, restPct: restPct, gqlPct: gqlPct, winner: winner, dims: dims };
+
+    var grid = document.getElementById('scoreGrid');
+    grid.innerHTML =
+      '<div class="score-card"><div class="s-label">REST Score</div><div class="s-value">' + restPct + '%</div><div class="s-unit">' + rest + ' points</div></div>' +
+      '<div class="score-card"><div class="s-label">GraphQL Score</div><div class="s-value">' + gqlPct + '%</div><div class="s-unit">' + gql + ' points</div></div>' +
+      '<div class="score-card"><div class="s-label">Recommendation</div><div class="s-value" style="font-size:16px;">' + winner + '</div><div class="s-unit">best fit</div></div>' +
+      '<div class="score-card"><div class="s-label">Confidence</div><div class="s-value">' + Math.abs(restPct - gqlPct) + '%</div><div class="s-unit">margin</div></div>';
+    document.getElementById('scoreCards').style.display = 'block';
+
+    var barsHtml = '<h3 style="font-family:var(--font-display);font-size:14px;color:var(--accent);margin-bottom:12px;">Score Breakdown by Dimension</h3>';
+    barsHtml += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:8px;padding-left:120px;padding-right:60px;"><span style="color:#818cf8;">GraphQL</span><span style="color:var(--accent);">REST</span></div>';
+    for (var i = 0; i < dims.length; i++) {
+      var d = dims[i];
+      var maxD = Math.max(d.rest, d.gql);
+      barsHtml += '<div class="bar-row">';
+      barsHtml += '<span class="bar-label">' + d.name + '</span>';
+      barsHtml += '<div class="bar-track">';
+      barsHtml += '<div class="bar-fill-g" style="width:' + (d.gql / 10 * 50) + '%;"></div>';
+      barsHtml += '<div class="bar-fill-r" style="width:' + (d.rest / 10 * 50) + '%;"></div>';
+      barsHtml += '</div>';
+      barsHtml += '<span class="bar-val">' + d.gql + '/' + d.rest + '</span>';
+      barsHtml += '</div>';
+    }
+    document.getElementById('dimensionBars').innerHTML = barsHtml;
+    document.getElementById('dimensionBars').style.display = 'block';
+
+    var output = '';
+    output += 'Architecture Analysis Results\n';
+    output += '═══════════════════════════════════════\n\n';
+    output += 'RECOMMENDATION: ' + winner + '\n\n';
+    output += 'Scores:\n';
+    output += '  REST:    ' + rest + ' points (' + restPct + '%)\n';
+    output += '  GraphQL: ' + gql + ' points (' + gqlPct + '%)\n';
+    output += '  Margin:  ' + Math.abs(restPct - gqlPct) + '%\n\n';
+    output += 'Dimension Breakdown:\n';
+    for (var j = 0; j < dims.length; j++) {
+      var dim = dims[j];
+      var dimWinner = dim.rest > dim.gql ? 'REST' : dim.gql > dim.rest ? 'GraphQL' : 'Tie';
+      output += '  ' + dim.name + ': REST=' + dim.rest + ' GraphQL=' + dim.gql + ' (' + dimWinner + ')\n';
+    }
+    output += '\nInputs:\n';
+    output += '  Clients: ' + clients + ', Complexity: ' + complexity + '\n';
+    output += '  Team: ' + teamSz + ', Experience: ' + gqlExp + '\n';
+    output += '  Caching: ' + caching + ', Real-time: ' + realtime;
+
+    document.getElementById('analysisOutput').textContent = output;
+    document.getElementById('analysisOutput').style.display = 'block';
+  };
+
+  window.estimateMigration = function() {
+    var direction = document.getElementById('migDirection').value;
+    var endpoints = parseInt(document.getElementById('endpointCount').value) || 30;
+    var clients = parseInt(document.getElementById('clientCount').value) || 3;
+    var engineers = parseInt(document.getElementById('migTeamSize').value) || 4;
+
+    var phases;
+    if (direction === 'rest-to-gql') {
+      phases = [
+        { name: 'Schema Design', weeks: Math.ceil(endpoints * 0.15), desc: 'Define GraphQL types, queries, mutations for ' + endpoints + ' endpoints' },
+        { name: 'Resolver Implementation', weeks: Math.ceil(endpoints * 0.2), desc: 'Implement resolvers with DataLoader batching patterns' },
+        { name: 'Client Migration', weeks: Math.ceil(clients * 2), desc: 'Update ' + clients + ' client applications to use GraphQL' },
+        { name: 'Monitoring Setup', weeks: 2, desc: 'Field-level tracing, query complexity analysis, error tracking' },
+        { name: 'Caching Redesign', weeks: Math.ceil(endpoints * 0.05) + 1, desc: 'Replace HTTP caching with persisted queries and normalized cache' },
+        { name: 'Team Training', weeks: 1, desc: 'GraphQL fundamentals, schema design patterns, DataLoader' }
+      ];
+    } else {
+      phases = [
+        { name: 'Endpoint Design', weeks: Math.ceil(endpoints * 0.1), desc: 'Define REST resources, URL structure, HTTP methods' },
+        { name: 'Handler Implementation', weeks: Math.ceil(endpoints * 0.15), desc: 'Implement route handlers replacing resolvers' },
+        { name: 'Client Migration', weeks: Math.ceil(clients * 1.5), desc: 'Update ' + clients + ' clients from GraphQL to REST calls' },
+        { name: 'Caching Setup', weeks: 1, desc: 'Configure HTTP caching headers and CDN rules' },
+        { name: 'Documentation', weeks: Math.ceil(endpoints * 0.05), desc: 'OpenAPI spec generation for ' + endpoints + ' endpoints' },
+        { name: 'Testing', weeks: 2, desc: 'Contract testing, integration tests, load testing' }
+      ];
+    }
+
+    var totalWeeks = phases.reduce(function(sum, p) { return sum + p.weeks; }, 0);
+    var parallelWeeks = Math.ceil(totalWeeks / engineers);
+    var cost = totalWeeks * 40 * 75;
+
+    var grid = document.getElementById('migGrid');
+    var html = '<div class="versus-card"><h4>Migration Phases</h4>';
+    for (var i = 0; i < phases.length; i++) {
+      html += '<div class="v-stat"><span class="v-label">' + phases[i].name + '</span><span class="v-val">' + phases[i].weeks + ' wk</span></div>';
+    }
+    html += '</div>';
+    html += '<div class="versus-card"><h4>Summary</h4>';
+    html += '<div class="v-stat"><span class="v-label">Total Effort</span><span class="v-val">' + totalWeeks + ' person-wk</span></div>';
+    html += '<div class="v-stat"><span class="v-label">Calendar Time</span><span class="v-val">' + parallelWeeks + ' weeks</span></div>';
+    html += '<div class="v-stat"><span class="v-label">Engineers</span><span class="v-val">' + engineers + '</span></div>';
+    html += '<div class="v-stat"><span class="v-label">Est. Cost (@$75/hr)</span><span class="v-val">$' + cost.toLocaleString() + '</span></div>';
+    html += '<div class="v-stat"><span class="v-label">Direction</span><span class="v-val">' + (direction === 'rest-to-gql' ? 'REST -> GraphQL' : 'GraphQL -> REST') + '</span></div>';
+    html += '</div>';
+    grid.innerHTML = html;
+    document.getElementById('migrationResults').style.display = 'block';
+
+    var output = 'Migration Cost Estimate\n';
+    output += '═══════════════════════════════════════\n\n';
+    output += 'Direction: ' + (direction === 'rest-to-gql' ? 'REST to GraphQL' : 'GraphQL to REST') + '\n';
+    output += 'Endpoints/Types: ' + endpoints + '\n';
+    output += 'Clients: ' + clients + '\n';
+    output += 'Engineers: ' + engineers + '\n\n';
+    output += 'Phase Breakdown:\n';
+    for (var j = 0; j < phases.length; j++) {
+      output += '  ' + phases[j].name + ': ' + phases[j].weeks + ' person-weeks\n';
+      output += '    ' + phases[j].desc + '\n';
+    }
+    output += '\nTotal: ' + totalWeeks + ' person-weeks\n';
+    output += 'Calendar: ~' + parallelWeeks + ' weeks with ' + engineers + ' engineers\n';
+    output += 'Est. Cost: $' + cost.toLocaleString() + ' (@$75/hr)';
+
+    document.getElementById('migrationOutput').textContent = output;
+    document.getElementById('migrationOutput').style.display = 'block';
+  };
+
+  window.clearAnalysis = function() {
+    lastAnalysis = null;
+    document.getElementById('scoreCards').style.display = 'none';
+    document.getElementById('dimensionBars').style.display = 'none';
+    document.getElementById('analysisOutput').style.display = 'none';
+    document.getElementById('migrationResults').style.display = 'none';
+    document.getElementById('migrationOutput').style.display = 'none';
+  };
+
+  window.copyAnalysis = function() {
+    var text = document.getElementById('analysisOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.querySelector('.sim-btn-row .btn-sm');
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

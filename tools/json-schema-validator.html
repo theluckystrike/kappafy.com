@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Schema Validator and Builder with Auto-Generation | Kappafy</title>
+<meta name="description" content="Build, validate, and auto-generate JSON Schemas from example data. Interactive schema editor with real-time validation, draft-07 support, and exportable schemas. Free browser-based tool for API developers.">
+<link rel="canonical" href="https://kappafy.com/tools/json-schema-validator.html">
+<meta property="og:title" content="JSON Schema Validator and Builder with Auto-Generation">
+<meta property="og:description" content="Build and validate JSON Schemas from example data. Real-time validation, auto-generation, and draft-07 support. Free browser-based tool.">
+<meta property="og:url" content="https://kappafy.com/tools/json-schema-validator.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="JSON Schema Validator and Builder with Auto-Generation">
+<meta name="twitter:description" content="Auto-generate JSON Schemas from example data. Validate, edit, and export. Free tool for API developers.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/tools/json-schema-validator.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/tools/json-schema-validator.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "JSON Schema Validator and Builder",
+    "url": "https://kappafy.com/tools/json-schema-validator.html",
+    "description": "Build, validate, and auto-generate JSON Schemas from example data. Interactive schema editor with real-time validation, draft-07 support, and exportable schemas for API developers.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "featureList": ["JSON Schema auto-generation from examples", "Real-time schema validation", "Draft-07 schema support", "Interactive schema builder", "Validation error reporting", "Schema export and sharing"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is JSON Schema and why should I use it?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "JSON Schema is a vocabulary that allows you to validate, annotate, and describe the structure of JSON data. It defines what properties are required, what data types are expected, value constraints like minimum and maximum, and string patterns like email or URL formats. You should use it because it catches data errors at the API boundary before they cause bugs in your application logic, generates documentation automatically, and enables code generation for client SDKs in any language."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do you auto-generate a JSON Schema from example data?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Auto-generation analyzes example JSON data to infer the schema by examining each value's type, detecting patterns in strings (emails, URLs, dates, UUIDs), determining which properties appear consistently across multiple examples to mark as required, and inferring array item schemas from element types. The generated schema is a starting point that you should refine by adding descriptions, tightening constraints, and specifying additional validation rules that cannot be inferred from data alone."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between JSON Schema draft-04, draft-07, and 2020-12?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Draft-04 is the oldest widely-used version with basic type validation and required properties. Draft-07 added if-then-else conditionals, const keyword, and readOnly/writeOnly annotations. Draft 2020-12 is the current standard adding prefixItems for tuple validation, dynamic references, and vocabulary extensibility. Most production APIs use draft-07 because it has the widest library support and covers most validation needs. Use 2020-12 for new projects if your toolchain supports it."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I validate API responses against a JSON Schema?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Validate API responses by loading the schema at application startup, then passing each response body through a schema validator library before processing. In Node.js use ajv, in Python use jsonschema, in Go use gojsonschema. For request validation, apply the schema in API middleware to reject malformed requests with a 400 response that includes the specific validation errors. For response validation, log violations in production rather than rejecting responses to avoid breaking clients when the schema and response diverge."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can JSON Schema validate nested objects and arrays?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, JSON Schema supports deep nesting through recursive property definitions. For nested objects, define a properties object within a property. For arrays, use the items keyword to define the schema for array elements, which can be objects with their own properties. You can also use minItems, maxItems, and uniqueItems to constrain array length and uniqueness. The additionalProperties keyword controls whether extra properties are allowed in objects, which is important for forward compatibility."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://kappafy.com/tools/"},{"@type":"ListItem","position":3,"name":"JSON Schema Validator"}]}</script>
+<style>
+  .sim-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .sim-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .sim-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .sim-controls { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr 1fr !important; }
+  }
+  .sim-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .sim-field select,
+  .sim-field input[type="number"],
+  .sim-field input[type="text"],
+  .sim-field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .sim-field textarea {
+    min-height: 200px;
+    resize: vertical;
+    line-height: 1.5;
+    tab-size: 2;
+  }
+  .sim-field select:focus,
+  .sim-field input:focus,
+  .sim-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .sim-field select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .sim-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .sim-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .stat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-card .s-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .stat-card .s-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-card .s-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .validation-result {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.6;
+    display: none;
+  }
+  .validation-result.pass {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #86efac;
+    display: block;
+  }
+  .validation-result.fail {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    display: block;
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .status-table th,
+  .status-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .status-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .status-table td code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span>JSON Schema Validator</span>
+  </nav>
+
+  <h1>JSON Schema Validator and Builder with Auto-Generation</h1>
+  <div class="meta">May 25, 2026 &middot; 15 min read</div>
+
+  <p>JSON Schema is the contract language of modern APIs. It defines what data your API accepts and returns, catches malformed requests before they reach your application logic, and generates documentation and client SDKs automatically. But writing JSON Schema by hand is tedious and error-prone: you need to remember the correct keywords for each constraint, handle nested objects and arrays, and keep the schema synchronized with your actual data structures. This tool automates the process by inferring schemas from example JSON data, validating data against schemas in real time, and providing an interactive builder for refining the generated output.</p>
+
+  <p>Paste example JSON in the left panel and the tool generates a complete draft-07 schema with inferred types, required properties, string format detection (emails, URLs, dates, UUIDs), and nested object schemas. Then paste any JSON in the validator to check it against the schema instantly, with detailed error messages showing exactly which property failed and why. Every operation runs entirely in your browser with no data sent to any server.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#generator">Schema Auto-Generator</a></li>
+      <li><a href="#validator">Schema Validator</a></li>
+      <li><a href="#builder">Interactive Schema Builder</a></li>
+      <li><a href="#types">JSON Schema Type System</a></li>
+      <li><a href="#patterns">Common Schema Patterns</a></li>
+      <li><a href="#validation-keywords">Validation Keywords Reference</a></li>
+      <li><a href="#api-integration">Schema in API Workflows</a></li>
+      <li><a href="#best-practices">Schema Design Best Practices</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="generator">Schema Auto-Generator</h2>
+
+  <p>Paste example JSON data below and click <strong>Generate Schema</strong> to produce a draft-07 JSON Schema. The generator analyzes each property's type, detects string formats (email, URI, date-time, UUID, IPv4), marks properties that appear in all examples as required, and recursively handles nested objects and arrays. Provide multiple examples separated by newlines to improve required property detection.</p>
+
+  <div class="sim-panel">
+    <h3>Example JSON Input</h3>
+    <div class="sim-field">
+      <label for="jsonInput">Paste JSON Data (one or more objects)</label>
+      <textarea id="jsonInput" placeholder='{"id": 1, "name": "Widget", "price": 9.99, "tags": ["sale"], "created": "2026-01-15T10:30:00Z"}'></textarea>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="generateSchema()">Generate Schema</button>
+      <button class="btn" onclick="loadExample()">Load Example</button>
+      <button class="btn btn-sm" onclick="copySchema()">Copy Schema</button>
+    </div>
+    <div id="schemaStats" style="display:none;">
+      <div class="stat-grid" id="statGrid"></div>
+    </div>
+    <div id="schemaOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="validator">Schema Validator</h2>
+
+  <p>Paste a JSON Schema in the left field and JSON data in the right field, then click <strong>Validate</strong> to check the data against the schema. The validator reports each error with the property path, expected type or constraint, and the actual value that failed. Use the schema generated above or paste your own.</p>
+
+  <div class="sim-panel">
+    <h3>Validate JSON Against Schema</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="schemaInput">JSON Schema</label>
+        <textarea id="schemaInput" style="min-height:180px;" placeholder='{"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}'></textarea>
+      </div>
+      <div class="sim-field">
+        <label for="dataInput">JSON Data</label>
+        <textarea id="dataInput" style="min-height:180px;" placeholder='{"name": "Test"}'></textarea>
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="validateData()">Validate</button>
+      <button class="btn" onclick="useGeneratedSchema()">Use Generated Schema</button>
+    </div>
+    <div id="validationResult" class="validation-result"></div>
+    <div id="validationDetails" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="builder">Interactive Schema Builder</h2>
+
+  <p>Build a schema property by property using the form below. Select the property name, type, and constraints, then click <strong>Add Property</strong>. The builder accumulates properties and generates the complete schema on the fly. This is useful for designing schemas from scratch when you do not have example data to auto-generate from.</p>
+
+  <div class="sim-panel">
+    <h3>Add Schema Properties</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="propName">Property Name</label>
+        <input type="text" id="propName" placeholder="email">
+      </div>
+      <div class="sim-field">
+        <label for="propType">Type</label>
+        <select id="propType">
+          <option value="string">string</option>
+          <option value="number">number</option>
+          <option value="integer">integer</option>
+          <option value="boolean">boolean</option>
+          <option value="array">array</option>
+          <option value="object">object</option>
+          <option value="null">null</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="propFormat">Format (optional)</label>
+        <select id="propFormat">
+          <option value="">None</option>
+          <option value="email">email</option>
+          <option value="uri">uri</option>
+          <option value="date-time">date-time</option>
+          <option value="date">date</option>
+          <option value="uuid">uuid</option>
+          <option value="ipv4">ipv4</option>
+          <option value="ipv6">ipv6</option>
+          <option value="hostname">hostname</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="propRequired">Required?</label>
+        <select id="propRequired">
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="addProperty()">Add Property</button>
+      <button class="btn" onclick="clearBuilder()">Clear All</button>
+      <button class="btn btn-sm" onclick="copyBuiltSchema()">Copy Schema</button>
+    </div>
+    <div id="builtSchemaOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="types">JSON Schema Type System</h2>
+
+  <p>JSON Schema defines seven primitive types that map directly to JSON value types. Understanding the type system is the foundation of writing effective schemas because every validation keyword is type-specific. A "minimum" constraint only applies to numbers, a "minLength" constraint only applies to strings, and applying the wrong keyword to the wrong type produces silent validation failures where the constraint is ignored.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>JSON Values</th>
+        <th>Key Constraints</th>
+        <th>Common Formats</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>string</code></td><td>"hello"</td><td>minLength, maxLength, pattern</td><td>email, uri, date-time, uuid</td></tr>
+      <tr><td><code>number</code></td><td>3.14, -1.5</td><td>minimum, maximum, multipleOf</td><td>-</td></tr>
+      <tr><td><code>integer</code></td><td>42, -7</td><td>minimum, maximum, multipleOf</td><td>-</td></tr>
+      <tr><td><code>boolean</code></td><td>true, false</td><td>const, enum</td><td>-</td></tr>
+      <tr><td><code>array</code></td><td>[1, 2, 3]</td><td>items, minItems, maxItems, uniqueItems</td><td>-</td></tr>
+      <tr><td><code>object</code></td><td>{"key": "value"}</td><td>properties, required, additionalProperties</td><td>-</td></tr>
+      <tr><td><code>null</code></td><td>null</td><td>const</td><td>-</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="patterns">Common Schema Patterns</h2>
+
+  <h3>Nullable Fields</h3>
+
+  <p>A field that can be either a string or null requires a type array: <code>{"type": ["string", "null"]}</code>. This is the correct way to represent optional values that are present in the response but may have no value, which is different from the property being absent entirely. The "required" keyword controls whether the property must exist, while the type array controls what values it can hold when it does exist.</p>
+
+  <h3>Enum Validation</h3>
+
+  <p>The "enum" keyword restricts a value to a fixed set: <code>{"type": "string", "enum": ["active", "inactive", "pending"]}</code>. Enums work with any type and provide the tightest validation possible when you know all valid values at schema design time. For single-value constants, use "const" instead: <code>{"const": "v1"}</code> is cleaner than <code>{"enum": ["v1"]}</code>.</p>
+
+  <h3>Conditional Schemas</h3>
+
+  <p>Draft-07 introduced if-then-else for conditional validation. If a "type" field is "business", require a "taxId" property: <code>{"if": {"properties": {"type": {"const": "business"}}}, "then": {"required": ["taxId"]}}</code>. This replaces the complex oneOf/anyOf patterns that were necessary in draft-04 for conditional requirements and makes the schema intention much clearer to readers.</p>
+
+  <h3>Reusable Definitions</h3>
+
+  <p>Use "$defs" (or "definitions" in draft-07) to define reusable sub-schemas referenced by "$ref": <code>{"$defs": {"address": {"type": "object", "properties": {"street": {"type": "string"}}}}, "properties": {"billing": {"$ref": "#/$defs/address"}, "shipping": {"$ref": "#/$defs/address"}}}</code>. This eliminates duplication and ensures consistent validation across properties that share the same structure.</p>
+
+  <h2 id="validation-keywords">Validation Keywords Reference</h2>
+
+  <p>Each validation keyword applies to specific types and controls a single constraint. Combining keywords creates compound validation rules. The most powerful combinations are: <code>type</code> + <code>format</code> for semantic string validation, <code>type</code> + <code>minimum</code> + <code>maximum</code> for bounded numbers, <code>properties</code> + <code>required</code> + <code>additionalProperties: false</code> for strict object shapes, and <code>items</code> + <code>minItems</code> + <code>uniqueItems</code> for constrained arrays.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "id":       { "type": "integer", "minimum": 1 },
+    "email":    { "type": "string", "format": "email" },
+    "name":     { "type": "string", "minLength": 1, "maxLength": 100 },
+    "age":      { "type": "integer", "minimum": 0, "maximum": 150 },
+    "role":     { "type": "string", "enum": ["admin", "user", "guest"] },
+    "tags":     { "type": "array", "items": { "type": "string" },
+                  "minItems": 0, "maxItems": 10, "uniqueItems": true },
+    "metadata": { "type": "object", "additionalProperties": true }
+  },
+  "required": ["id", "email", "name"],
+  "additionalProperties": false
+}</code></pre>
+
+  <h2 id="api-integration">Schema in API Workflows</h2>
+
+  <p>JSON Schema integrates into every stage of the API lifecycle. During design, schemas define the API contract in OpenAPI specifications. During development, schemas generate TypeScript interfaces, Python dataclasses, and Go structs automatically. During testing, schemas power contract testing that verifies both request and response formats. During runtime, schemas validate incoming requests in API middleware, rejecting malformed data with structured error responses before your business logic executes.</p>
+
+  <p>The most impactful integration point is request validation middleware. A schema-validated API endpoint rejects invalid requests with a 400 response containing the specific validation errors, which improves security (blocks injection attempts), reliability (catches client bugs early), and developer experience (clear error messages tell the client exactly what to fix). The implementation cost is minimal: load schemas at startup, validate on each request, and return errors in a standard format.</p>
+
+  <h2 id="best-practices">Schema Design Best Practices</h2>
+
+  <p>First, always set <code>additionalProperties: false</code> for request schemas. This prevents clients from sending unexpected properties that your code ignores today but might process incorrectly after a future refactor. For response schemas, leave <code>additionalProperties: true</code> (the default) so you can add new fields without breaking existing client validations. This asymmetry between request strictness and response flexibility is the key to forward-compatible API evolution.</p>
+
+  <p>Second, use <code>description</code> on every property. Descriptions become API documentation automatically when your schema is embedded in an OpenAPI spec. A schema with descriptions is self-documenting; a schema without descriptions requires a separate documentation effort that inevitably drifts out of sync. Third, prefer specific formats over generic types. <code>{"type": "string", "format": "email"}</code> is more useful than <code>{"type": "string"}</code> because it enables format-aware validation, generates better documentation, and gives code generators enough information to use email-specific types in client SDKs.</p>
+
+  <p>Fourth, version your schemas independently from your API version. A schema change that adds a new optional property is backward-compatible and does not require a new API version. A schema change that removes a property or changes a type is breaking and requires a version bump. Track schema changes in version control alongside your API code so that every deploy has a matching schema version, and use schema diffing tools to detect breaking changes in your CI pipeline.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is JSON Schema and why should I use it?</summary>
+    <p>JSON Schema is a vocabulary that allows you to validate, annotate, and describe the structure of JSON data. It defines what properties are required, what data types are expected, value constraints like minimum and maximum, and string patterns like email or URL formats. You should use it because it catches data errors at the API boundary before they cause bugs in your application logic, generates documentation automatically, and enables code generation for client SDKs in any language.</p>
+  </details>
+  <details>
+    <summary>How do you auto-generate a JSON Schema from example data?</summary>
+    <p>Auto-generation analyzes example JSON data to infer the schema by examining each value's type, detecting patterns in strings (emails, URLs, dates, UUIDs), determining which properties appear consistently across multiple examples to mark as required, and inferring array item schemas from element types. The generated schema is a starting point that you should refine by adding descriptions, tightening constraints, and specifying additional validation rules that cannot be inferred from data alone.</p>
+  </details>
+  <details>
+    <summary>What is the difference between JSON Schema draft-04, draft-07, and 2020-12?</summary>
+    <p>Draft-04 is the oldest widely-used version with basic type validation and required properties. Draft-07 added if-then-else conditionals, const keyword, and readOnly/writeOnly annotations. Draft 2020-12 is the current standard adding prefixItems for tuple validation, dynamic references, and vocabulary extensibility. Most production APIs use draft-07 because it has the widest library support and covers most validation needs. Use 2020-12 for new projects if your toolchain supports it.</p>
+  </details>
+  <details>
+    <summary>How do I validate API responses against a JSON Schema?</summary>
+    <p>Validate API responses by loading the schema at application startup, then passing each response body through a schema validator library before processing. In Node.js use ajv, in Python use jsonschema, in Go use gojsonschema. For request validation, apply the schema in API middleware to reject malformed requests with a 400 response that includes the specific validation errors. For response validation, log violations in production rather than rejecting responses to avoid breaking clients when the schema and response diverge.</p>
+  </details>
+  <details>
+    <summary>Can JSON Schema validate nested objects and arrays?</summary>
+    <p>Yes, JSON Schema supports deep nesting through recursive property definitions. For nested objects, define a properties object within a property. For arrays, use the items keyword to define the schema for array elements, which can be objects with their own properties. You can also use minItems, maxItems, and uniqueItems to constrain array length and uniqueness. The additionalProperties keyword controls whether extra properties are allowed in objects, which is important for forward compatibility.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/answers/api-authentication-comparison.html" class="related-card">OAuth vs API Key vs JWT Wizard</a>
+      <a href="/research/api-versioning-strategies.html" class="related-card">API Versioning Decision Tree</a>
+      <a href="/tools/api-documentation-generator.html" class="related-card">API Documentation Generator</a>
+      <a href="/answers/api-error-handling-patterns.html" class="related-card">API Error Handling Patterns</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var generatedSchema = null;
+  var builtProperties = {};
+  var builtRequired = [];
+
+  function detectFormat(val) {
+    if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val)) return 'email';
+    if (/^https?:\/\//.test(val)) return 'uri';
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) return 'date-time';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return 'date';
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)) return 'uuid';
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(val)) return 'ipv4';
+    return null;
+  }
+
+  function inferSchema(value) {
+    if (value === null) return { type: 'null' };
+    if (typeof value === 'boolean') return { type: 'boolean' };
+    if (typeof value === 'number') {
+      return Number.isInteger(value) ? { type: 'integer' } : { type: 'number' };
+    }
+    if (typeof value === 'string') {
+      var schema = { type: 'string' };
+      var fmt = detectFormat(value);
+      if (fmt) schema.format = fmt;
+      return schema;
+    }
+    if (Array.isArray(value)) {
+      var schema = { type: 'array' };
+      if (value.length > 0) {
+        schema.items = inferSchema(value[0]);
+      }
+      return schema;
+    }
+    if (typeof value === 'object') {
+      var schema = { type: 'object', properties: {}, required: [] };
+      var keys = Object.keys(value);
+      for (var i = 0; i < keys.length; i++) {
+        schema.properties[keys[i]] = inferSchema(value[keys[i]]);
+        schema.required.push(keys[i]);
+      }
+      if (schema.required.length === 0) delete schema.required;
+      return schema;
+    }
+    return {};
+  }
+
+  function countProperties(schema) {
+    var count = 0;
+    if (schema.properties) {
+      var keys = Object.keys(schema.properties);
+      count += keys.length;
+      for (var i = 0; i < keys.length; i++) {
+        if (schema.properties[keys[i]].type === 'object') {
+          count += countProperties(schema.properties[keys[i]]);
+        }
+      }
+    }
+    return count;
+  }
+
+  function countRequired(schema) {
+    var count = 0;
+    if (schema.required) count += schema.required.length;
+    if (schema.properties) {
+      var keys = Object.keys(schema.properties);
+      for (var i = 0; i < keys.length; i++) {
+        if (schema.properties[keys[i]].type === 'object') {
+          count += countRequired(schema.properties[keys[i]]);
+        }
+      }
+    }
+    return count;
+  }
+
+  function countFormats(schema) {
+    var count = 0;
+    if (schema.format) count++;
+    if (schema.properties) {
+      var keys = Object.keys(schema.properties);
+      for (var i = 0; i < keys.length; i++) {
+        count += countFormats(schema.properties[keys[i]]);
+      }
+    }
+    if (schema.items) count += countFormats(schema.items);
+    return count;
+  }
+
+  window.generateSchema = function() {
+    var input = document.getElementById('jsonInput').value.trim();
+    if (!input) return;
+
+    var parsed;
+    try {
+      parsed = JSON.parse(input);
+    } catch (e) {
+      document.getElementById('schemaOutput').textContent = 'Error: Invalid JSON - ' + e.message;
+      document.getElementById('schemaOutput').style.display = 'block';
+      return;
+    }
+
+    var schema = inferSchema(parsed);
+    schema['$schema'] = 'http://json-schema.org/draft-07/schema#';
+    generatedSchema = schema;
+
+    var propCount = countProperties(schema);
+    var reqCount = countRequired(schema);
+    var fmtCount = countFormats(schema);
+    var depth = JSON.stringify(schema).split('"properties"').length - 1;
+
+    var grid = document.getElementById('statGrid');
+    grid.innerHTML =
+      '<div class="stat-card"><div class="s-label">Properties</div><div class="s-value">' + propCount + '</div><div class="s-unit">detected</div></div>' +
+      '<div class="stat-card"><div class="s-label">Required</div><div class="s-value">' + reqCount + '</div><div class="s-unit">fields</div></div>' +
+      '<div class="stat-card"><div class="s-label">Formats</div><div class="s-value">' + fmtCount + '</div><div class="s-unit">detected</div></div>' +
+      '<div class="stat-card"><div class="s-label">Depth</div><div class="s-value">' + depth + '</div><div class="s-unit">levels</div></div>';
+    document.getElementById('schemaStats').style.display = 'block';
+
+    var output = document.getElementById('schemaOutput');
+    output.textContent = JSON.stringify(schema, null, 2);
+    output.style.display = 'block';
+  };
+
+  window.loadExample = function() {
+    document.getElementById('jsonInput').value = JSON.stringify({
+      "id": 42,
+      "name": "API Development Guide",
+      "author": {
+        "email": "dev@example.com",
+        "url": "https://example.com/profile"
+      },
+      "tags": ["api", "rest", "tutorial"],
+      "published": true,
+      "created_at": "2026-05-25T10:30:00Z",
+      "price": 29.99,
+      "metadata": {
+        "uuid": "550e8400-e29b-41d4-a716-446655440000",
+        "version": 3
+      }
+    }, null, 2);
+  };
+
+  function validateAgainstSchema(schema, data, path) {
+    var errors = [];
+    if (!schema) return errors;
+
+    if (schema.type) {
+      var types = Array.isArray(schema.type) ? schema.type : [schema.type];
+      var actual = data === null ? 'null' : Array.isArray(data) ? 'array' : typeof data;
+      if (actual === 'number' && Number.isInteger(data) && types.indexOf('integer') >= 0) {
+        actual = 'integer';
+      }
+      if (types.indexOf(actual) < 0 && !(actual === 'integer' && types.indexOf('number') >= 0)) {
+        errors.push({ path: path || '/', message: 'Expected type ' + types.join('|') + ', got ' + actual });
+      }
+    }
+
+    if (schema.type === 'object' || (typeof data === 'object' && data !== null && !Array.isArray(data))) {
+      if (schema.required) {
+        for (var i = 0; i < schema.required.length; i++) {
+          if (data === null || data === undefined || !(schema.required[i] in data)) {
+            errors.push({ path: (path || '') + '/' + schema.required[i], message: 'Required property missing' });
+          }
+        }
+      }
+      if (schema.properties && data) {
+        var keys = Object.keys(schema.properties);
+        for (var j = 0; j < keys.length; j++) {
+          if (keys[j] in data) {
+            var sub = validateAgainstSchema(schema.properties[keys[j]], data[keys[j]], (path || '') + '/' + keys[j]);
+            errors = errors.concat(sub);
+          }
+        }
+      }
+      if (schema.additionalProperties === false && data && schema.properties) {
+        var dataKeys = Object.keys(data);
+        var schemaKeys = Object.keys(schema.properties);
+        for (var k = 0; k < dataKeys.length; k++) {
+          if (schemaKeys.indexOf(dataKeys[k]) < 0) {
+            errors.push({ path: (path || '') + '/' + dataKeys[k], message: 'Additional property not allowed' });
+          }
+        }
+      }
+    }
+
+    if (schema.type === 'array' && Array.isArray(data)) {
+      if (schema.minItems !== undefined && data.length < schema.minItems) {
+        errors.push({ path: path || '/', message: 'Array has ' + data.length + ' items, minimum ' + schema.minItems });
+      }
+      if (schema.maxItems !== undefined && data.length > schema.maxItems) {
+        errors.push({ path: path || '/', message: 'Array has ' + data.length + ' items, maximum ' + schema.maxItems });
+      }
+      if (schema.items) {
+        for (var m = 0; m < data.length; m++) {
+          var sub2 = validateAgainstSchema(schema.items, data[m], (path || '') + '/[' + m + ']');
+          errors = errors.concat(sub2);
+        }
+      }
+    }
+
+    if (schema.type === 'string' && typeof data === 'string') {
+      if (schema.minLength !== undefined && data.length < schema.minLength) {
+        errors.push({ path: path || '/', message: 'String length ' + data.length + ' below minimum ' + schema.minLength });
+      }
+      if (schema.maxLength !== undefined && data.length > schema.maxLength) {
+        errors.push({ path: path || '/', message: 'String length ' + data.length + ' exceeds maximum ' + schema.maxLength });
+      }
+      if (schema.enum && schema.enum.indexOf(data) < 0) {
+        errors.push({ path: path || '/', message: 'Value "' + data + '" not in enum: ' + schema.enum.join(', ') });
+      }
+    }
+
+    if ((schema.type === 'number' || schema.type === 'integer') && typeof data === 'number') {
+      if (schema.minimum !== undefined && data < schema.minimum) {
+        errors.push({ path: path || '/', message: 'Value ' + data + ' below minimum ' + schema.minimum });
+      }
+      if (schema.maximum !== undefined && data > schema.maximum) {
+        errors.push({ path: path || '/', message: 'Value ' + data + ' exceeds maximum ' + schema.maximum });
+      }
+    }
+
+    return errors;
+  }
+
+  window.validateData = function() {
+    var schemaText = document.getElementById('schemaInput').value.trim();
+    var dataText = document.getElementById('dataInput').value.trim();
+    var resultEl = document.getElementById('validationResult');
+    var detailsEl = document.getElementById('validationDetails');
+
+    var schema, data;
+    try {
+      schema = JSON.parse(schemaText);
+    } catch (e) {
+      resultEl.className = 'validation-result fail';
+      resultEl.textContent = 'Schema parse error: ' + e.message;
+      detailsEl.style.display = 'none';
+      return;
+    }
+    try {
+      data = JSON.parse(dataText);
+    } catch (e) {
+      resultEl.className = 'validation-result fail';
+      resultEl.textContent = 'Data parse error: ' + e.message;
+      detailsEl.style.display = 'none';
+      return;
+    }
+
+    var errors = validateAgainstSchema(schema, data, '');
+
+    if (errors.length === 0) {
+      resultEl.className = 'validation-result pass';
+      resultEl.textContent = 'VALID - JSON data matches the schema. 0 errors found.';
+      detailsEl.style.display = 'none';
+    } else {
+      resultEl.className = 'validation-result fail';
+      resultEl.textContent = 'INVALID - ' + errors.length + ' validation error(s) found.';
+      var details = 'Validation Errors:\n';
+      details += '═══════════════════════════════════\n\n';
+      for (var i = 0; i < errors.length; i++) {
+        details += (i + 1) + '. Path: ' + errors[i].path + '\n';
+        details += '   Error: ' + errors[i].message + '\n\n';
+      }
+      detailsEl.textContent = details;
+      detailsEl.style.display = 'block';
+    }
+  };
+
+  window.useGeneratedSchema = function() {
+    if (generatedSchema) {
+      document.getElementById('schemaInput').value = JSON.stringify(generatedSchema, null, 2);
+    }
+  };
+
+  window.addProperty = function() {
+    var name = document.getElementById('propName').value.trim();
+    if (!name) return;
+
+    var type = document.getElementById('propType').value;
+    var format = document.getElementById('propFormat').value;
+    var required = document.getElementById('propRequired').value === 'yes';
+
+    var prop = { type: type };
+    if (format) prop.format = format;
+    if (type === 'array') prop.items = { type: 'string' };
+
+    builtProperties[name] = prop;
+    if (required && builtRequired.indexOf(name) < 0) builtRequired.push(name);
+
+    var schema = {
+      '$schema': 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: builtProperties
+    };
+    if (builtRequired.length > 0) schema.required = builtRequired;
+
+    var output = document.getElementById('builtSchemaOutput');
+    output.textContent = JSON.stringify(schema, null, 2);
+    output.style.display = 'block';
+
+    document.getElementById('propName').value = '';
+  };
+
+  window.clearBuilder = function() {
+    builtProperties = {};
+    builtRequired = [];
+    document.getElementById('builtSchemaOutput').style.display = 'none';
+  };
+
+  window.copySchema = function() {
+    var text = document.getElementById('schemaOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.querySelector('.sim-btn-row .btn-sm');
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+  window.copyBuiltSchema = function() {
+    var text = document.getElementById('builtSchemaOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btns = document.querySelectorAll('.sim-btn-row .btn-sm');
+      var btn = btns[btns.length - 1];
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

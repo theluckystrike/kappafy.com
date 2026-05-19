@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Error Handling Patterns with Retry Strategy Configurator | Kappafy</title>
+<meta name="description" content="Select the right error handling pattern for your API. Interactive pattern selector covers RFC 7807 problem details, error codes, retry strategies with exponential backoff, circuit breakers, and dead letter queues. Free tool.">
+<link rel="canonical" href="https://kappafy.com/answers/api-error-handling-patterns.html">
+<meta property="og:title" content="API Error Handling Patterns with Retry Strategy Configurator">
+<meta property="og:description" content="Choose API error handling patterns with interactive retry strategy configurator. Exponential backoff calculator, circuit breaker simulator, and RFC 7807 templates.">
+<meta property="og:url" content="https://kappafy.com/answers/api-error-handling-patterns.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="API Error Handling Patterns with Retry Strategy Configurator">
+<meta name="twitter:description" content="Interactive error handling pattern selector with retry strategy configurator. Exponential backoff calculator. Free tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/answers/api-error-handling-patterns.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/answers/api-error-handling-patterns.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "API Error Handling Pattern Selector",
+    "url": "https://kappafy.com/answers/api-error-handling-patterns.html",
+    "description": "Select the right error handling pattern for your API with interactive retry strategy configurator. Covers RFC 7807, exponential backoff, circuit breakers, and dead letter queues.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "featureList": ["Error handling pattern selector", "Retry strategy configurator", "Exponential backoff calculator", "Circuit breaker simulator", "RFC 7807 template generator", "Error response formatter"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is RFC 7807 Problem Details and should I use it?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "RFC 7807 defines a standard JSON format for HTTP API error responses with fields: type (URI identifying the error), title (human-readable summary), status (HTTP status code), detail (specific explanation), and instance (URI for this specific occurrence). You should use it because it provides a consistent error format across all endpoints, is machine-parseable by clients for automated error handling, and is the IETF standard adopted by major APIs including Microsoft Graph and many cloud providers. Clients can build generic error handlers that work across any RFC 7807-compliant API."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "When should an API client retry a failed request?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Retry only on transient errors that are likely to succeed on a subsequent attempt: HTTP 429 (rate limited, respect Retry-After header), 502/503/504 (gateway and service unavailability), network timeouts, and connection resets. Never retry on 400 (bad request, same payload will fail again), 401/403 (authentication or authorization errors), 404 (resource does not exist), or 409 (conflict, requires client resolution). The retry decision should be based on the HTTP status code and the idempotency of the request: GET, PUT, and DELETE are safe to retry, POST requires an idempotency key."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is exponential backoff and how do I calculate the delay?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Exponential backoff increases the delay between retries exponentially to prevent overwhelming a recovering service. The formula is: delay = min(base_delay * 2^attempt + random_jitter, max_delay). For example, with a 1-second base and 3 retries: attempt 1 waits ~1s, attempt 2 waits ~2s, attempt 3 waits ~4s. Random jitter (0-1s) prevents thundering herd problems where all clients retry at the exact same moment. The max_delay cap (typically 30-60 seconds) prevents unreasonably long waits. Most HTTP libraries provide built-in exponential backoff, but configuring the parameters correctly for your specific API is critical."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between a retry and a circuit breaker?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A retry attempts the same request again after a failure, hoping the transient issue has resolved. A circuit breaker stops making requests entirely after a threshold of failures, returning an error immediately without contacting the server. The circuit breaker prevents cascading failures by giving the failing service time to recover without being hammered by retries. After a timeout period, the circuit breaker allows a single test request through. If it succeeds, the circuit closes and normal traffic resumes. If it fails, the circuit stays open. Use retries for individual request failures and circuit breakers for systemic service degradation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How should I structure error responses for a REST API?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Structure error responses with a consistent JSON format containing: an error code (machine-readable string like 'VALIDATION_ERROR' or 'RATE_LIMITED'), a human-readable message describing what went wrong, a details array for field-level validation errors (field name, code, message per field), and a request ID for correlation with server logs. Always return the appropriate HTTP status code. Never return 200 with an error body. Include a documentation URL pointing to the specific error code reference page so developers can self-serve error resolution without contacting support."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Answers","item":"https://kappafy.com/answers/"},{"@type":"ListItem","position":3,"name":"API Error Handling Patterns"}]}</script>
+<style>
+  .sim-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 24px 0; }
+  .sim-panel h3 { font-family: var(--font-display); font-size: 15px; margin-bottom: 16px; color: var(--accent); }
+  .sim-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .sim-controls { grid-template-columns: 1fr; } .retry-grid { grid-template-columns: 1fr !important; } }
+  .sim-field label { display: block; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 500; }
+  .sim-field select, .sim-field input[type="number"], .sim-field input[type="text"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text);
+    font-family: var(--font-body); font-size: 13px; padding: 8px 10px; outline: none; box-sizing: border-box;
+  }
+  .sim-field select:focus, .sim-field input:focus { border-color: var(--accent); }
+  .sim-field select option { background: var(--bg); color: var(--text); }
+  .sim-output { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: var(--font-display); font-size: 12px; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; color: var(--text); max-height: 500px; overflow-y: auto; margin-top: 12px; }
+  .sim-btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .retry-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+  .retry-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; }
+  .retry-card .r-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .retry-card .r-value { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--accent); }
+  .retry-card .r-unit { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .timeline-bar { display: flex; align-items: center; margin: 6px 0; font-family: var(--font-display); font-size: 11px; }
+  .timeline-bar .t-label { width: 70px; flex-shrink: 0; color: var(--text-muted); }
+  .timeline-bar .t-track { flex: 1; height: 24px; background: var(--bg); border-radius: 3px; position: relative; overflow: hidden; }
+  .timeline-bar .t-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s; opacity: 0.7; display: flex; align-items: center; padding-left: 6px; font-size: 10px; color: var(--bg); font-weight: 600; }
+  .pattern-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 8px 0; cursor: pointer; transition: border-color 0.2s; }
+  .pattern-card:hover { border-color: var(--accent); }
+  .pattern-card.selected { border-color: var(--accent); background: rgba(168, 85, 247, 0.05); }
+  .pattern-card h4 { font-size: 13px; margin-bottom: 4px; }
+  .pattern-card p { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .toc { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 24px 0; }
+  .toc h3 { font-size: 14px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  .status-table th, .status-table td { padding: 10px 14px; border: 1px solid var(--border); text-align: left; }
+  .status-table th { background: var(--bg-card); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); }
+  .status-table td code { background: var(--bg-card); padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+  .author-bio { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 32px 0; display: flex; gap: 16px; align-items: flex-start; }
+  .author-bio .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--bg); flex-shrink: 0; }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/answers/">Answers</a> &rsaquo; <span>API Error Handling Patterns</span>
+  </nav>
+
+  <h1>API Error Handling Patterns with Retry Strategy Configurator</h1>
+  <div class="meta">May 25, 2026 &middot; 16 min read</div>
+
+  <p>Error handling is the part of API design that separates production-ready systems from prototypes. When everything works, any API design looks good. When things break, which they will, the error handling determines whether the client can recover automatically, whether the developer can debug quickly, and whether cascading failures bring down your entire service mesh. The three pillars of robust API error handling are structured error responses (so clients know what went wrong), retry strategies (so transient failures resolve automatically), and circuit breakers (so persistent failures do not cascade).</p>
+
+  <p>This tool provides an interactive pattern selector that recommends the right error handling approach for your use case, a retry strategy configurator that calculates exponential backoff timings with jitter, and an error response formatter that generates RFC 7807 Problem Details templates. Use the retry visualizer to see exactly how your backoff parameters translate to timing under failure conditions, and copy the generated code templates into your client and server implementations.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#retry">Retry Strategy Configurator</a></li>
+      <li><a href="#patterns">Error Pattern Selector</a></li>
+      <li><a href="#formatter">Error Response Formatter</a></li>
+      <li><a href="#retryable">Retryable vs Non-Retryable Errors</a></li>
+      <li><a href="#backoff">Exponential Backoff Deep Dive</a></li>
+      <li><a href="#circuit-breaker">Circuit Breaker Pattern</a></li>
+      <li><a href="#rfc7807">RFC 7807 Problem Details</a></li>
+      <li><a href="#idempotency">Idempotency and Safe Retries</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="retry">Retry Strategy Configurator</h2>
+
+  <p>Configure your retry parameters below and click <strong>Calculate Retry Timeline</strong> to visualize the backoff delays. The configurator shows the exact delay for each retry attempt, the total maximum wait time, and the probability of success assuming independent failure probability per attempt. Adjust the base delay, max retries, and jitter to find the right balance between fast recovery and server protection.</p>
+
+  <div class="sim-panel">
+    <h3>Retry Parameters</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="baseDelay">Base Delay (ms)</label>
+        <input type="number" id="baseDelay" value="1000" min="100" max="60000" step="100">
+      </div>
+      <div class="sim-field">
+        <label for="maxRetries">Max Retries</label>
+        <input type="number" id="maxRetries" value="4" min="1" max="10" step="1">
+      </div>
+      <div class="sim-field">
+        <label for="maxDelay">Max Delay Cap (ms)</label>
+        <input type="number" id="maxDelay" value="30000" min="1000" max="300000" step="1000">
+      </div>
+      <div class="sim-field">
+        <label for="jitterType">Jitter Strategy</label>
+        <select id="jitterType">
+          <option value="full">Full Jitter (0 to delay)</option>
+          <option value="equal">Equal Jitter (delay/2 to delay)</option>
+          <option value="decorrelated">Decorrelated Jitter</option>
+          <option value="none">No Jitter</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="failProb">Failure Probability per Attempt (%)</label>
+        <input type="number" id="failProb" value="30" min="1" max="99" step="1">
+      </div>
+      <div class="sim-field">
+        <label for="backoffType">Backoff Type</label>
+        <select id="backoffType">
+          <option value="exponential" selected>Exponential (2^n)</option>
+          <option value="linear">Linear (n * base)</option>
+          <option value="constant">Constant (fixed delay)</option>
+        </select>
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="calculateRetry()">Calculate Retry Timeline</button>
+      <button class="btn" onclick="clearRetry()">Clear</button>
+      <button class="btn btn-sm" onclick="copyRetry()">Copy Results</button>
+    </div>
+    <div id="retryCards" style="display:none;">
+      <div class="retry-grid" id="retryGrid"></div>
+    </div>
+    <div id="retryTimeline" style="display:none;margin-top:16px;"></div>
+    <div id="retryOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="patterns">Error Pattern Selector</h2>
+
+  <p>Select your API characteristics below and the tool recommends the appropriate error handling pattern combination. Click the patterns that match your requirements, then click <strong>Get Recommendation</strong>.</p>
+
+  <div class="sim-panel">
+    <h3>What type of errors does your API encounter?</h3>
+    <div id="patternOptions">
+      <div class="pattern-card" data-p="transient" onclick="togglePattern(this)">
+        <h4>Transient Network Errors</h4>
+        <p>Timeouts, connection resets, DNS failures that resolve on retry.</p>
+      </div>
+      <div class="pattern-card" data-p="ratelimit" onclick="togglePattern(this)">
+        <h4>Rate Limiting (429)</h4>
+        <p>API throttling with Retry-After headers and quota management.</p>
+      </div>
+      <div class="pattern-card" data-p="validation" onclick="togglePattern(this)">
+        <h4>Validation Errors (400)</h4>
+        <p>Malformed requests with field-level error details for client correction.</p>
+      </div>
+      <div class="pattern-card" data-p="downstream" onclick="togglePattern(this)">
+        <h4>Downstream Service Failures</h4>
+        <p>Dependencies that fail intermittently causing 502/503 cascading errors.</p>
+      </div>
+      <div class="pattern-card" data-p="partial" onclick="togglePattern(this)">
+        <h4>Partial Failures</h4>
+        <p>Batch operations where some items succeed and others fail.</p>
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="getPatternRecommendation()">Get Recommendation</button>
+    </div>
+    <div id="patternOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="formatter">Error Response Formatter</h2>
+
+  <p>Generate a structured error response in RFC 7807 format or a custom format. Select the error type, enter details, and click <strong>Generate Error Response</strong> to produce a copy-ready JSON response body with the correct HTTP status code.</p>
+
+  <div class="sim-panel">
+    <h3>Error Response Generator</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="errStatus">HTTP Status</label>
+        <select id="errStatus">
+          <option value="400">400 Bad Request</option>
+          <option value="401">401 Unauthorized</option>
+          <option value="403">403 Forbidden</option>
+          <option value="404">404 Not Found</option>
+          <option value="409">409 Conflict</option>
+          <option value="422">422 Unprocessable Entity</option>
+          <option value="429">429 Too Many Requests</option>
+          <option value="500">500 Internal Server Error</option>
+          <option value="502">502 Bad Gateway</option>
+          <option value="503">503 Service Unavailable</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="errFormat">Response Format</label>
+        <select id="errFormat">
+          <option value="rfc7807">RFC 7807 Problem Details</option>
+          <option value="google">Google API Style</option>
+          <option value="stripe">Stripe Style</option>
+          <option value="custom">Custom Format</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="errMessage">Error Message</label>
+        <input type="text" id="errMessage" placeholder="The email field is required" value="The email field is required">
+      </div>
+      <div class="sim-field">
+        <label for="errCode">Error Code</label>
+        <input type="text" id="errCode" placeholder="VALIDATION_ERROR" value="VALIDATION_ERROR">
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="generateError()">Generate Error Response</button>
+      <button class="btn btn-sm" onclick="copyError()">Copy Response</button>
+    </div>
+    <div id="errorOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="retryable">Retryable vs Non-Retryable Errors</h2>
+
+  <p>The most critical decision in error handling is whether to retry. Retrying a non-retryable error wastes resources, delays the user, and can cause duplicate side effects. Not retrying a retryable error forces the user to manually trigger an action that would have succeeded automatically.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Retryable</th>
+        <th>Reason</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>400</code></td><td>No</td><td>Client error, same payload will fail again</td><td>Fix request and resubmit</td></tr>
+      <tr><td><code>401</code></td><td>Once</td><td>Token may have expired</td><td>Refresh token, retry once</td></tr>
+      <tr><td><code>403</code></td><td>No</td><td>Permission denied permanently</td><td>Check authorization</td></tr>
+      <tr><td><code>404</code></td><td>No</td><td>Resource does not exist</td><td>Verify URL</td></tr>
+      <tr><td><code>409</code></td><td>Conditional</td><td>Conflict may resolve after read</td><td>Re-read, resolve, retry</td></tr>
+      <tr><td><code>429</code></td><td>Yes</td><td>Rate limit, will reset</td><td>Wait for Retry-After</td></tr>
+      <tr><td><code>500</code></td><td>Yes</td><td>Server bug may be transient</td><td>Retry with backoff</td></tr>
+      <tr><td><code>502</code></td><td>Yes</td><td>Gateway issue, often transient</td><td>Retry with backoff</td></tr>
+      <tr><td><code>503</code></td><td>Yes</td><td>Service temporarily unavailable</td><td>Retry with Retry-After</td></tr>
+      <tr><td><code>504</code></td><td>Yes</td><td>Timeout, request may not have reached server</td><td>Retry with idempotency key</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="backoff">Exponential Backoff Deep Dive</h2>
+
+  <p>Exponential backoff is the standard retry timing strategy because it balances fast recovery for transient errors with protection for the server during sustained outages. The formula is: <code>delay = min(base * 2^attempt, max_delay) + jitter</code>. The exponential growth means the first few retries happen quickly (1s, 2s, 4s) to catch brief glitches, while subsequent retries space out dramatically (8s, 16s, 32s) to avoid overwhelming a recovering server.</p>
+
+  <p>Jitter is not optional. Without jitter, all clients that failed at the same time retry at the same time, creating a thundering herd that can re-crash the recovering server. Full jitter randomizes the delay between 0 and the calculated value. Equal jitter randomizes between half and the full value, guaranteeing at least some backoff. Decorrelated jitter uses the previous delay to calculate the next, producing more variance. AWS recommends full jitter based on their analysis of distributed system behavior, and the difference in recovery time between jitter strategies is typically under 10%, so full jitter is the safe default.</p>
+
+  <h2 id="circuit-breaker">Circuit Breaker Pattern</h2>
+
+  <p>The circuit breaker operates in three states: Closed (normal operation, requests pass through), Open (all requests fail immediately without reaching the server), and Half-Open (a single test request passes through to probe server health). The circuit transitions from Closed to Open when the failure count exceeds a threshold within a time window. It transitions from Open to Half-Open after a timeout period. It transitions from Half-Open to Closed on a successful test request, or back to Open on a failed test request.</p>
+
+  <p>The key parameters are: failure threshold (typically 5-10 failures in 60 seconds), timeout duration (typically 30-60 seconds in Open state), and success threshold (typically 1-3 successes in Half-Open to close). These values should be tuned based on your service's recovery characteristics. A service that recovers in seconds (restarting a container) needs a short timeout. A service that recovers in minutes (database failover) needs a longer timeout. Monitor the circuit breaker state and alert when it opens, because an open circuit breaker means the dependency is degraded. For a complete implementation guide, see our <a href="/guides/circuit-breaker-pattern.html">circuit breaker pattern guide</a>.</p>
+
+  <h2 id="rfc7807">RFC 7807 Problem Details</h2>
+
+  <p>RFC 7807 standardizes API error responses with five fields. The <strong>type</strong> field is a URI that identifies the error class and should point to documentation explaining the error. The <strong>title</strong> is a short, human-readable summary that stays constant for a given type. The <strong>status</strong> is the HTTP status code repeated in the body for convenience. The <strong>detail</strong> is a human-readable explanation specific to this occurrence. The <strong>instance</strong> is a URI identifying this specific error occurrence, typically a request ID or trace ID.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/problem+json
+
+{
+  "type": "https://api.example.com/errors/validation",
+  "title": "Validation Error",
+  "status": 422,
+  "detail": "The request body contains invalid fields",
+  "instance": "/requests/abc-123-def",
+  "errors": [
+    {
+      "field": "email",
+      "code": "INVALID_FORMAT",
+      "message": "Must be a valid email address"
+    },
+    {
+      "field": "age",
+      "code": "OUT_OF_RANGE",
+      "message": "Must be between 0 and 150"
+    }
+  ]
+}</code></pre>
+
+  <h2 id="idempotency">Idempotency and Safe Retries</h2>
+
+  <p>Retrying a request is only safe if the request is idempotent, meaning executing it multiple times produces the same result as executing it once. GET, PUT, and DELETE are inherently idempotent in REST semantics. POST is not: retrying a POST /orders request might create duplicate orders. The solution is idempotency keys: the client generates a unique key (UUID) and includes it in the request header. The server stores the key with the response and returns the cached response for duplicate keys, guaranteeing that retries do not create duplicates.</p>
+
+  <p>Implement idempotency keys with a TTL that matches your retry window. If your retry strategy completes within 5 minutes, store idempotency keys for 24 hours to cover delayed retries and manual re-attempts. Use the key as a database unique constraint so concurrent duplicate requests fail at the database level rather than creating duplicates. Return the original response (including the original status code) for idempotent replays, not a new 200 or a 409 conflict, so the client cannot distinguish a replay from the original response.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is RFC 7807 Problem Details and should I use it?</summary>
+    <p>RFC 7807 defines a standard JSON format for HTTP API error responses with fields: type (URI), title (summary), status (HTTP code), detail (explanation), and instance (occurrence URI). Use it because it provides a consistent error format across endpoints, is machine-parseable, and is adopted by major APIs including Microsoft Graph. Clients can build generic error handlers that work across any RFC 7807-compliant API.</p>
+  </details>
+  <details>
+    <summary>When should an API client retry a failed request?</summary>
+    <p>Retry only on transient errors: HTTP 429 (rate limited), 502/503/504 (gateway/availability), network timeouts, and connection resets. Never retry on 400 (bad request), 401/403 (auth errors), 404 (not found), or 409 (conflict). The retry decision depends on the HTTP status code and request idempotency: GET, PUT, and DELETE are safe to retry; POST requires an idempotency key.</p>
+  </details>
+  <details>
+    <summary>What is exponential backoff and how do I calculate the delay?</summary>
+    <p>Exponential backoff increases retry delay exponentially: delay = min(base * 2^attempt + jitter, max_delay). With 1s base: attempt 1 waits ~1s, attempt 2 ~2s, attempt 3 ~4s. Jitter randomizes timing to prevent thundering herds. The max_delay cap prevents unreasonably long waits. Most HTTP libraries provide built-in exponential backoff.</p>
+  </details>
+  <details>
+    <summary>What is the difference between a retry and a circuit breaker?</summary>
+    <p>A retry re-attempts the same request hoping the issue resolved. A circuit breaker stops all requests after a failure threshold, giving the server time to recover. After a timeout, one test request passes through. If it succeeds, traffic resumes. Use retries for individual failures and circuit breakers for systemic degradation.</p>
+  </details>
+  <details>
+    <summary>How should I structure error responses for a REST API?</summary>
+    <p>Use a consistent JSON format with: error code (machine-readable string), message (human-readable), details array (field-level errors), and request ID (for log correlation). Always use the correct HTTP status code. Include a documentation URL for each error code. Never return 200 with an error body.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/guides/circuit-breaker-pattern.html" class="related-card">Circuit Breaker Pattern Guide</a>
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/answers/api-authentication-comparison.html" class="related-card">API Authentication Comparison</a>
+      <a href="/guides/webhook-testing-suite.html" class="related-card">Webhook Testing Suite</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var selectedPatterns = {};
+
+  window.calculateRetry = function() {
+    var base = parseInt(document.getElementById('baseDelay').value) || 1000;
+    var maxR = parseInt(document.getElementById('maxRetries').value) || 4;
+    var maxD = parseInt(document.getElementById('maxDelay').value) || 30000;
+    var jitter = document.getElementById('jitterType').value;
+    var failP = parseInt(document.getElementById('failProb').value) || 30;
+    var backoff = document.getElementById('backoffType').value;
+
+    var attempts = [];
+    var totalDelay = 0;
+    var maxTotal = 0;
+
+    for (var i = 0; i < maxR; i++) {
+      var rawDelay;
+      if (backoff === 'exponential') {
+        rawDelay = base * Math.pow(2, i);
+      } else if (backoff === 'linear') {
+        rawDelay = base * (i + 1);
+      } else {
+        rawDelay = base;
+      }
+      rawDelay = Math.min(rawDelay, maxD);
+
+      var minJ, maxJ;
+      if (jitter === 'full') {
+        minJ = 0; maxJ = rawDelay;
+      } else if (jitter === 'equal') {
+        minJ = rawDelay / 2; maxJ = rawDelay;
+      } else if (jitter === 'decorrelated') {
+        minJ = base; maxJ = rawDelay * 3;
+      } else {
+        minJ = rawDelay; maxJ = rawDelay;
+      }
+
+      var avgDelay = (minJ + maxJ) / 2;
+      totalDelay += avgDelay;
+      maxTotal += maxJ;
+
+      attempts.push({
+        attempt: i + 1,
+        rawDelay: rawDelay,
+        minDelay: Math.round(minJ),
+        maxDelay: Math.round(Math.min(maxJ, maxD)),
+        avgDelay: Math.round(avgDelay)
+      });
+    }
+
+    var successProb = 1 - Math.pow(failP / 100, maxR + 1);
+
+    var grid = document.getElementById('retryGrid');
+    grid.innerHTML =
+      '<div class="retry-card"><div class="r-label">Total Retries</div><div class="r-value">' + maxR + '</div><div class="r-unit">attempts</div></div>' +
+      '<div class="retry-card"><div class="r-label">Avg Total Wait</div><div class="r-value">' + (totalDelay / 1000).toFixed(1) + '</div><div class="r-unit">seconds</div></div>' +
+      '<div class="retry-card"><div class="r-label">Max Total Wait</div><div class="r-value">' + (maxTotal / 1000).toFixed(1) + '</div><div class="r-unit">seconds</div></div>' +
+      '<div class="retry-card"><div class="r-label">Success Prob</div><div class="r-value">' + (successProb * 100).toFixed(1) + '</div><div class="r-unit">%</div></div>';
+    document.getElementById('retryCards').style.display = 'block';
+
+    var maxBar = Math.max.apply(null, attempts.map(function(a) { return a.maxDelay; }));
+    var timelineHtml = '<h3 style="font-family:var(--font-display);font-size:14px;color:var(--accent);margin-bottom:12px;">Retry Timeline</h3>';
+    for (var j = 0; j < attempts.length; j++) {
+      var a = attempts[j];
+      var pct = maxBar > 0 ? (a.avgDelay / maxBar) * 100 : 0;
+      timelineHtml += '<div class="timeline-bar">';
+      timelineHtml += '<span class="t-label">Retry ' + a.attempt + '</span>';
+      timelineHtml += '<div class="t-track"><div class="t-fill" style="width:' + pct + '%;">' + (a.avgDelay / 1000).toFixed(1) + 's</div></div>';
+      timelineHtml += '</div>';
+    }
+    document.getElementById('retryTimeline').innerHTML = timelineHtml;
+    document.getElementById('retryTimeline').style.display = 'block';
+
+    var output = 'Retry Strategy Configuration\n';
+    output += '═══════════════════════════════════════\n\n';
+    output += 'Parameters:\n';
+    output += '  Base Delay:     ' + base + 'ms\n';
+    output += '  Max Retries:    ' + maxR + '\n';
+    output += '  Max Delay Cap:  ' + maxD + 'ms\n';
+    output += '  Jitter:         ' + jitter + '\n';
+    output += '  Backoff:        ' + backoff + '\n';
+    output += '  Fail Prob:      ' + failP + '% per attempt\n\n';
+    output += 'Timeline:\n';
+    for (var k = 0; k < attempts.length; k++) {
+      var at = attempts[k];
+      output += '  Retry ' + at.attempt + ': ' + at.minDelay + '-' + at.maxDelay + 'ms (avg ' + at.avgDelay + 'ms)\n';
+    }
+    output += '\nSummary:\n';
+    output += '  Avg Total Wait:   ' + (totalDelay / 1000).toFixed(1) + 's\n';
+    output += '  Max Total Wait:   ' + (maxTotal / 1000).toFixed(1) + 's\n';
+    output += '  Success Prob:     ' + (successProb * 100).toFixed(1) + '%\n';
+    output += '  (assuming ' + failP + '% independent failure per attempt)';
+
+    document.getElementById('retryOutput').textContent = output;
+    document.getElementById('retryOutput').style.display = 'block';
+  };
+
+  window.togglePattern = function(el) {
+    var p = el.getAttribute('data-p');
+    if (selectedPatterns[p]) {
+      delete selectedPatterns[p];
+      el.classList.remove('selected');
+    } else {
+      selectedPatterns[p] = true;
+      el.classList.add('selected');
+    }
+  };
+
+  window.getPatternRecommendation = function() {
+    var selected = Object.keys(selectedPatterns);
+    if (selected.length === 0) {
+      document.getElementById('patternOutput').textContent = 'Select at least one error type above.';
+      document.getElementById('patternOutput').style.display = 'block';
+      return;
+    }
+
+    var recs = [];
+    if (selectedPatterns.transient) {
+      recs.push('EXPONENTIAL BACKOFF WITH JITTER\n  For transient network errors, implement exponential backoff with full jitter.\n  Base: 1s, Max retries: 3-5, Max delay: 30s.\n  Retry on: timeout, connection reset, 502/503/504.');
+    }
+    if (selectedPatterns.ratelimit) {
+      recs.push('RETRY-AFTER HEADER COMPLIANCE\n  For 429 responses, always respect the Retry-After header.\n  Parse both delta-seconds and HTTP-date formats.\n  Implement a token bucket client-side to pre-emptively throttle.');
+    }
+    if (selectedPatterns.validation) {
+      recs.push('RFC 7807 PROBLEM DETAILS + FIELD ERRORS\n  Return structured validation errors with field paths and codes.\n  Never retry validation errors (same payload will fail again).\n  Include documentation URLs for each error code.');
+    }
+    if (selectedPatterns.downstream) {
+      recs.push('CIRCUIT BREAKER + FALLBACK\n  For downstream dependency failures, add a circuit breaker.\n  Threshold: 5 failures in 60s, timeout: 30s, test: 1 success to close.\n  Provide degraded functionality when circuit is open.');
+    }
+    if (selectedPatterns.partial) {
+      recs.push('PARTIAL SUCCESS RESPONSE (207 MULTI-STATUS)\n  Return 207 with per-item results array.\n  Each item: {index, status, result/error}.\n  Client retries only failed items with original idempotency keys.');
+    }
+
+    var output = 'Error Handling Recommendation\n';
+    output += '═══════════════════════════════════════\n\n';
+    output += 'Selected error types: ' + selected.join(', ') + '\n\n';
+    output += 'Recommended patterns:\n\n';
+    output += recs.join('\n\n');
+
+    document.getElementById('patternOutput').textContent = output;
+    document.getElementById('patternOutput').style.display = 'block';
+  };
+
+  window.generateError = function() {
+    var status = document.getElementById('errStatus').value;
+    var format = document.getElementById('errFormat').value;
+    var message = document.getElementById('errMessage').value || 'An error occurred';
+    var code = document.getElementById('errCode').value || 'UNKNOWN_ERROR';
+
+    var response;
+
+    if (format === 'rfc7807') {
+      response = {
+        type: 'https://api.example.com/errors/' + code.toLowerCase().replace(/_/g, '-'),
+        title: code.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }),
+        status: parseInt(status),
+        detail: message,
+        instance: '/requests/' + Math.random().toString(36).substring(2, 10)
+      };
+    } else if (format === 'google') {
+      response = {
+        error: {
+          code: parseInt(status),
+          message: message,
+          status: code,
+          errors: [
+            { message: message, domain: 'global', reason: code.toLowerCase() }
+          ]
+        }
+      };
+    } else if (format === 'stripe') {
+      response = {
+        error: {
+          type: code.toLowerCase().indexOf('validation') >= 0 ? 'invalid_request_error' : 'api_error',
+          code: code.toLowerCase(),
+          message: message,
+          param: null,
+          doc_url: 'https://docs.example.com/errors#' + code.toLowerCase()
+        }
+      };
+    } else {
+      response = {
+        error: {
+          code: code,
+          message: message,
+          status: parseInt(status),
+          timestamp: new Date().toISOString(),
+          request_id: 'req_' + Math.random().toString(36).substring(2, 12),
+          docs: 'https://docs.example.com/errors/' + code.toLowerCase()
+        }
+      };
+    }
+
+    var output = 'HTTP/1.1 ' + status + '\n';
+    output += 'Content-Type: ' + (format === 'rfc7807' ? 'application/problem+json' : 'application/json') + '\n\n';
+    output += JSON.stringify(response, null, 2);
+
+    document.getElementById('errorOutput').textContent = output;
+    document.getElementById('errorOutput').style.display = 'block';
+  };
+
+  window.clearRetry = function() {
+    document.getElementById('retryCards').style.display = 'none';
+    document.getElementById('retryTimeline').style.display = 'none';
+    document.getElementById('retryOutput').style.display = 'none';
+  };
+
+  window.copyRetry = function() {
+    var text = document.getElementById('retryOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.querySelector('.sim-btn-row .btn-sm');
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+  window.copyError = function() {
+    var text = document.getElementById('errorOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btns = document.querySelectorAll('.sim-btn-row .btn-sm');
+      var btn = btns[btns.length - 1];
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

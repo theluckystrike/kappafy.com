@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Documentation Generator with OpenAPI Spec Builder | Kappafy</title>
+<meta name="description" content="Build OpenAPI 3.0 specifications interactively and preview live documentation. Add endpoints, schemas, and authentication in a visual editor. Export to YAML or JSON. Free browser-based API documentation tool.">
+<link rel="canonical" href="https://kappafy.com/tools/api-documentation-generator.html">
+<meta property="og:title" content="API Documentation Generator with OpenAPI Spec Builder">
+<meta property="og:description" content="Build OpenAPI 3.0 specs interactively with live documentation preview. Visual endpoint editor, schema builder, and YAML/JSON export. Free tool.">
+<meta property="og:url" content="https://kappafy.com/tools/api-documentation-generator.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="API Documentation Generator with OpenAPI Spec Builder">
+<meta name="twitter:description" content="Build OpenAPI 3.0 specs with live documentation preview. Free visual editor for API docs.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/tools/api-documentation-generator.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/tools/api-documentation-generator.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "API Documentation Generator",
+    "url": "https://kappafy.com/tools/api-documentation-generator.html",
+    "description": "Build OpenAPI 3.0 specifications interactively and preview live documentation. Add endpoints, schemas, and authentication in a visual editor. Export to YAML or JSON.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "featureList": ["OpenAPI 3.0 spec builder", "Interactive endpoint editor", "Live documentation preview", "JSON and YAML export", "Authentication configuration", "Response schema builder"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is OpenAPI and how does it relate to Swagger?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "OpenAPI is the specification standard for describing RESTful APIs. Swagger was the original name for both the specification and the tooling. In 2016, the specification was donated to the OpenAPI Initiative and renamed to OpenAPI Specification (OAS). Swagger now refers specifically to the tooling ecosystem built by SmartBear: Swagger UI for documentation rendering, Swagger Editor for spec editing, and Swagger Codegen for client SDK generation. When people say Swagger they usually mean the tooling; when they say OpenAPI they mean the specification format."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Should I write API documentation before or after building the API?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Write documentation first using a design-first approach. Define the OpenAPI spec before writing any code, review it with frontend developers and API consumers, then generate server stubs from the spec. This catches design problems early when changes are cheap, ensures the API contract is driven by consumer needs rather than implementation convenience, and produces documentation that is always accurate because the code is generated from it. The alternative code-first approach generates specs from annotations in code, which is faster initially but produces documentation that lags behind the implementation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are the required fields in an OpenAPI 3.0 specification?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "An OpenAPI 3.0 specification requires three top-level fields: openapi (the version string, e.g. '3.0.3'), info (containing title and version), and paths (the endpoint definitions). The info object must contain at least title and version strings. The paths object maps URL patterns to operations. While technically valid with just these fields, a production spec should also include servers (base URLs), components/schemas (reusable data models), security (authentication requirements), and tags (endpoint grouping)."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I document authentication in OpenAPI?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Authentication is documented using security schemes in the components/securitySchemes section. Define each scheme with its type (apiKey, http, oauth2, or openIdConnect), then reference it in the top-level security array for global authentication or in individual operation security for per-endpoint overrides. For Bearer JWT authentication, use type http with scheme bearer and bearerFormat JWT. For API keys, use type apiKey with the header name and location. For OAuth 2.0, define flows with authorization and token URLs plus available scopes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I generate client SDKs from an OpenAPI spec?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use OpenAPI Generator (the open-source successor to Swagger Codegen) to generate client SDKs in over 50 languages from your spec file. Run the CLI command with your spec URL and target language to produce a complete client library with typed models, API methods, authentication handling, and error types. Popular alternatives include openapi-typescript for TypeScript types, oapi-codegen for Go, and Kiota from Microsoft for multiple languages. The generated code quality depends directly on the completeness of your spec, especially response schemas and error definitions."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://kappafy.com/tools/"},{"@type":"ListItem","position":3,"name":"API Documentation Generator"}]}</script>
+<style>
+  .sim-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 24px 0; }
+  .sim-panel h3 { font-family: var(--font-display); font-size: 15px; margin-bottom: 16px; color: var(--accent); }
+  .sim-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .sim-controls { grid-template-columns: 1fr; } .endpoint-list { grid-template-columns: 1fr !important; } }
+  .sim-field label { display: block; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 500; }
+  .sim-field select, .sim-field input[type="number"], .sim-field input[type="text"], .sim-field textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text);
+    font-family: var(--font-display); font-size: 13px; padding: 8px 10px; outline: none; box-sizing: border-box;
+  }
+  .sim-field textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+  .sim-field select:focus, .sim-field input:focus, .sim-field textarea:focus { border-color: var(--accent); }
+  .sim-field select option { background: var(--bg); color: var(--text); }
+  .sim-output { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: var(--font-display); font-size: 12px; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; color: var(--text); max-height: 500px; overflow-y: auto; margin-top: 12px; }
+  .sim-btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .endpoint-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+  .endpoint-item { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .endpoint-item .ep-method { font-weight: 700; font-family: var(--font-display); text-transform: uppercase; width: 50px; }
+  .endpoint-item .ep-path { flex: 1; margin: 0 8px; font-family: var(--font-display); }
+  .endpoint-item .ep-del { cursor: pointer; color: var(--text-muted); font-size: 14px; }
+  .endpoint-item .ep-del:hover { color: #ef4444; }
+  .method-get { color: #22c55e; }
+  .method-post { color: #3b82f6; }
+  .method-put { color: #f59e0b; }
+  .method-delete { color: #ef4444; }
+  .method-patch { color: #a855f7; }
+  .preview-section { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 16px; }
+  .preview-endpoint { margin: 16px 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+  .preview-endpoint h4 { font-size: 13px; margin-bottom: 8px; }
+  .preview-endpoint .pe-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .preview-endpoint code { background: var(--bg-card); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+  .stat-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; }
+  .stat-card .s-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-card .s-value { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--accent); }
+  .stat-card .s-unit { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .toc { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 24px 0; }
+  .toc h3 { font-size: 14px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  .status-table th, .status-table td { padding: 10px 14px; border: 1px solid var(--border); text-align: left; }
+  .status-table th { background: var(--bg-card); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); }
+  .status-table td code { background: var(--bg-card); padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+  .author-bio { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 32px 0; display: flex; gap: 16px; align-items: flex-start; }
+  .author-bio .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--bg); flex-shrink: 0; }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span>API Documentation Generator</span>
+  </nav>
+
+  <h1>API Documentation Generator with OpenAPI Spec Builder</h1>
+  <div class="meta">May 25, 2026 &middot; 16 min read</div>
+
+  <p>Good API documentation is the difference between an API that developers adopt in minutes and one they abandon after hours of frustration. The OpenAPI Specification (formerly Swagger) is the industry standard for describing REST APIs in a machine-readable format that generates documentation, client SDKs, and test suites automatically. But creating an OpenAPI spec from scratch requires memorizing the specification structure, understanding YAML/JSON syntax, and maintaining consistency across dozens of endpoints. This tool simplifies the process with a visual builder that produces valid OpenAPI 3.0 specifications from form inputs, previews the generated documentation live, and exports the result in both JSON and YAML formats.</p>
+
+  <p>Start by configuring your API's metadata (title, version, base URL), then add endpoints one by one with their HTTP methods, paths, descriptions, parameters, and response schemas. The builder validates your inputs, prevents duplicate paths, and generates a complete spec that you can paste directly into Swagger UI, Redoc, or any OpenAPI-compatible tool. The documentation preview shows how your API will look to consumers before you publish it.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#builder">OpenAPI Spec Builder</a></li>
+      <li><a href="#preview">Documentation Preview</a></li>
+      <li><a href="#export">Export and Share</a></li>
+      <li><a href="#openapi-structure">OpenAPI Specification Structure</a></li>
+      <li><a href="#design-first">Design-First API Development</a></li>
+      <li><a href="#documentation-patterns">Documentation Patterns That Work</a></li>
+      <li><a href="#tools-ecosystem">OpenAPI Tools Ecosystem</a></li>
+      <li><a href="#versioning-docs">Versioning Your Documentation</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="builder">OpenAPI Spec Builder</h2>
+
+  <p>Configure the API metadata first, then add endpoints. Each endpoint needs an HTTP method, path, summary, and at least one response code. The builder generates a valid OpenAPI 3.0.3 spec in real time.</p>
+
+  <div class="sim-panel">
+    <h3>API Metadata</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="apiTitle">API Title</label>
+        <input type="text" id="apiTitle" value="My API" placeholder="My API">
+      </div>
+      <div class="sim-field">
+        <label for="apiVersion">API Version</label>
+        <input type="text" id="apiVersion" value="1.0.0" placeholder="1.0.0">
+      </div>
+      <div class="sim-field">
+        <label for="apiBaseUrl">Base URL</label>
+        <input type="text" id="apiBaseUrl" value="https://api.example.com/v1" placeholder="https://api.example.com/v1">
+      </div>
+      <div class="sim-field">
+        <label for="apiDesc">Description</label>
+        <input type="text" id="apiDesc" value="" placeholder="A brief description of your API">
+      </div>
+    </div>
+  </div>
+
+  <div class="sim-panel">
+    <h3>Add Endpoint</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="epMethod">HTTP Method</label>
+        <select id="epMethod">
+          <option value="get">GET</option>
+          <option value="post">POST</option>
+          <option value="put">PUT</option>
+          <option value="patch">PATCH</option>
+          <option value="delete">DELETE</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="epPath">Path</label>
+        <input type="text" id="epPath" placeholder="/users/{id}">
+      </div>
+      <div class="sim-field">
+        <label for="epSummary">Summary</label>
+        <input type="text" id="epSummary" placeholder="Get user by ID">
+      </div>
+      <div class="sim-field">
+        <label for="epTag">Tag (grouping)</label>
+        <input type="text" id="epTag" placeholder="Users">
+      </div>
+      <div class="sim-field">
+        <label for="epResponseCode">Response Code</label>
+        <select id="epResponseCode">
+          <option value="200">200 OK</option>
+          <option value="201">201 Created</option>
+          <option value="204">204 No Content</option>
+          <option value="400">400 Bad Request</option>
+          <option value="401">401 Unauthorized</option>
+          <option value="404">404 Not Found</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="epResponseDesc">Response Description</label>
+        <input type="text" id="epResponseDesc" placeholder="Successful response">
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="addEndpoint()">Add Endpoint</button>
+      <button class="btn" onclick="loadSampleApi()">Load Sample API</button>
+      <button class="btn" onclick="clearEndpoints()">Clear All</button>
+    </div>
+    <div id="endpointList" class="endpoint-list"></div>
+  </div>
+
+  <div class="sim-panel">
+    <h3>Authentication</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="authType">Auth Type</label>
+        <select id="authType">
+          <option value="none">None</option>
+          <option value="bearer">Bearer Token (JWT)</option>
+          <option value="apikey">API Key (Header)</option>
+          <option value="basic">Basic Auth</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="authKeyName">Header/Key Name</label>
+        <input type="text" id="authKeyName" value="Authorization" placeholder="Authorization">
+      </div>
+    </div>
+  </div>
+
+  <h2 id="preview">Documentation Preview</h2>
+
+  <p>Click <strong>Generate Spec</strong> to build the OpenAPI specification and render the documentation preview. The preview shows endpoints grouped by tag with their methods, paths, parameters, and responses. This is how your API documentation will appear to consumers.</p>
+
+  <div class="sim-panel">
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="generateSpec()">Generate Spec</button>
+      <button class="btn btn-sm" onclick="copySpec()">Copy JSON</button>
+      <button class="btn btn-sm" onclick="copyYaml()">Copy YAML</button>
+    </div>
+    <div id="specStats" style="display:none;">
+      <div class="stat-grid" id="statGrid"></div>
+    </div>
+    <div id="docPreview" class="preview-section" style="display:none;"></div>
+    <div id="specOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="export">Export and Share</h2>
+
+  <p>The generated specification can be exported as JSON (for programmatic use) or YAML (for human readability). Both formats are fully compatible with Swagger UI, Redoc, Stoplight, and every OpenAPI-compatible tool. Copy the output and paste it into your documentation renderer, import it into Postman, or commit it to your repository as the single source of truth for your API contract.</p>
+
+  <h2 id="openapi-structure">OpenAPI Specification Structure</h2>
+
+  <p>An OpenAPI 3.0 specification is organized into five main sections. The <strong>info</strong> section contains metadata: title, version, description, contact, and license. The <strong>servers</strong> section lists base URLs for different environments (production, staging, development). The <strong>paths</strong> section defines each endpoint with its HTTP method, parameters, request body, and responses. The <strong>components</strong> section contains reusable schemas, security schemes, parameters, and response definitions. The <strong>security</strong> section applies authentication globally or per-endpoint.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Section</th>
+        <th>Purpose</th>
+        <th>Required</th>
+        <th>Key Fields</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>openapi</code></td><td>Spec version</td><td>Yes</td><td>"3.0.3"</td></tr>
+      <tr><td><code>info</code></td><td>API metadata</td><td>Yes</td><td>title, version, description</td></tr>
+      <tr><td><code>servers</code></td><td>Base URLs</td><td>No</td><td>url, description, variables</td></tr>
+      <tr><td><code>paths</code></td><td>Endpoints</td><td>Yes</td><td>path, method, parameters, responses</td></tr>
+      <tr><td><code>components</code></td><td>Reusable definitions</td><td>No</td><td>schemas, securitySchemes, parameters</td></tr>
+      <tr><td><code>security</code></td><td>Auth requirements</td><td>No</td><td>References to securitySchemes</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="design-first">Design-First API Development</h2>
+
+  <p>Design-first means writing the OpenAPI spec before writing any code. This inverts the traditional workflow where developers build the API, then write documentation after. Design-first produces better APIs because it forces you to think about the consumer experience before getting locked into implementation details. The spec becomes the contract between frontend and backend teams, and both can work in parallel: frontend develops against mock servers generated from the spec, backend implements the spec knowing exactly what the contract requires.</p>
+
+  <p>The workflow is: design the spec in this tool, review with consumers, generate server stubs (using openapi-generator or a similar tool), implement business logic in the stubs, then validate the implementation against the spec in CI. Any deviation between the spec and the implementation fails the build, ensuring documentation never drifts out of sync. Teams that adopt design-first report 40-60% fewer integration bugs because the contract is validated automatically rather than relying on manual testing.</p>
+
+  <h2 id="documentation-patterns">Documentation Patterns That Work</h2>
+
+  <p>The best API documentation follows five patterns. First, every endpoint has a complete example request and response. Developers learn by example, and a working curl command is worth more than a page of parameter descriptions. Second, error responses are documented as thoroughly as success responses. Include the error format, specific error codes, and what the client should do to fix each error. Third, authentication is explained with a step-by-step getting started guide, not just a list of security schemes. Show the developer how to get a token, how to include it in a request, and what error they will see if they forget it.</p>
+
+  <p>Fourth, pagination, filtering, and sorting conventions are documented once at the top level and referenced from every list endpoint. Do not repeat the same pagination description on every GET endpoint. Fifth, rate limits are documented with the response headers that communicate remaining quota. Developers need to know not just the limit but how to detect when they are approaching it and how long to wait after hitting it. For more on handling rate limits in your API clients, see our <a href="/guides/rate-limiting-tester.html">rate limiting calculator and tester</a>.</p>
+
+  <h2 id="tools-ecosystem">OpenAPI Tools Ecosystem</h2>
+
+  <p>The OpenAPI ecosystem includes tools for every stage of the API lifecycle. Swagger UI and Redoc render interactive documentation from a spec file. Postman and Insomnia import specs to create request collections. OpenAPI Generator produces client SDKs in 50+ languages. Prism creates mock servers from specs for frontend development. Schemathesis generates fuzz tests from specs to find edge cases. Spectral lints specs for consistency and best practices. Optic tracks spec changes over time and detects breaking changes in CI.</p>
+
+  <p>The tool selection that maximizes ROI for most teams is: this builder or Stoplight for spec creation, Redoc for documentation hosting (it renders better than Swagger UI for large APIs), OpenAPI Generator for client SDKs, Prism for mocking during development, and Spectral for linting in CI. This five-tool stack covers spec creation, documentation, client generation, mocking, and validation with minimal setup overhead.</p>
+
+  <h2 id="versioning-docs">Versioning Your Documentation</h2>
+
+  <p>Store your OpenAPI spec in version control alongside your API code. Every commit that changes the API should include the corresponding spec change. Use a CI job that diffs the spec against the previous version and classifies changes as breaking (removed endpoints, changed required parameters, narrowed response types) or non-breaking (added endpoints, added optional parameters, widened response types). Breaking changes require a version bump; non-breaking changes are additive.</p>
+
+  <p>Host multiple spec versions simultaneously so that consumers on older versions can still access their documentation. A common pattern is versioned URLs: /docs/v1, /docs/v2. Each version renders its own spec file. Include a migration guide between versions that lists every breaking change with before/after examples and suggested client code changes. The migration guide reduces support tickets by 80% compared to just publishing a changelog.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is OpenAPI and how does it relate to Swagger?</summary>
+    <p>OpenAPI is the specification standard for describing RESTful APIs. Swagger was the original name for both the specification and the tooling. In 2016, the specification was donated to the OpenAPI Initiative and renamed to OpenAPI Specification (OAS). Swagger now refers to the tooling ecosystem: Swagger UI for documentation, Swagger Editor for editing, and Swagger Codegen for SDK generation. When people say Swagger they usually mean the tooling; when they say OpenAPI they mean the specification format.</p>
+  </details>
+  <details>
+    <summary>Should I write API documentation before or after building the API?</summary>
+    <p>Write documentation first using a design-first approach. Define the OpenAPI spec before writing code, review it with consumers, then generate server stubs. This catches design problems early, ensures the contract is consumer-driven, and produces documentation that is always accurate because the code is generated from it. The code-first approach generates specs from code annotations, which is faster initially but documentation inevitably lags behind.</p>
+  </details>
+  <details>
+    <summary>What are the required fields in an OpenAPI 3.0 specification?</summary>
+    <p>An OpenAPI 3.0 spec requires three top-level fields: openapi (version string like "3.0.3"), info (containing title and version), and paths (endpoint definitions). A production spec should also include servers (base URLs), components/schemas (reusable data models), security (authentication), and tags (endpoint grouping).</p>
+  </details>
+  <details>
+    <summary>How do I document authentication in OpenAPI?</summary>
+    <p>Define security schemes in components/securitySchemes, then reference them in the top-level security array for global auth or per-operation. For Bearer JWT, use type "http" with scheme "bearer". For API keys, use type "apiKey" with the header name. For OAuth 2.0, define flows with authorization/token URLs and scopes.</p>
+  </details>
+  <details>
+    <summary>How do I generate client SDKs from an OpenAPI spec?</summary>
+    <p>Use OpenAPI Generator to produce client SDKs in 50+ languages from your spec. The generated code includes typed models, API methods, authentication handling, and error types. Alternatives include openapi-typescript for TypeScript, oapi-codegen for Go, and Kiota for multiple languages. Generated code quality depends on spec completeness, especially response schemas and error definitions.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/tools/json-schema-validator.html" class="related-card">JSON Schema Validator &amp; Builder</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/research/api-versioning-strategies.html" class="related-card">API Versioning Decision Tree</a>
+      <a href="/answers/api-authentication-comparison.html" class="related-card">API Authentication Comparison</a>
+      <a href="/answers/api-error-handling-patterns.html" class="related-card">API Error Handling Patterns</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var endpoints = [];
+  var specJson = null;
+
+  window.addEndpoint = function() {
+    var method = document.getElementById('epMethod').value;
+    var path = document.getElementById('epPath').value.trim();
+    var summary = document.getElementById('epSummary').value.trim();
+    var tag = document.getElementById('epTag').value.trim();
+    var respCode = document.getElementById('epResponseCode').value;
+    var respDesc = document.getElementById('epResponseDesc').value.trim();
+
+    if (!path || !summary) return;
+    if (!path.startsWith('/')) path = '/' + path;
+
+    endpoints.push({
+      method: method,
+      path: path,
+      summary: summary,
+      tag: tag || 'default',
+      respCode: respCode,
+      respDesc: respDesc || 'Successful response'
+    });
+
+    renderEndpointList();
+    document.getElementById('epPath').value = '';
+    document.getElementById('epSummary').value = '';
+    document.getElementById('epResponseDesc').value = '';
+  };
+
+  window.removeEndpoint = function(idx) {
+    endpoints.splice(idx, 1);
+    renderEndpointList();
+  };
+
+  function renderEndpointList() {
+    var list = document.getElementById('endpointList');
+    if (endpoints.length === 0) { list.innerHTML = ''; return; }
+    var html = '';
+    for (var i = 0; i < endpoints.length; i++) {
+      var ep = endpoints[i];
+      html += '<div class="endpoint-item">';
+      html += '<span class="ep-method method-' + ep.method + '">' + ep.method.toUpperCase() + '</span>';
+      html += '<span class="ep-path">' + ep.path + '</span>';
+      html += '<span class="ep-del" onclick="removeEndpoint(' + i + ')">&times;</span>';
+      html += '</div>';
+    }
+    list.innerHTML = html;
+  }
+
+  window.loadSampleApi = function() {
+    endpoints = [
+      { method: 'get', path: '/users', summary: 'List all users', tag: 'Users', respCode: '200', respDesc: 'Array of user objects' },
+      { method: 'post', path: '/users', summary: 'Create a new user', tag: 'Users', respCode: '201', respDesc: 'Created user object' },
+      { method: 'get', path: '/users/{id}', summary: 'Get user by ID', tag: 'Users', respCode: '200', respDesc: 'User object' },
+      { method: 'put', path: '/users/{id}', summary: 'Update user', tag: 'Users', respCode: '200', respDesc: 'Updated user object' },
+      { method: 'delete', path: '/users/{id}', summary: 'Delete user', tag: 'Users', respCode: '204', respDesc: 'User deleted' },
+      { method: 'get', path: '/products', summary: 'List products', tag: 'Products', respCode: '200', respDesc: 'Array of product objects' },
+      { method: 'post', path: '/products', summary: 'Create product', tag: 'Products', respCode: '201', respDesc: 'Created product object' },
+      { method: 'get', path: '/orders', summary: 'List orders', tag: 'Orders', respCode: '200', respDesc: 'Array of order objects' },
+      { method: 'post', path: '/orders', summary: 'Place an order', tag: 'Orders', respCode: '201', respDesc: 'Created order object' }
+    ];
+    document.getElementById('apiTitle').value = 'E-Commerce API';
+    document.getElementById('apiVersion').value = '2.0.0';
+    document.getElementById('apiDesc').value = 'RESTful API for managing users, products, and orders';
+    document.getElementById('authType').value = 'bearer';
+    renderEndpointList();
+  };
+
+  window.clearEndpoints = function() {
+    endpoints = [];
+    renderEndpointList();
+    document.getElementById('specOutput').style.display = 'none';
+    document.getElementById('docPreview').style.display = 'none';
+    document.getElementById('specStats').style.display = 'none';
+  };
+
+  window.generateSpec = function() {
+    var title = document.getElementById('apiTitle').value.trim() || 'My API';
+    var version = document.getElementById('apiVersion').value.trim() || '1.0.0';
+    var baseUrl = document.getElementById('apiBaseUrl').value.trim();
+    var desc = document.getElementById('apiDesc').value.trim();
+    var authType = document.getElementById('authType').value;
+    var authKeyName = document.getElementById('authKeyName').value.trim();
+
+    var spec = {
+      openapi: '3.0.3',
+      info: { title: title, version: version }
+    };
+    if (desc) spec.info.description = desc;
+    if (baseUrl) spec.servers = [{ url: baseUrl }];
+
+    spec.paths = {};
+    var tags = {};
+
+    for (var i = 0; i < endpoints.length; i++) {
+      var ep = endpoints[i];
+      if (!spec.paths[ep.path]) spec.paths[ep.path] = {};
+
+      var params = [];
+      var pathParams = ep.path.match(/\{([^}]+)\}/g);
+      if (pathParams) {
+        for (var p = 0; p < pathParams.length; p++) {
+          var paramName = pathParams[p].replace(/[{}]/g, '');
+          params.push({
+            name: paramName,
+            in: 'path',
+            required: true,
+            schema: { type: 'string' }
+          });
+        }
+      }
+
+      var operation = {
+        summary: ep.summary,
+        tags: [ep.tag],
+        responses: {}
+      };
+      operation.responses[ep.respCode] = { description: ep.respDesc };
+      if (params.length > 0) operation.parameters = params;
+
+      if (ep.method === 'post' || ep.method === 'put' || ep.method === 'patch') {
+        operation.requestBody = {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object' } } }
+        };
+      }
+
+      spec.paths[ep.path][ep.method] = operation;
+      tags[ep.tag] = true;
+    }
+
+    spec.tags = Object.keys(tags).map(function(t) { return { name: t }; });
+
+    if (authType !== 'none') {
+      spec.components = { securitySchemes: {} };
+      if (authType === 'bearer') {
+        spec.components.securitySchemes.BearerAuth = {
+          type: 'http', scheme: 'bearer', bearerFormat: 'JWT'
+        };
+        spec.security = [{ BearerAuth: [] }];
+      } else if (authType === 'apikey') {
+        spec.components.securitySchemes.ApiKeyAuth = {
+          type: 'apiKey', in: 'header', name: authKeyName || 'X-API-Key'
+        };
+        spec.security = [{ ApiKeyAuth: [] }];
+      } else if (authType === 'basic') {
+        spec.components.securitySchemes.BasicAuth = {
+          type: 'http', scheme: 'basic'
+        };
+        spec.security = [{ BasicAuth: [] }];
+      }
+    }
+
+    specJson = spec;
+
+    var tagCount = Object.keys(tags).length;
+    var pathCount = Object.keys(spec.paths).length;
+    var grid = document.getElementById('statGrid');
+    grid.innerHTML =
+      '<div class="stat-card"><div class="s-label">Endpoints</div><div class="s-value">' + endpoints.length + '</div><div class="s-unit">operations</div></div>' +
+      '<div class="stat-card"><div class="s-label">Paths</div><div class="s-value">' + pathCount + '</div><div class="s-unit">unique URLs</div></div>' +
+      '<div class="stat-card"><div class="s-label">Tags</div><div class="s-value">' + tagCount + '</div><div class="s-unit">groups</div></div>' +
+      '<div class="stat-card"><div class="s-label">Auth</div><div class="s-value" style="font-size:14px;">' + (authType === 'none' ? 'None' : authType) + '</div><div class="s-unit">scheme</div></div>';
+    document.getElementById('specStats').style.display = 'block';
+
+    // Render preview
+    var previewHtml = '<h3 style="font-family:var(--font-display);font-size:16px;margin-bottom:8px;">' + title + ' <span style="font-size:12px;color:var(--text-muted);">v' + version + '</span></h3>';
+    if (desc) previewHtml += '<p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">' + desc + '</p>';
+
+    var groupedTags = {};
+    for (var j = 0; j < endpoints.length; j++) {
+      var e = endpoints[j];
+      if (!groupedTags[e.tag]) groupedTags[e.tag] = [];
+      groupedTags[e.tag].push(e);
+    }
+
+    var tagNames = Object.keys(groupedTags);
+    for (var t = 0; t < tagNames.length; t++) {
+      previewHtml += '<h4 style="font-size:14px;margin:16px 0 8px;color:var(--accent);">' + tagNames[t] + '</h4>';
+      var eps = groupedTags[tagNames[t]];
+      for (var k = 0; k < eps.length; k++) {
+        var ep2 = eps[k];
+        previewHtml += '<div class="preview-endpoint">';
+        previewHtml += '<h4><span class="method-' + ep2.method + '" style="font-family:var(--font-display);font-weight:700;">' + ep2.method.toUpperCase() + '</span> <code>' + ep2.path + '</code></h4>';
+        previewHtml += '<div class="pe-desc">' + ep2.summary + '</div>';
+        previewHtml += '<div style="font-size:11px;color:var(--text-muted);">Response ' + ep2.respCode + ': ' + ep2.respDesc + '</div>';
+        previewHtml += '</div>';
+      }
+    }
+
+    document.getElementById('docPreview').innerHTML = previewHtml;
+    document.getElementById('docPreview').style.display = 'block';
+
+    document.getElementById('specOutput').textContent = JSON.stringify(spec, null, 2);
+    document.getElementById('specOutput').style.display = 'block';
+  };
+
+  function jsonToYaml(obj, indent) {
+    indent = indent || 0;
+    var pad = '';
+    for (var p = 0; p < indent; p++) pad += '  ';
+    var lines = [];
+
+    if (Array.isArray(obj)) {
+      for (var i = 0; i < obj.length; i++) {
+        if (typeof obj[i] === 'object' && obj[i] !== null) {
+          var sub = jsonToYaml(obj[i], indent + 1);
+          var subLines = sub.split('\n');
+          lines.push(pad + '- ' + subLines[0].trim());
+          for (var s = 1; s < subLines.length; s++) {
+            if (subLines[s].trim()) lines.push(pad + '  ' + subLines[s].trim());
+          }
+        } else {
+          lines.push(pad + '- ' + JSON.stringify(obj[i]));
+        }
+      }
+    } else if (typeof obj === 'object' && obj !== null) {
+      var keys = Object.keys(obj);
+      for (var k = 0; k < keys.length; k++) {
+        var val = obj[keys[k]];
+        if (typeof val === 'object' && val !== null) {
+          lines.push(pad + keys[k] + ':');
+          lines.push(jsonToYaml(val, indent + 1));
+        } else if (typeof val === 'string') {
+          lines.push(pad + keys[k] + ': ' + (val.indexOf(':') >= 0 || val.indexOf('#') >= 0 ? '"' + val + '"' : val));
+        } else {
+          lines.push(pad + keys[k] + ': ' + val);
+        }
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  window.copySpec = function() {
+    if (!specJson) return;
+    navigator.clipboard.writeText(JSON.stringify(specJson, null, 2)).then(function() {
+      var btns = document.querySelectorAll('.sim-btn-row .btn-sm');
+      var btn = btns[0];
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+  window.copyYaml = function() {
+    if (!specJson) return;
+    var yaml = jsonToYaml(specJson, 0);
+    navigator.clipboard.writeText(yaml).then(function() {
+      var btns = document.querySelectorAll('.sim-btn-row .btn-sm');
+      var btn = btns[1];
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

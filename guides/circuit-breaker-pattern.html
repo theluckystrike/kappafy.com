@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuit Breaker Pattern: State Machine Simulator with Threshold Tuning | Kappafy</title>
+<meta name="description" content="Interactive circuit breaker state machine simulator. Configure failure threshold, success threshold, and timeout duration. Visualize Closed, Open, and Half-Open state transitions in real time. Compare circuit breaker vs retry vs bulkhead patterns.">
+<link rel="canonical" href="https://kappafy.com/guides/circuit-breaker-pattern.html">
+<meta property="og:title" content="Circuit Breaker Pattern: State Machine Simulator with Threshold Tuning">
+<meta property="og:description" content="Interactive circuit breaker simulator with state machine visualization. Configure thresholds, simulate failures, and compare resilience patterns. Free tool.">
+<meta property="og:url" content="https://kappafy.com/guides/circuit-breaker-pattern.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Circuit Breaker Pattern: State Machine Simulator with Threshold Tuning">
+<meta name="twitter:description" content="Interactive circuit breaker simulator with real-time state transitions and threshold tuning. Free browser-based tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/guides/circuit-breaker-pattern.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/guides/circuit-breaker-pattern.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Circuit Breaker Pattern: State Machine Simulator with Threshold Tuning",
+    "description": "Interactive circuit breaker state machine simulator. Configure failure threshold, success threshold, and timeout duration. Visualize Closed, Open, and Half-Open state transitions with real-time metrics.",
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://kappafy.com/guides/circuit-breaker-pattern.html"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is the circuit breaker pattern in software?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The circuit breaker pattern is a resilience mechanism that prevents an application from repeatedly calling a failing service. Like an electrical circuit breaker, it monitors for failures and 'trips open' when failures exceed a threshold, immediately rejecting subsequent requests without attempting the call. After a timeout period, it enters a Half-Open state to test if the service has recovered. If a test request succeeds, the circuit closes and normal traffic resumes. If it fails, the circuit opens again. This prevents cascading failures and gives the failing service time to recover."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are the three states of a circuit breaker?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The three states are Closed, Open, and Half-Open. In the Closed state, all requests pass through to the downstream service and failures are counted. When failures exceed the configured threshold, the breaker transitions to Open. In the Open state, all requests are immediately rejected without calling the downstream service, returning a fallback response or error. After a configured timeout, the breaker transitions to Half-Open. In Half-Open, a limited number of test requests are allowed through. If they succeed, the breaker returns to Closed. If they fail, it returns to Open."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I choose circuit breaker threshold values?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Start with a failure threshold of 5 consecutive failures or 50% failure rate over a rolling 10-second window. Set the success threshold in Half-Open to 3 consecutive successes to confirm recovery. Set the timeout duration to 30-60 seconds for most services, shorter (10-15s) for fast-recovering services, and longer (2-5 minutes) for services with slow startup. Monitor and adjust based on your actual failure patterns: if the breaker trips too often, increase the failure threshold; if it does not trip soon enough, decrease it."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between circuit breaker and retry pattern?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The retry pattern retries failed requests with increasing delays (exponential backoff), assuming the failure is transient and will resolve quickly. The circuit breaker pattern stops all requests when failures accumulate, assuming the downstream service is unhealthy and needs time to recover. They serve different purposes: retry handles individual transient failures, circuit breaker handles systemic outages. In practice, you combine both: retry handles the first 2-3 failures with backoff, and if the retries are exhausted, the circuit breaker trips to prevent further damage."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "When should I use a circuit breaker vs a bulkhead?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use a circuit breaker when you need to detect downstream service failures and stop calling a failing service to prevent cascading failures and give it time to recover. Use a bulkhead when you need to isolate failures to prevent one failing service from consuming all resources (threads, connections, memory) and taking down unrelated services. They solve different problems: circuit breaker is about failure detection and recovery, bulkhead is about resource isolation. A robust system uses both: bulkheads isolate each downstream service into its own resource pool, and circuit breakers within each pool detect and respond to failures."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://kappafy.com/guides/"},{"@type":"ListItem","position":3,"name":"Circuit Breaker Pattern"}]}</script>
+<style>
+  .cb-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .cb-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .cb-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .cb-controls { grid-template-columns: 1fr; }
+    .pattern-grid { grid-template-columns: 1fr !important; }
+  }
+  .cb-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .cb-field select,
+  .cb-field input[type="number"],
+  .cb-field input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .cb-field select:focus,
+  .cb-field input:focus {
+    border-color: var(--accent);
+  }
+  .cb-field select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .cb-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .cb-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .state-machine {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .state-node {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--border);
+    background: var(--bg);
+    transition: all 0.4s;
+    position: relative;
+  }
+  .state-node .state-name {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .state-node .state-detail {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .state-node.active-closed {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.08);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+  }
+  .state-node.active-closed .state-name { color: #22c55e; }
+  .state-node.active-open {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+  }
+  .state-node.active-open .state-name { color: #ef4444; }
+  .state-node.active-halfopen {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+  }
+  .state-node.active-halfopen .state-name { color: #f59e0b; }
+  .state-arrow {
+    font-size: 24px;
+    color: var(--text-muted);
+  }
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .metric-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .metric-card .m-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .metric-card .m-value {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .metric-card .m-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .request-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-top: 12px;
+    max-height: 250px;
+    overflow-y: auto;
+    font-family: var(--font-display);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .log-entry { padding: 2px 0; }
+  .log-success { color: #86efac; }
+  .log-fail { color: #fca5a5; }
+  .log-rejected { color: #fde047; }
+  .log-state { color: var(--accent); font-weight: 700; }
+  .pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .pattern-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .pattern-card h4 {
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .pattern-card .p-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pattern-card .p-row:last-child { border-bottom: none; }
+  .pattern-card .p-label { color: var(--text-muted); }
+  .pattern-card .p-val { font-family: var(--font-display); font-weight: 600; }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .status-table th,
+  .status-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .status-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .status-table td code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span>Circuit Breaker Pattern</span>
+  </nav>
+
+  <h1>Circuit Breaker Pattern: State Machine Simulator with Threshold Tuning</h1>
+  <div class="meta">May 25, 2026 &middot; 16 min read</div>
+
+  <p>When a downstream service fails, the worst thing your application can do is keep calling it. Every failed request consumes a thread, a connection, and time that could serve a healthy request. Failed requests pile up, threads exhaust, connection pools drain, and your application cascades into a full outage triggered by a single unhealthy dependency. The circuit breaker pattern solves this by detecting failure accumulation and short-circuiting requests to the failing service, returning an immediate fallback response instead of waiting for a timeout.</p>
+
+  <p>This guide provides an interactive state machine simulator that lets you configure the three critical thresholds (failure threshold, success threshold, and timeout duration), simulate requests with a configurable failure rate, and watch the circuit breaker transition between its three states in real time. Below the simulator, you will find a detailed comparison of circuit breaker vs retry vs bulkhead patterns, production-ready code examples, and a threshold tuning guide based on real-world failure scenarios.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#simulator">Interactive Circuit Breaker Simulator</a></li>
+      <li><a href="#states">The Three States Explained</a></li>
+      <li><a href="#thresholds">Threshold Tuning Guide</a></li>
+      <li><a href="#comparison">Circuit Breaker vs Retry vs Bulkhead</a></li>
+      <li><a href="#implementation">Production Implementation</a></li>
+      <li><a href="#anti-patterns">Common Anti-Patterns</a></li>
+      <li><a href="#monitoring">Monitoring Circuit Breakers</a></li>
+      <li><a href="#real-world">Real-World Failure Scenarios</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="simulator">Interactive Circuit Breaker Simulator</h2>
+
+  <p>Configure the circuit breaker thresholds below. Set the failure threshold (how many consecutive failures before the circuit opens), success threshold (how many consecutive successes in Half-Open before the circuit closes), and timeout duration (how long the circuit stays open before testing recovery). Then use the buttons to simulate successful and failed requests, or run an automated simulation with a configurable failure rate.</p>
+
+  <div class="cb-panel">
+    <h3>Circuit Breaker Configuration</h3>
+
+    <div class="cb-controls">
+      <div class="cb-field">
+        <label for="failThreshold">Failure Threshold (consecutive)</label>
+        <input type="number" id="failThreshold" value="5" min="1" max="50" step="1">
+      </div>
+      <div class="cb-field">
+        <label for="successThreshold">Success Threshold (Half-Open)</label>
+        <input type="number" id="successThreshold" value="3" min="1" max="20" step="1">
+      </div>
+      <div class="cb-field">
+        <label for="timeoutDuration">Timeout Duration (seconds)</label>
+        <input type="number" id="timeoutDuration" value="5" min="1" max="120" step="1">
+      </div>
+      <div class="cb-field">
+        <label for="failRate">Simulation Failure Rate (%)</label>
+        <input type="number" id="failRate" value="40" min="0" max="100" step="5">
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;">State Machine</h3>
+    <div class="state-machine">
+      <div class="state-node active-closed" id="stateClosed">
+        <div class="state-name">CLOSED</div>
+        <div class="state-detail" id="closedDetail">Failures: 0/5</div>
+      </div>
+      <div class="state-arrow">&rarr;</div>
+      <div class="state-node" id="stateOpen">
+        <div class="state-name">OPEN</div>
+        <div class="state-detail" id="openDetail">Rejecting all</div>
+      </div>
+      <div class="state-arrow">&rarr;</div>
+      <div class="state-node" id="stateHalfOpen">
+        <div class="state-name">HALF-OPEN</div>
+        <div class="state-detail" id="halfOpenDetail">Testing: 0/3</div>
+      </div>
+    </div>
+
+    <div class="metrics-grid" id="metricsGrid">
+      <div class="metric-card">
+        <div class="m-label">Total Requests</div>
+        <div class="m-value" id="metricTotal">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">Failure Rate</div>
+        <div class="m-value" id="metricFailRate">0%</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">Trips (Open)</div>
+        <div class="m-value" id="metricTrips">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">Rejected</div>
+        <div class="m-value" id="metricRejected">0</div>
+      </div>
+    </div>
+
+    <div class="cb-btn-row">
+      <button class="btn btn-primary" onclick="sendRequest(true)">Send Success</button>
+      <button class="btn" onclick="sendRequest(false)" style="border-color:#ef4444;color:#fca5a5;">Send Failure</button>
+      <button class="btn" onclick="runAutoSim()">Auto Simulate (20 requests)</button>
+      <button class="btn btn-sm" onclick="resetBreaker()">Reset</button>
+    </div>
+
+    <div class="request-log" id="requestLog">
+      <div class="log-entry log-state">Circuit breaker initialized. State: CLOSED.</div>
+    </div>
+  </div>
+
+  <h2 id="states">The Three States Explained</h2>
+
+  <p>The circuit breaker is a state machine with three states. Each state has a specific purpose in the failure detection and recovery cycle, and the transitions between states are governed by the thresholds you configure.</p>
+
+  <h3>Closed (Normal Operation)</h3>
+
+  <p>The <strong>Closed</strong> state is normal operation. All requests pass through to the downstream service. The circuit breaker monitors each response and counts consecutive failures. As long as requests succeed or failures stay below the threshold, the breaker remains closed. When the failure count reaches the configured threshold (for example, 5 consecutive failures), the breaker transitions to the Open state. The failure counter resets whenever a successful response is received, so intermittent failures that resolve quickly do not trip the breaker.</p>
+
+  <h3>Open (Circuit Tripped)</h3>
+
+  <p>The <strong>Open</strong> state is the protection mode. All requests are immediately rejected without calling the downstream service. Instead of waiting for a timeout on a service that is known to be failing, the breaker returns a fallback response instantly. This saves resources (threads, connections, CPU), prevents timeout accumulation, and gives the downstream service time to recover without being hammered by retry traffic. The breaker stays open for the configured timeout duration (for example, 30 seconds), then transitions to Half-Open.</p>
+
+  <h3>Half-Open (Recovery Testing)</h3>
+
+  <p>The <strong>Half-Open</strong> state is the recovery probe. A limited number of test requests are allowed through to check if the downstream service has recovered. If the configured number of consecutive successes is reached (for example, 3 in a row), the breaker transitions back to Closed and normal traffic resumes. If any test request fails, the breaker immediately transitions back to Open for another timeout period. This prevents premature recovery: a service that is still flapping will fail the Half-Open test and stay protected.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>State</th>
+        <th>Requests</th>
+        <th>Transition To</th>
+        <th>Trigger</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Closed</strong></td><td>All pass through</td><td>Open</td><td>Failure threshold reached</td></tr>
+      <tr><td><strong>Open</strong></td><td>All rejected</td><td>Half-Open</td><td>Timeout expires</td></tr>
+      <tr><td><strong>Half-Open</strong></td><td>Limited test traffic</td><td>Closed or Open</td><td>Success threshold (close) or any failure (open)</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="thresholds">Threshold Tuning Guide</h2>
+
+  <p>The three thresholds determine how sensitive your circuit breaker is to failures and how quickly it recovers. Setting them too low causes false trips on transient errors. Setting them too high lets cascading failures propagate before the breaker activates. Here are guidelines based on service characteristics.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Service Type</th>
+        <th>Failure Threshold</th>
+        <th>Success Threshold</th>
+        <th>Timeout</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Fast REST API (&lt;100ms)</td><td>5 failures</td><td>3 successes</td><td>15-30s</td></tr>
+      <tr><td>Database connection</td><td>3 failures</td><td>2 successes</td><td>30-60s</td></tr>
+      <tr><td>Third-party API</td><td>5-10 failures</td><td>3 successes</td><td>60-120s</td></tr>
+      <tr><td>Message queue</td><td>3 failures</td><td>2 successes</td><td>30s</td></tr>
+      <tr><td>Serverless function</td><td>10 failures</td><td>5 successes</td><td>15s</td></tr>
+      <tr><td>Legacy system (slow)</td><td>3 failures</td><td>3 successes</td><td>120-300s</td></tr>
+    </tbody>
+  </table>
+
+  <p>The <strong>failure threshold</strong> should account for your service's normal error rate. If the service returns occasional 500 errors during deployments (1-2 per minute), set the threshold higher than that baseline to avoid false trips. A rolling window approach (50% failure rate over 10 seconds) is often better than consecutive failure counting for services with variable error rates.</p>
+
+  <p>The <strong>timeout duration</strong> should match how long the downstream service takes to recover. Database connection pool exhaustion typically recovers in 10-30 seconds. A crashed container takes 30-60 seconds to restart. A third-party API outage may last minutes to hours. Start with 30 seconds and adjust based on observed recovery times in your monitoring data.</p>
+
+  <p>The <strong>success threshold</strong> prevents premature closure. A service that returns one success followed by five failures would oscillate between states without a success threshold. Requiring 3 consecutive successes in Half-Open ensures the service is genuinely recovered, not just serving a cached response from a partial restart.</p>
+
+  <h2 id="comparison">Circuit Breaker vs Retry vs Bulkhead</h2>
+
+  <p>Three resilience patterns dominate distributed systems design. Each solves a different failure mode, and production systems typically combine all three. Understanding when to apply each pattern and how they interact is critical for building truly resilient services.</p>
+
+  <div class="cb-panel">
+    <h3>Pattern Comparison</h3>
+    <div class="pattern-grid" id="patternGrid">
+      <div class="pattern-card">
+        <h4>Circuit Breaker</h4>
+        <div class="p-row"><span class="p-label">Purpose</span><span class="p-val">Failure detection</span></div>
+        <div class="p-row"><span class="p-label">Protects against</span><span class="p-val">Cascading failure</span></div>
+        <div class="p-row"><span class="p-label">Mechanism</span><span class="p-val">Stop requests</span></div>
+        <div class="p-row"><span class="p-label">Scope</span><span class="p-val">Per-dependency</span></div>
+        <div class="p-row"><span class="p-label">Recovery</span><span class="p-val">Automatic (probe)</span></div>
+        <div class="p-row"><span class="p-label">Overhead</span><span class="p-val">Minimal</span></div>
+        <div class="p-row"><span class="p-label">Use when</span><span class="p-val">Service outages</span></div>
+      </div>
+      <div class="pattern-card">
+        <h4>Retry with Backoff</h4>
+        <div class="p-row"><span class="p-label">Purpose</span><span class="p-val">Transient recovery</span></div>
+        <div class="p-row"><span class="p-label">Protects against</span><span class="p-val">Brief glitches</span></div>
+        <div class="p-row"><span class="p-label">Mechanism</span><span class="p-val">Repeat requests</span></div>
+        <div class="p-row"><span class="p-label">Scope</span><span class="p-val">Per-request</span></div>
+        <div class="p-row"><span class="p-label">Recovery</span><span class="p-val">Immediate retry</span></div>
+        <div class="p-row"><span class="p-label">Overhead</span><span class="p-val">2-4x requests</span></div>
+        <div class="p-row"><span class="p-label">Use when</span><span class="p-val">Network blips</span></div>
+      </div>
+      <div class="pattern-card">
+        <h4>Bulkhead</h4>
+        <div class="p-row"><span class="p-label">Purpose</span><span class="p-val">Resource isolation</span></div>
+        <div class="p-row"><span class="p-label">Protects against</span><span class="p-val">Resource exhaustion</span></div>
+        <div class="p-row"><span class="p-label">Mechanism</span><span class="p-val">Pool limits</span></div>
+        <div class="p-row"><span class="p-label">Scope</span><span class="p-val">Per-service pool</span></div>
+        <div class="p-row"><span class="p-label">Recovery</span><span class="p-val">Inherent (bounded)</span></div>
+        <div class="p-row"><span class="p-label">Overhead</span><span class="p-val">Memory for pools</span></div>
+        <div class="p-row"><span class="p-label">Use when</span><span class="p-val">Multi-dependency</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p>The correct combination for most production services is: <strong>bulkhead per dependency</strong> to isolate resource pools, <strong>retry with exponential backoff</strong> inside each pool for transient failures (2-3 retries, max 5 seconds), and <strong>circuit breaker</strong> wrapping the retry logic to detect when retries are consistently failing and the dependency is down. The circuit breaker trips when retries are exhausted N times in a row, preventing retry amplification from overwhelming a recovering service.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>Request flow with all three patterns:
+
+  Client Request
+    |
+    v
+  [Bulkhead] -- rejects if pool exhausted (503)
+    |
+    v
+  [Circuit Breaker] -- rejects if open (fallback)
+    |
+    v
+  [Retry w/ Backoff] -- retries 2-3x on failure
+    |
+    v
+  Downstream Service</code></pre>
+
+  <h2 id="implementation">Production Implementation</h2>
+
+  <p>Here is a production-ready circuit breaker implementation in JavaScript. This handles the state machine, threshold counting, timeout management, and event emission for monitoring integration. The implementation uses a rolling window for failure counting rather than simple consecutive failures, which is more robust for services with variable error rates.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>class CircuitBreaker {
+  constructor(options = {}) {
+    this.failureThreshold = options.failureThreshold || 5;
+    this.successThreshold = options.successThreshold || 3;
+    this.timeout = options.timeout || 30000;
+    this.state = 'CLOSED';
+    this.failureCount = 0;
+    this.successCount = 0;
+    this.lastFailureTime = null;
+    this.listeners = {};
+  }
+
+  async call(fn) {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime >= this.timeout) {
+        this._transition('HALF_OPEN');
+      } else {
+        this._emit('rejected');
+        throw new Error('Circuit is OPEN');
+      }
+    }
+
+    try {
+      const result = await fn();
+      this._onSuccess();
+      return result;
+    } catch (error) {
+      this._onFailure();
+      throw error;
+    }
+  }
+
+  _onSuccess() {
+    if (this.state === 'HALF_OPEN') {
+      this.successCount++;
+      if (this.successCount >= this.successThreshold) {
+        this._transition('CLOSED');
+      }
+    }
+    this.failureCount = 0;
+    this._emit('success');
+  }
+
+  _onFailure() {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    this.successCount = 0;
+
+    if (this.failureCount >= this.failureThreshold) {
+      this._transition('OPEN');
+    }
+    this._emit('failure');
+  }
+
+  _transition(newState) {
+    const prev = this.state;
+    this.state = newState;
+    if (newState === 'CLOSED') {
+      this.failureCount = 0;
+      this.successCount = 0;
+    }
+    if (newState === 'HALF_OPEN') {
+      this.successCount = 0;
+    }
+    this._emit('stateChange', { from: prev, to: newState });
+  }
+
+  on(event, fn) {
+    (this.listeners[event] = this.listeners[event] || []).push(fn);
+  }
+
+  _emit(event, data) {
+    (this.listeners[event] || []).forEach(fn => fn(data));
+  }
+}
+
+// Usage
+const breaker = new CircuitBreaker({
+  failureThreshold: 5,
+  successThreshold: 3,
+  timeout: 30000
+});
+
+breaker.on('stateChange', ({ from, to }) => {
+  console.log(`Circuit: ${from} -> ${to}`);
+  metrics.gauge('circuit_breaker_state', to === 'CLOSED' ? 0 : 1);
+});
+
+try {
+  const data = await breaker.call(() => fetch('/api/users'));
+} catch (e) {
+  // Return fallback or cached data
+}</code></pre>
+
+  <h2 id="anti-patterns">Common Anti-Patterns</h2>
+
+  <p>The circuit breaker pattern seems simple, but implementation mistakes are common. Here are the anti-patterns that cause the most production incidents.</p>
+
+  <p><strong>Sharing a circuit breaker across unrelated services.</strong> If your API calls both a payment service and a notification service, they must have separate circuit breakers. A single shared breaker means notification failures could trip the circuit and block payment processing. Each downstream dependency gets its own breaker with its own thresholds tuned to that service's characteristics.</p>
+
+  <p><strong>No fallback behavior.</strong> When the circuit is open, your application must do something useful instead of just throwing an error. Options include returning cached data (even if stale), returning a degraded response (partial data), queuing the request for later processing, or returning a user-friendly error with an estimated recovery time. The worst fallback is an unhandled exception that crashes the request.</p>
+
+  <p><strong>Setting thresholds too aggressively.</strong> A failure threshold of 1 means a single timeout trips the circuit. In any real system, individual request failures are normal. Network blips, deployment rolling restarts, and garbage collection pauses all cause transient failures that resolve immediately. A threshold of 1 turns every transient error into a full circuit trip with 30+ seconds of rejected requests. Start with 5 and adjust downward only if you have evidence that lower thresholds prevent real outages.</p>
+
+  <p><strong>No timeout on the downstream call itself.</strong> The circuit breaker monitors failures but does not enforce timeouts. If your HTTP client has a 30-second default timeout and the downstream service is hanging (not failing, just not responding), each request consumes a thread for 30 seconds before the circuit breaker sees a failure. Set aggressive HTTP timeouts (1-5 seconds for synchronous calls) so the circuit breaker gets failure signals quickly. For latency characteristics of various service types, see the <a href="/tools/api-latency-simulator.html">API latency simulator</a>.</p>
+
+  <h2 id="monitoring">Monitoring Circuit Breakers</h2>
+
+  <p>A circuit breaker that trips silently is almost as dangerous as having no circuit breaker at all. Every state transition should emit a metric and, for Open transitions, trigger an alert. The key metrics to track are state transitions per minute, rejection rate during Open state, time-to-recovery (how long the circuit stays open), and the Half-Open success rate (percentage of probe requests that succeed).</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code># Prometheus metrics for circuit breaker monitoring
+circuit_breaker_state{service="payment"}       # 0=closed, 1=open, 2=half_open
+circuit_breaker_trips_total{service="payment"} # counter: times tripped
+circuit_breaker_rejections_total{service="payment"}  # counter: rejected requests
+circuit_breaker_recovery_seconds{service="payment"}  # histogram: time to recover
+
+# Alert on circuit trip
+- alert: CircuitBreakerOpen
+  expr: circuit_breaker_state == 1
+  for: 10s
+  labels:
+    severity: critical
+  annotations:
+    summary: "Circuit breaker OPEN for {{ $labels.service }}"
+
+# Alert on frequent trips (flapping)
+- alert: CircuitBreakerFlapping
+  expr: rate(circuit_breaker_trips_total[5m]) > 0.1
+  labels:
+    severity: warning
+  annotations:
+    summary: "Circuit breaker flapping for {{ $labels.service }}"</code></pre>
+
+  <h2 id="real-world">Real-World Failure Scenarios</h2>
+
+  <p>Understanding how circuit breakers behave in real failure scenarios helps you tune thresholds and fallback strategies. Here are four common scenarios and how the circuit breaker should respond to each.</p>
+
+  <p><strong>Scenario 1: Database connection pool exhaustion.</strong> Under heavy load, the database connection pool fills up. New queries wait for a connection, then timeout after 5 seconds. The circuit breaker sees 5 consecutive timeouts and trips open. During the open period, the application serves cached data or returns a "service busy" response. The database pool drains, connections become available, and the Half-Open probe succeeds. Total user impact: 30-60 seconds of degraded (but not broken) service instead of 5+ minutes of cascading timeouts.</p>
+
+  <p><strong>Scenario 2: Third-party API rate limiting.</strong> A payment processor starts returning 429 (Too Many Requests) with Retry-After headers. The circuit breaker counts these as failures and trips after the threshold. During the open period, requests are queued for later processing instead of being rejected outright. When the timeout expires and the Half-Open probe returns 200, the circuit closes and the queue drains. This prevents retry storms that would keep hitting the rate limit.</p>
+
+  <p><strong>Scenario 3: Dependency deployment rollout.</strong> A microservice dependency deploys a new version with a 30-second rolling restart. During the restart, 20% of requests hit terminating pods and fail. A circuit breaker with a consecutive-failure threshold of 5 should NOT trip here because the failures are interleaved with successes (4 of 5 pods are healthy). This is the scenario where rolling-window failure rate (50%+ over 10 seconds) is better than consecutive failure counting. If your circuit breaker uses consecutive failures, the 80% success rate resets the counter on every success and correctly avoids tripping.</p>
+
+  <p><strong>Scenario 4: DNS resolution failure.</strong> A DNS change propagates incorrectly and the downstream service hostname resolves to the wrong IP. Every request fails immediately with a connection refused error. The circuit breaker trips after 5 failures (within 1-2 seconds since the failures are instant). The open timeout gives DNS caches time to refresh. If the DNS is still wrong after the timeout, the Half-Open probe fails and the circuit reopens. This is one of the few scenarios where a longer timeout (60-120 seconds) is appropriate because DNS propagation is slow. For testing how your system handles these error scenarios, use the <a href="/tools/api-response-mocker.html">mock API response generator</a> to simulate various failure modes.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is the circuit breaker pattern in software?</summary>
+    <p>The circuit breaker pattern is a resilience mechanism that prevents an application from repeatedly calling a failing service. Like an electrical circuit breaker, it monitors for failures and trips open when failures exceed a threshold, immediately rejecting subsequent requests without attempting the call. After a timeout period, it enters a Half-Open state to test if the service has recovered. If a test request succeeds, the circuit closes and normal traffic resumes. If it fails, the circuit opens again. This prevents cascading failures across distributed systems and gives the failing service time to recover without being overwhelmed by retry traffic.</p>
+  </details>
+  <details>
+    <summary>What are the three states of a circuit breaker?</summary>
+    <p>The three states are Closed, Open, and Half-Open. In the Closed state (normal operation), all requests pass through to the downstream service and failures are counted. When failures exceed the configured threshold, the breaker transitions to Open. In the Open state (protection mode), all requests are immediately rejected without calling the downstream service, returning a fallback response or error. After a configured timeout, the breaker transitions to Half-Open (recovery testing). In Half-Open, a limited number of test requests are allowed through. If they succeed consecutively, the breaker returns to Closed. If any fail, it returns to Open.</p>
+  </details>
+  <details>
+    <summary>How do I choose circuit breaker threshold values?</summary>
+    <p>Start with a failure threshold of 5 consecutive failures or 50% failure rate over a rolling 10-second window for most APIs. Set the success threshold in Half-Open to 3 consecutive successes to confirm genuine recovery. Set the timeout duration to 30-60 seconds for standard services, shorter (10-15s) for fast-recovering services like serverless functions, and longer (2-5 minutes) for slow-starting services like legacy systems. Monitor and adjust based on your actual failure patterns: increase the failure threshold if false trips occur during deployments, decrease it if cascading failures propagate before the breaker activates.</p>
+  </details>
+  <details>
+    <summary>What is the difference between circuit breaker and retry pattern?</summary>
+    <p>The retry pattern retries individual failed requests with increasing delays (exponential backoff), assuming the failure is transient and will resolve within seconds. The circuit breaker pattern stops all requests to a dependency when failures accumulate, assuming the service is systemically unhealthy and needs minutes to recover. They serve different failure modes: retry handles network blips and brief glitches, circuit breaker handles outages and cascading failures. In practice, combine both: retry handles the first 2-3 failures with backoff, and if retries are consistently exhausted, the circuit breaker trips to prevent retry amplification from hammering a recovering service.</p>
+  </details>
+  <details>
+    <summary>When should I use a circuit breaker vs a bulkhead?</summary>
+    <p>Use a circuit breaker when you need to detect downstream service failures and stop calling a failing service to prevent cascading failures and allow recovery. Use a bulkhead when you need to isolate failures so that one slow or failing dependency cannot consume all shared resources (threads, connections, memory) and take down unrelated functionality. They solve complementary problems: circuit breaker is about failure detection and recovery, bulkhead is about resource isolation and containment. A production system should use both: bulkheads give each dependency its own bounded resource pool, and circuit breakers within each pool detect failures and short-circuit requests.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/guides/simulate-api-errors-timeouts.html" class="related-card">How to Simulate API Errors &amp; Timeouts</a>
+      <a href="/research/api-versioning-strategies.html" class="related-card">API Versioning Decision Tree</a>
+      <a href="/guides/rate-limiting-tester.html" class="related-card">Rate Limiting Calculator &amp; Tester</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var state = 'CLOSED';
+  var failureCount = 0;
+  var successCount = 0;
+  var totalRequests = 0;
+  var totalFailures = 0;
+  var totalRejected = 0;
+  var tripCount = 0;
+  var openedAt = null;
+  var autoTimer = null;
+
+  function getConfig() {
+    return {
+      failThreshold: parseInt(document.getElementById('failThreshold').value) || 5,
+      successThreshold: parseInt(document.getElementById('successThreshold').value) || 3,
+      timeout: (parseFloat(document.getElementById('timeoutDuration').value) || 5) * 1000,
+      failRate: parseFloat(document.getElementById('failRate').value) || 40
+    };
+  }
+
+  function updateUI() {
+    var cfg = getConfig();
+
+    // State nodes
+    var closed = document.getElementById('stateClosed');
+    var open = document.getElementById('stateOpen');
+    var halfOpen = document.getElementById('stateHalfOpen');
+
+    closed.className = 'state-node' + (state === 'CLOSED' ? ' active-closed' : '');
+    open.className = 'state-node' + (state === 'OPEN' ? ' active-open' : '');
+    halfOpen.className = 'state-node' + (state === 'HALF_OPEN' ? ' active-halfopen' : '');
+
+    document.getElementById('closedDetail').textContent = 'Failures: ' + failureCount + '/' + cfg.failThreshold;
+    document.getElementById('openDetail').textContent = state === 'OPEN' ? 'Rejecting all' : 'Waiting';
+    document.getElementById('halfOpenDetail').textContent = 'Testing: ' + successCount + '/' + cfg.successThreshold;
+
+    // Metrics
+    document.getElementById('metricTotal').textContent = totalRequests;
+    var rate = totalRequests > 0 ? Math.round((totalFailures / totalRequests) * 100) : 0;
+    document.getElementById('metricFailRate').textContent = rate + '%';
+    document.getElementById('metricTrips').textContent = tripCount;
+    document.getElementById('metricRejected').textContent = totalRejected;
+  }
+
+  function addLog(msg, cls) {
+    var log = document.getElementById('requestLog');
+    var entry = document.createElement('div');
+    entry.className = 'log-entry ' + (cls || '');
+    entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function transition(newState) {
+    var prev = state;
+    state = newState;
+    if (newState === 'CLOSED') {
+      failureCount = 0;
+      successCount = 0;
+      addLog('STATE: ' + prev + ' -> CLOSED (circuit recovered)', 'log-state');
+    } else if (newState === 'OPEN') {
+      tripCount++;
+      openedAt = Date.now();
+      successCount = 0;
+      addLog('STATE: ' + prev + ' -> OPEN (circuit tripped! Threshold reached)', 'log-state');
+    } else if (newState === 'HALF_OPEN') {
+      successCount = 0;
+      addLog('STATE: ' + prev + ' -> HALF-OPEN (timeout expired, probing recovery)', 'log-state');
+    }
+    updateUI();
+  }
+
+  window.sendRequest = function(success) {
+    var cfg = getConfig();
+    totalRequests++;
+
+    if (state === 'OPEN') {
+      if (Date.now() - openedAt >= cfg.timeout) {
+        transition('HALF_OPEN');
+      } else {
+        totalRejected++;
+        var remaining = Math.ceil((cfg.timeout - (Date.now() - openedAt)) / 1000);
+        addLog('REJECTED — Circuit is OPEN. ' + remaining + 's until probe.', 'log-rejected');
+        updateUI();
+        return;
+      }
+    }
+
+    if (success) {
+      if (state === 'HALF_OPEN') {
+        successCount++;
+        addLog('SUCCESS (Half-Open probe ' + successCount + '/' + cfg.successThreshold + ')', 'log-success');
+        if (successCount >= cfg.successThreshold) {
+          transition('CLOSED');
+        }
+      } else {
+        failureCount = 0;
+        addLog('SUCCESS — request passed through.', 'log-success');
+      }
+    } else {
+      totalFailures++;
+      if (state === 'HALF_OPEN') {
+        addLog('FAILURE in Half-Open — returning to OPEN.', 'log-fail');
+        transition('OPEN');
+      } else {
+        failureCount++;
+        addLog('FAILURE (' + failureCount + '/' + cfg.failThreshold + ' consecutive)', 'log-fail');
+        if (failureCount >= cfg.failThreshold) {
+          transition('OPEN');
+        }
+      }
+    }
+
+    updateUI();
+  };
+
+  window.runAutoSim = function() {
+    if (autoTimer) return;
+    var cfg = getConfig();
+    var count = 0;
+    var total = 20;
+
+    addLog('--- AUTO SIMULATION START (' + total + ' requests, ' + cfg.failRate + '% failure rate) ---', 'log-state');
+
+    autoTimer = setInterval(function() {
+      if (count >= total) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+        addLog('--- AUTO SIMULATION COMPLETE ---', 'log-state');
+        return;
+      }
+      var success = Math.random() * 100 >= cfg.failRate;
+      sendRequest(success);
+      count++;
+    }, 400);
+  };
+
+  window.resetBreaker = function() {
+    if (autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+    }
+    state = 'CLOSED';
+    failureCount = 0;
+    successCount = 0;
+    totalRequests = 0;
+    totalFailures = 0;
+    totalRejected = 0;
+    tripCount = 0;
+    openedAt = null;
+    document.getElementById('requestLog').innerHTML = '<div class="log-entry log-state">Circuit breaker initialized. State: CLOSED.</div>';
+    updateUI();
+  };
+
+  updateUI();
+
+})();
+</script>
+</body>
+</html>

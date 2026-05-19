@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OAuth vs API Key vs JWT: Authentication Decision Wizard | Kappafy</title>
+<meta name="description" content="Compare OAuth 2.0, API keys, and JWT authentication methods side by side. Interactive decision wizard helps you choose the right API auth strategy with implementation templates for each approach.">
+<link rel="canonical" href="https://kappafy.com/answers/api-authentication-comparison.html">
+<meta property="og:title" content="OAuth vs API Key vs JWT: Authentication Decision Wizard">
+<meta property="og:description" content="Interactive decision wizard to choose between OAuth 2.0, API keys, and JWT for your API. Includes implementation templates, security comparison, and migration guides.">
+<meta property="og:url" content="https://kappafy.com/answers/api-authentication-comparison.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OAuth vs API Key vs JWT: Authentication Decision Wizard">
+<meta name="twitter:description" content="Compare OAuth 2.0, API keys, and JWT authentication. Interactive wizard with implementation templates. Free tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/answers/api-authentication-comparison.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/answers/api-authentication-comparison.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "API Authentication Comparison Wizard",
+    "url": "https://kappafy.com/answers/api-authentication-comparison.html",
+    "description": "Compare OAuth 2.0, API keys, and JWT authentication methods side by side. Interactive decision wizard helps you choose the right API auth strategy with implementation templates for each approach.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "featureList": ["OAuth 2.0 vs API Key vs JWT comparison", "Interactive decision wizard", "Implementation code templates", "Security scoring matrix", "Token lifecycle visualization", "Migration cost estimator"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "When should I use OAuth 2.0 instead of API keys?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use OAuth 2.0 when your API needs delegated authorization where users grant third-party applications limited access to their resources without sharing credentials. OAuth is essential for consumer-facing APIs, multi-tenant SaaS platforms, and any scenario where you need granular permission scopes. API keys are simpler and better suited for server-to-server communication, internal services, and cases where the calling application owns the data rather than acting on behalf of a user."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are the security differences between JWT and API keys?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "JWTs are cryptographically signed tokens that contain claims (user identity, permissions, expiry) and can be verified without a database lookup. They expire automatically and support fine-grained authorization through embedded claims. API keys are static strings that require server-side lookup for every request, never expire unless manually rotated, and carry no embedded permissions. JWTs are more secure for user-facing authentication because they are short-lived and self-contained, while API keys are simpler but require additional infrastructure for rate limiting, rotation, and revocation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use multiple authentication methods on the same API?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, and most production APIs do. A common pattern is using API keys for server-to-server integrations and machine clients, OAuth 2.0 with JWTs for user-facing authentication through web and mobile apps, and service account tokens for internal microservice communication. The API gateway inspects the Authorization header format to route to the correct authentication handler. This layered approach lets you optimize security and developer experience for each use case independently."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I handle JWT token refresh without breaking user sessions?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Implement a silent refresh pattern using short-lived access tokens (15-30 minutes) paired with long-lived refresh tokens (7-30 days). When the access token expires, the client automatically sends the refresh token to obtain a new access token without requiring the user to re-authenticate. Store refresh tokens in HTTP-only secure cookies to prevent XSS theft. Implement refresh token rotation where each use of a refresh token invalidates the old one and issues a new pair, detecting token theft if a revoked refresh token is reused."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the performance impact of JWT validation versus API key lookup?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "JWT validation is a CPU-bound cryptographic operation (verifying the signature) that takes 0.1-1ms per request with no network I/O. API key validation requires a database or cache lookup, adding 1-10ms of network latency per request depending on your infrastructure. At scale, JWT validation is faster and more scalable because it eliminates the database dependency entirely. However, JWTs cannot be individually revoked without maintaining a blacklist, which reintroduces the database lookup that JWTs were designed to eliminate."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Answers","item":"https://kappafy.com/answers/"},{"@type":"ListItem","position":3,"name":"API Authentication Comparison"}]}</script>
+<style>
+  .sim-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .sim-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .sim-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .sim-controls { grid-template-columns: 1fr; }
+    .comparison-grid { grid-template-columns: 1fr !important; }
+    .score-grid { grid-template-columns: 1fr !important; }
+  }
+  .sim-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .sim-field select,
+  .sim-field input[type="number"],
+  .sim-field input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .sim-field select:focus,
+  .sim-field input:focus {
+    border-color: var(--accent);
+  }
+  .sim-field select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .sim-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .sim-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .comparison-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .comparison-card h4 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--accent);
+  }
+  .comparison-card .c-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .comparison-card .c-stat:last-child { border-bottom: none; }
+  .comparison-card .c-stat .c-label { color: var(--text-muted); }
+  .comparison-card .c-stat .c-val { font-family: var(--font-display); font-weight: 600; }
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .score-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .score-card .s-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .score-card .s-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .score-card .s-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .wizard-step {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 12px 0;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .wizard-step:hover { border-color: var(--accent); }
+  .wizard-step.selected {
+    border-color: var(--accent);
+    background: rgba(168, 85, 247, 0.05);
+  }
+  .wizard-step h4 { font-size: 13px; margin-bottom: 4px; }
+  .wizard-step p { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .recommendation-box {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 13px;
+    line-height: 1.6;
+    display: none;
+  }
+  .recommendation-box.show {
+    display: block;
+    background: rgba(168, 85, 247, 0.08);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: var(--text);
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .toc li {
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .status-table th,
+  .status-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .status-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .status-table td code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+  .author-bio .author-info h4 {
+    margin: 0 0 4px;
+    font-size: 14px;
+  }
+  .author-bio .author-info p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .author-bio .author-info a {
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/answers/">Answers</a> &rsaquo; <span>API Authentication Comparison</span>
+  </nav>
+
+  <h1>OAuth vs API Key vs JWT: Authentication Decision Wizard</h1>
+  <div class="meta">May 25, 2026 &middot; 16 min read</div>
+
+  <p>Choosing the right API authentication method is one of the most consequential architecture decisions you will make. The wrong choice creates security vulnerabilities, developer friction, and expensive migration costs that compound over years. OAuth 2.0, API keys, and JWTs each solve fundamentally different problems, and understanding when to use each one prevents the painful rewrite that happens when teams discover their authentication model does not scale to their actual use case. This tool provides an interactive decision wizard, a side-by-side security comparison matrix, and implementation templates you can copy directly into your codebase.</p>
+
+  <p>The decision is not always binary. Most production APIs use a hybrid approach: API keys for server-to-server integrations, OAuth 2.0 with JWT access tokens for user-facing authentication, and service mesh tokens for internal microservice calls. The wizard below evaluates your specific requirements across six dimensions to recommend the optimal authentication strategy, and the implementation templates give you working code for each approach.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#wizard">Authentication Decision Wizard</a></li>
+      <li><a href="#comparison">Side-by-Side Comparison</a></li>
+      <li><a href="#templates">Implementation Templates</a></li>
+      <li><a href="#oauth-deep-dive">OAuth 2.0 Deep Dive</a></li>
+      <li><a href="#jwt-deep-dive">JWT Architecture and Security</a></li>
+      <li><a href="#api-key-patterns">API Key Best Practices</a></li>
+      <li><a href="#hybrid-auth">Hybrid Authentication Patterns</a></li>
+      <li><a href="#migration">Migration Between Auth Methods</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="wizard">Authentication Decision Wizard</h2>
+
+  <p>Answer each question below to receive a tailored recommendation. The wizard evaluates your use case across six dimensions: client type, user delegation, token lifecycle, security requirements, developer experience, and scalability. Click on the option that best matches your situation for each question, then click <strong>Get Recommendation</strong> to see the analysis.</p>
+
+  <div class="sim-panel">
+    <h3>Step 1: Who is calling your API?</h3>
+    <div id="q1">
+      <div class="wizard-step" data-q="1" data-v="server" onclick="selectWizard(this)">
+        <h4>Server-to-Server</h4>
+        <p>Backend services, cron jobs, CI/CD pipelines, or machine clients calling your API without human interaction.</p>
+      </div>
+      <div class="wizard-step" data-q="1" data-v="spa" onclick="selectWizard(this)">
+        <h4>Single Page Application (SPA)</h4>
+        <p>Browser-based JavaScript applications where the client code is publicly visible and cannot store secrets securely.</p>
+      </div>
+      <div class="wizard-step" data-q="1" data-v="mobile" onclick="selectWizard(this)">
+        <h4>Mobile Application</h4>
+        <p>Native iOS or Android apps where secrets can be extracted from the binary with moderate effort.</p>
+      </div>
+      <div class="wizard-step" data-q="1" data-v="thirdparty" onclick="selectWizard(this)">
+        <h4>Third-Party Integrations</h4>
+        <p>External developers or partner companies building applications that access your users' data on their behalf.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sim-panel">
+    <h3>Step 2: Does the API act on behalf of a user?</h3>
+    <div id="q2">
+      <div class="wizard-step" data-q="2" data-v="yes" onclick="selectWizard(this)">
+        <h4>Yes, Delegated Access</h4>
+        <p>The API needs to know which user authorized the request and what permissions they granted.</p>
+      </div>
+      <div class="wizard-step" data-q="2" data-v="no" onclick="selectWizard(this)">
+        <h4>No, Application-Level Access</h4>
+        <p>The API serves data owned by the application itself or provides utility functionality with no user context.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sim-panel">
+    <h3>Step 3: What is your security sensitivity?</h3>
+    <div id="q3">
+      <div class="wizard-step" data-q="3" data-v="high" onclick="selectWizard(this)">
+        <h4>High (Financial, Healthcare, PII)</h4>
+        <p>Handles sensitive data requiring token rotation, audit trails, granular scopes, and instant revocation capabilities.</p>
+      </div>
+      <div class="wizard-step" data-q="3" data-v="medium" onclick="selectWizard(this)">
+        <h4>Medium (Standard SaaS)</h4>
+        <p>Standard business data with reasonable security requirements. Token expiry and HTTPS enforcement are sufficient.</p>
+      </div>
+      <div class="wizard-step" data-q="3" data-v="low" onclick="selectWizard(this)">
+        <h4>Low (Public Data, Dev Tools)</h4>
+        <p>Publicly accessible data or developer tools where authentication is primarily for rate limiting and usage tracking.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sim-panel">
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="getRecommendation()">Get Recommendation</button>
+      <button class="btn" onclick="resetWizard()">Reset Wizard</button>
+      <button class="btn btn-sm" onclick="copyRecommendation()">Copy Results</button>
+    </div>
+
+    <div id="scoreCards" style="display:none;">
+      <div class="score-grid" id="scoreGrid"></div>
+    </div>
+
+    <div id="recommendation" class="recommendation-box"></div>
+    <div id="wizardOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="comparison">Side-by-Side Comparison</h2>
+
+  <p>The comparison matrix below evaluates all three authentication methods across the critical dimensions that affect your implementation. Click <strong>Generate Comparison</strong> to produce a detailed analysis based on your wizard selections, or view the default comparison that covers the general case.</p>
+
+  <div class="sim-panel">
+    <h3>Security &amp; Feature Matrix</h3>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="generateComparison()">Generate Comparison</button>
+    </div>
+    <div id="comparisonResults" style="display:none;">
+      <div class="comparison-grid" id="compGrid"></div>
+    </div>
+  </div>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>API Key</th>
+        <th>JWT</th>
+        <th>OAuth 2.0</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Setup Complexity</td><td><code>Low</code></td><td><code>Medium</code></td><td><code>High</code></td></tr>
+      <tr><td>User Delegation</td><td><code>No</code></td><td><code>Embedded claims</code></td><td><code>Full delegation</code></td></tr>
+      <tr><td>Token Expiry</td><td><code>Manual rotation</code></td><td><code>Built-in exp</code></td><td><code>Short + refresh</code></td></tr>
+      <tr><td>Revocation</td><td><code>Delete from DB</code></td><td><code>Blacklist needed</code></td><td><code>Revoke endpoint</code></td></tr>
+      <tr><td>Verification Cost</td><td><code>DB lookup</code></td><td><code>CPU (crypto)</code></td><td><code>Token introspect</code></td></tr>
+      <tr><td>Secret Exposure Risk</td><td><code>High if leaked</code></td><td><code>Time-limited</code></td><td><code>Scoped + rotated</code></td></tr>
+      <tr><td>Best For</td><td><code>Server-to-server</code></td><td><code>Microservices</code></td><td><code>User-facing APIs</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="templates">Implementation Templates</h2>
+
+  <p>Select an authentication method below and click <strong>Generate Template</strong> to produce a working implementation. Each template includes the server-side middleware, client-side usage, error handling, and security headers. The code is framework-agnostic pseudocode that maps directly to Express, FastAPI, Spring Boot, or any HTTP framework.</p>
+
+  <div class="sim-panel">
+    <h3>Code Template Generator</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="templateType">Authentication Method</label>
+        <select id="templateType">
+          <option value="apikey">API Key (Header-based)</option>
+          <option value="jwt">JWT (Bearer Token)</option>
+          <option value="oauth">OAuth 2.0 (Authorization Code)</option>
+          <option value="hybrid">Hybrid (API Key + JWT)</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="templateLang">Language Style</label>
+        <select id="templateLang">
+          <option value="node">Node.js / Express</option>
+          <option value="python">Python / FastAPI</option>
+          <option value="generic">Generic Pseudocode</option>
+        </select>
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="generateTemplate()">Generate Template</button>
+      <button class="btn btn-sm" onclick="copyTemplate()">Copy Code</button>
+    </div>
+    <div id="templateOutput" class="sim-output" style="display:none;"></div>
+  </div>
+
+  <h2 id="oauth-deep-dive">OAuth 2.0 Deep Dive</h2>
+
+  <p>OAuth 2.0 is a delegation protocol, not an authentication protocol. This distinction matters because OAuth tells you "this application is authorized to access this resource" but does not inherently tell you "this is user X." OpenID Connect (OIDC) adds the authentication layer on top of OAuth by defining a standardized ID token that contains the user's identity claims. When people say "use OAuth for authentication," they almost always mean "use OIDC on top of OAuth 2.0."</p>
+
+  <p>The Authorization Code flow with PKCE (Proof Key for Code Exchange) is the recommended flow for all client types as of 2024. The implicit flow is deprecated because it exposes tokens in the URL fragment, and the resource owner password flow is deprecated because it gives the client application direct access to user credentials. PKCE adds a code verifier and code challenge that prevent authorization code interception attacks, making the authorization code flow safe for public clients like SPAs and mobile apps that cannot store a client secret.</p>
+
+  <p>The token lifecycle in OAuth 2.0 involves four components: the authorization code (one-time use, expires in 60 seconds), the access token (short-lived, 15-60 minutes), the refresh token (long-lived, 7-90 days), and the ID token (identity assertion, used once at login). Access tokens are sent with every API request. When an access token expires, the client uses the refresh token to obtain a new access token without user interaction. Refresh token rotation issues a new refresh token with each use and invalidates the old one, creating a chain where any break in the chain signals token theft.</p>
+
+  <h2 id="jwt-deep-dive">JWT Architecture and Security</h2>
+
+  <p>A JWT consists of three Base64URL-encoded parts separated by dots: the header specifying the signing algorithm, the payload containing claims, and the signature proving the token was not tampered with. The most critical security decisions are the signing algorithm and key management. Use RS256 (RSA with SHA-256) for systems where multiple services verify tokens because you can distribute the public key freely. Use HS256 (HMAC with SHA-256) only when the same service issues and verifies tokens, because the signing key and verification key are identical.</p>
+
+  <p>Never use the "none" algorithm in production. Never accept the algorithm from the JWT header without validation. Always validate the "exp" (expiration), "iss" (issuer), and "aud" (audience) claims. These three rules prevent the most common JWT vulnerabilities: algorithm confusion attacks (where an attacker switches RS256 to HS256 and signs with the public key), expired token replay, and token misuse across different services. The payload is Base64URL-encoded, not encrypted, so never put sensitive data like passwords or credit card numbers in JWT claims.</p>
+
+  <p>JWT size is a practical concern. Every claim you add increases the token size, and the token is sent with every HTTP request. A JWT with standard claims is roughly 300-500 bytes. Adding extensive permission arrays or user profile data can bloat tokens to 2-4KB, which affects performance for high-frequency API calls. Keep JWTs lean with essential claims only, and fetch additional user data from a user info endpoint when needed.</p>
+
+  <h2 id="api-key-patterns">API Key Best Practices</h2>
+
+  <p>API keys are the simplest authentication mechanism and remain the right choice for many use cases. The key patterns that separate secure API key implementations from vulnerable ones are: prefix-based identification, hash-only storage, automatic rotation, and scope restriction.</p>
+
+  <p>Prefix your API keys with a service identifier (e.g., "kpfy_live_" or "kpfy_test_") so they are immediately recognizable in logs and can be detected by secret scanning tools like GitHub's push protection and GitGuardian. Store only the SHA-256 hash of the key in your database, never the plaintext. Show the full key exactly once at creation time, then only display the last four characters for identification. This pattern means that even a complete database breach does not expose usable API keys.</p>
+
+  <p>Implement key rotation by supporting multiple active keys per account with a grace period. When a developer rotates their key, the old key remains valid for 24-72 hours while they update their deployment. This eliminates the fear of rotation that causes keys to live for years without being changed. Add scope restrictions so that keys can be limited to specific API endpoints, HTTP methods, or IP ranges. A key scoped to "read-only on /api/v1/products from 10.0.0.0/8" is far less dangerous if leaked than an unrestricted admin key.</p>
+
+  <h2 id="hybrid-auth">Hybrid Authentication Patterns</h2>
+
+  <p>Production APIs rarely use a single authentication method. The hybrid pattern inspects the Authorization header format to determine which authentication handler to invoke. A Bearer token triggers JWT validation. An "ApiKey" scheme triggers key lookup. A Basic scheme triggers client credential validation for OAuth machine-to-machine flows. The API gateway or middleware router dispatches to the correct handler transparently, and downstream services receive a normalized identity context regardless of how the caller authenticated.</p>
+
+  <p>The normalized identity context should include: a principal identifier (user ID, service account name, or API key owner), a set of permissions or scopes, an authentication method indicator, and an expiry timestamp. Downstream services authorize based on this context without knowing or caring how the caller proved their identity. This abstraction layer is what makes the hybrid approach maintainable as you add new authentication methods over time.</p>
+
+  <h2 id="migration">Migration Between Auth Methods</h2>
+
+  <p>Migrating from API keys to OAuth is the most common authentication evolution as APIs mature. The zero-downtime migration follows four phases. Phase 1: add OAuth support alongside existing API key authentication with a feature flag. Phase 2: migrate internal consumers to OAuth while keeping API keys active for external developers. Phase 3: announce API key deprecation with a 6-12 month timeline, provide migration guides and tooling. Phase 4: enforce OAuth-only authentication for new integrations while grandfathering existing API keys with read-only scope.</p>
+
+  <p>The most expensive mistake in auth migration is breaking existing integrations. Every API key rotation, scope change, or endpoint modification must be backward-compatible during the migration period. Implement a compatibility layer that translates between the old and new authentication models so that consumers see no change until they actively opt into the new system. Monitor adoption metrics: percentage of traffic using each auth method, error rates by auth type, and the number of active API keys that have not migrated.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>When should I use OAuth 2.0 instead of API keys?</summary>
+    <p>Use OAuth 2.0 when your API needs delegated authorization where users grant third-party applications limited access to their resources without sharing credentials. OAuth is essential for consumer-facing APIs, multi-tenant SaaS platforms, and any scenario where you need granular permission scopes. API keys are simpler and better suited for server-to-server communication, internal services, and cases where the calling application owns the data rather than acting on behalf of a user.</p>
+  </details>
+  <details>
+    <summary>What are the security differences between JWT and API keys?</summary>
+    <p>JWTs are cryptographically signed tokens that contain claims (user identity, permissions, expiry) and can be verified without a database lookup. They expire automatically and support fine-grained authorization through embedded claims. API keys are static strings that require server-side lookup for every request, never expire unless manually rotated, and carry no embedded permissions. JWTs are more secure for user-facing authentication because they are short-lived and self-contained, while API keys are simpler but require additional infrastructure for rate limiting, rotation, and revocation.</p>
+  </details>
+  <details>
+    <summary>Can I use multiple authentication methods on the same API?</summary>
+    <p>Yes, and most production APIs do. A common pattern is using API keys for server-to-server integrations and machine clients, OAuth 2.0 with JWTs for user-facing authentication through web and mobile apps, and service account tokens for internal microservice communication. The API gateway inspects the Authorization header format to route to the correct authentication handler. This layered approach lets you optimize security and developer experience for each use case independently.</p>
+  </details>
+  <details>
+    <summary>How do I handle JWT token refresh without breaking user sessions?</summary>
+    <p>Implement a silent refresh pattern using short-lived access tokens (15-30 minutes) paired with long-lived refresh tokens (7-30 days). When the access token expires, the client automatically sends the refresh token to obtain a new access token without requiring the user to re-authenticate. Store refresh tokens in HTTP-only secure cookies to prevent XSS theft. Implement refresh token rotation where each use of a refresh token invalidates the old one and issues a new pair, detecting token theft if a revoked refresh token is reused.</p>
+  </details>
+  <details>
+    <summary>What is the performance impact of JWT validation versus API key lookup?</summary>
+    <p>JWT validation is a CPU-bound cryptographic operation (verifying the signature) that takes 0.1-1ms per request with no network I/O. API key validation requires a database or cache lookup, adding 1-10ms of network latency per request depending on your infrastructure. At scale, JWT validation is faster and more scalable because it eliminates the database dependency entirely. However, JWTs cannot be individually revoked without maintaining a blacklist, which reintroduces the database lookup that JWTs were designed to eliminate.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/guides/circuit-breaker-pattern.html" class="related-card">Circuit Breaker Pattern Guide</a>
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/research/api-versioning-strategies.html" class="related-card">API Versioning Decision Tree</a>
+      <a href="/answers/api-error-handling-patterns.html" class="related-card">API Error Handling Patterns</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var wizardState = {};
+
+  window.selectWizard = function(el) {
+    var q = el.getAttribute('data-q');
+    var v = el.getAttribute('data-v');
+    wizardState['q' + q] = v;
+    var steps = document.querySelectorAll('[data-q="' + q + '"]');
+    for (var i = 0; i < steps.length; i++) {
+      steps[i].classList.remove('selected');
+    }
+    el.classList.add('selected');
+  };
+
+  window.getRecommendation = function() {
+    var q1 = wizardState.q1;
+    var q2 = wizardState.q2;
+    var q3 = wizardState.q3;
+
+    if (!q1 || !q2 || !q3) {
+      var rec = document.getElementById('recommendation');
+      rec.className = 'recommendation-box show';
+      rec.textContent = 'Please answer all three questions above before getting a recommendation.';
+      return;
+    }
+
+    var scores = { apikey: 0, jwt: 0, oauth: 0 };
+    var reasons = { apikey: [], jwt: [], oauth: [] };
+
+    if (q1 === 'server') {
+      scores.apikey += 3; scores.jwt += 1; scores.oauth += 1;
+      reasons.apikey.push('API keys are ideal for server-to-server with static credentials');
+      reasons.jwt.push('JWTs work for service-to-service with short-lived tokens');
+    } else if (q1 === 'spa') {
+      scores.oauth += 3; scores.jwt += 2; scores.apikey += 0;
+      reasons.oauth.push('OAuth + PKCE is the standard for SPAs that cannot store secrets');
+      reasons.jwt.push('JWT access tokens work well as OAuth bearer tokens in SPAs');
+    } else if (q1 === 'mobile') {
+      scores.oauth += 3; scores.jwt += 2; scores.apikey += 1;
+      reasons.oauth.push('OAuth + PKCE handles mobile auth with secure token storage');
+      reasons.jwt.push('Short-lived JWTs limit exposure from mobile binary extraction');
+    } else if (q1 === 'thirdparty') {
+      scores.oauth += 4; scores.jwt += 1; scores.apikey += 1;
+      reasons.oauth.push('OAuth delegation is essential for third-party access to user data');
+    }
+
+    if (q2 === 'yes') {
+      scores.oauth += 3; scores.jwt += 2; scores.apikey += 0;
+      reasons.oauth.push('Delegated access requires OAuth scopes and user consent');
+      reasons.jwt.push('JWT claims can embed user context for delegated requests');
+    } else {
+      scores.apikey += 2; scores.jwt += 1; scores.oauth += 0;
+      reasons.apikey.push('Application-level access is the sweet spot for API keys');
+    }
+
+    if (q3 === 'high') {
+      scores.oauth += 3; scores.jwt += 2; scores.apikey += 0;
+      reasons.oauth.push('High-security scenarios need token rotation, scopes, and revocation');
+      reasons.jwt.push('Short-lived JWTs with RS256 provide strong cryptographic guarantees');
+    } else if (q3 === 'medium') {
+      scores.jwt += 2; scores.oauth += 1; scores.apikey += 1;
+      reasons.jwt.push('Medium security is well-served by JWT expiry and signing');
+    } else {
+      scores.apikey += 2; scores.jwt += 1; scores.oauth += 0;
+      reasons.apikey.push('Simple API keys with rate limiting suffice for low-security APIs');
+    }
+
+    var methods = [
+      { name: 'API Key', key: 'apikey', score: scores.apikey },
+      { name: 'JWT', key: 'jwt', score: scores.jwt },
+      { name: 'OAuth 2.0', key: 'oauth', score: scores.oauth }
+    ];
+    methods.sort(function(a, b) { return b.score - a.score; });
+
+    var winner = methods[0];
+    var total = scores.apikey + scores.jwt + scores.oauth;
+
+    var grid = document.getElementById('scoreGrid');
+    var html = '';
+    var labels = { apikey: 'API Key', jwt: 'JWT', oauth: 'OAuth 2.0' };
+    var keys = ['apikey', 'jwt', 'oauth'];
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      html += '<div class="score-card"><div class="s-label">' + labels[k] + '</div>';
+      html += '<div class="s-value">' + Math.round(scores[k] / total * 100) + '</div>';
+      html += '<div class="s-unit">% match</div></div>';
+    }
+    html += '<div class="score-card"><div class="s-label">Winner</div>';
+    html += '<div class="s-value" style="font-size:16px;">' + winner.name + '</div>';
+    html += '<div class="s-unit">recommended</div></div>';
+    grid.innerHTML = html;
+    document.getElementById('scoreCards').style.display = 'block';
+
+    var rec = document.getElementById('recommendation');
+    rec.className = 'recommendation-box show';
+    var recText = 'RECOMMENDED: ' + winner.name + '\n\n';
+    recText += 'Based on your selections (' + q1 + ' client, ' + (q2 === 'yes' ? 'delegated' : 'application-level') + ' access, ' + q3 + ' security):\n\n';
+    for (var j = 0; j < methods.length; j++) {
+      recText += methods[j].name + ' (Score: ' + methods[j].score + '/' + total + '):\n';
+      var r = reasons[methods[j].key];
+      for (var k2 = 0; k2 < r.length; k2++) {
+        recText += '  - ' + r[k2] + '\n';
+      }
+      recText += '\n';
+    }
+    if (winner.key === 'oauth' && scores.apikey > 0) {
+      recText += 'TIP: Consider a hybrid approach using OAuth for user-facing flows\nand API keys for server-to-server integrations.';
+    }
+    rec.textContent = recText;
+
+    var output = document.getElementById('wizardOutput');
+    output.textContent = recText;
+    output.style.display = 'block';
+  };
+
+  window.generateComparison = function() {
+    var grid = document.getElementById('compGrid');
+    var methods = [
+      {
+        name: 'API Key',
+        props: {
+          'Setup Time': '30 minutes',
+          'Maintenance': 'Low',
+          'Verification': '1-10ms (DB)',
+          'Token Size': '32-64 bytes',
+          'Expiry': 'Manual',
+          'Revocation': 'Instant (DB delete)',
+          'User Context': 'None',
+          'Scalability': 'DB-bound'
+        }
+      },
+      {
+        name: 'JWT',
+        props: {
+          'Setup Time': '2-4 hours',
+          'Maintenance': 'Medium',
+          'Verification': '0.1-1ms (CPU)',
+          'Token Size': '300-2000 bytes',
+          'Expiry': 'Automatic (exp)',
+          'Revocation': 'Blacklist needed',
+          'User Context': 'Embedded claims',
+          'Scalability': 'Stateless'
+        }
+      },
+      {
+        name: 'OAuth 2.0',
+        props: {
+          'Setup Time': '1-2 days',
+          'Maintenance': 'High',
+          'Verification': '1-5ms (introspect)',
+          'Token Size': 'Varies (opaque/JWT)',
+          'Expiry': 'Short + refresh',
+          'Revocation': 'Revoke endpoint',
+          'User Context': 'Full delegation',
+          'Scalability': 'Provider-bound'
+        }
+      }
+    ];
+
+    var html = '';
+    for (var i = 0; i < methods.length; i++) {
+      var m = methods[i];
+      html += '<div class="comparison-card"><h4>' + m.name + '</h4>';
+      var keys = Object.keys(m.props);
+      for (var j = 0; j < keys.length; j++) {
+        html += '<div class="c-stat"><span class="c-label">' + keys[j] + '</span>';
+        html += '<span class="c-val">' + m.props[keys[j]] + '</span></div>';
+      }
+      html += '</div>';
+    }
+    grid.innerHTML = html;
+    document.getElementById('comparisonResults').style.display = 'block';
+  };
+
+  window.generateTemplate = function() {
+    var type = document.getElementById('templateType').value;
+    var lang = document.getElementById('templateLang').value;
+    var output = document.getElementById('templateOutput');
+    var code = '';
+
+    if (type === 'apikey' && lang === 'node') {
+      code = '// API Key Authentication Middleware (Express.js)\n';
+      code += '// Store hashed keys in DB, never plaintext\n\n';
+      code += 'const crypto = require("crypto");\n\n';
+      code += 'function hashApiKey(key) {\n';
+      code += '  return crypto.createHash("sha256").update(key).digest("hex");\n';
+      code += '}\n\n';
+      code += 'async function apiKeyAuth(req, res, next) {\n';
+      code += '  const apiKey = req.headers["x-api-key"];\n';
+      code += '  if (!apiKey) {\n';
+      code += '    return res.status(401).json({\n';
+      code += '      error: "missing_api_key",\n';
+      code += '      message: "X-API-Key header is required"\n';
+      code += '    });\n';
+      code += '  }\n\n';
+      code += '  // Validate prefix format: kpfy_live_ or kpfy_test_\n';
+      code += '  if (!apiKey.startsWith("kpfy_")) {\n';
+      code += '    return res.status(401).json({ error: "invalid_key_format" });\n';
+      code += '  }\n\n';
+      code += '  const hash = hashApiKey(apiKey);\n';
+      code += '  const record = await db.apiKeys.findOne({ hash });\n\n';
+      code += '  if (!record || record.revoked) {\n';
+      code += '    return res.status(401).json({ error: "invalid_api_key" });\n';
+      code += '  }\n\n';
+      code += '  // Check IP allowlist if configured\n';
+      code += '  if (record.allowedIps && record.allowedIps.length > 0) {\n';
+      code += '    if (!record.allowedIps.includes(req.ip)) {\n';
+      code += '      return res.status(403).json({ error: "ip_not_allowed" });\n';
+      code += '    }\n';
+      code += '  }\n\n';
+      code += '  req.apiKeyOwner = record.ownerId;\n';
+      code += '  req.apiKeyScopes = record.scopes;\n';
+      code += '  next();\n';
+      code += '}\n\n';
+      code += '// Usage:\n';
+      code += 'app.get("/api/v1/data", apiKeyAuth, handler);';
+    } else if (type === 'apikey' && lang === 'python') {
+      code = '# API Key Authentication Middleware (FastAPI)\n';
+      code += 'import hashlib\n';
+      code += 'from fastapi import Security, HTTPException, status\n';
+      code += 'from fastapi.security import APIKeyHeader\n\n';
+      code += 'api_key_header = APIKeyHeader(name="X-API-Key")\n\n';
+      code += 'def hash_api_key(key: str) -> str:\n';
+      code += '    return hashlib.sha256(key.encode()).hexdigest()\n\n';
+      code += 'async def verify_api_key(\n';
+      code += '    api_key: str = Security(api_key_header)\n';
+      code += '):\n';
+      code += '    if not api_key.startswith("kpfy_"):\n';
+      code += '        raise HTTPException(\n';
+      code += '            status_code=status.HTTP_401_UNAUTHORIZED,\n';
+      code += '            detail="Invalid API key format"\n';
+      code += '        )\n\n';
+      code += '    hashed = hash_api_key(api_key)\n';
+      code += '    record = await db.api_keys.find_one({"hash": hashed})\n\n';
+      code += '    if not record or record.get("revoked"):\n';
+      code += '        raise HTTPException(\n';
+      code += '            status_code=status.HTTP_401_UNAUTHORIZED,\n';
+      code += '            detail="Invalid or revoked API key"\n';
+      code += '        )\n\n';
+      code += '    return record\n\n';
+      code += '# Usage:\n';
+      code += '@app.get("/api/v1/data")\n';
+      code += 'async def get_data(key=Depends(verify_api_key)):\n';
+      code += '    return {"owner": key["owner_id"]}';
+    } else if (type === 'jwt' && lang === 'node') {
+      code = '// JWT Bearer Token Authentication (Express.js)\n';
+      code += 'const jwt = require("jsonwebtoken");\n\n';
+      code += 'const JWT_SECRET = process.env.JWT_SECRET;\n';
+      code += 'const JWT_ISSUER = "kappafy.com";\n';
+      code += 'const JWT_AUDIENCE = "api.kappafy.com";\n\n';
+      code += 'function jwtAuth(req, res, next) {\n';
+      code += '  const authHeader = req.headers.authorization;\n';
+      code += '  if (!authHeader || !authHeader.startsWith("Bearer ")) {\n';
+      code += '    return res.status(401).json({\n';
+      code += '      error: "missing_token",\n';
+      code += '      message: "Bearer token required"\n';
+      code += '    });\n';
+      code += '  }\n\n';
+      code += '  const token = authHeader.slice(7);\n\n';
+      code += '  try {\n';
+      code += '    const decoded = jwt.verify(token, JWT_SECRET, {\n';
+      code += '      issuer: JWT_ISSUER,\n';
+      code += '      audience: JWT_AUDIENCE,\n';
+      code += '      algorithms: ["RS256"] // Never accept "none"\n';
+      code += '    });\n\n';
+      code += '    req.user = {\n';
+      code += '      id: decoded.sub,\n';
+      code += '      email: decoded.email,\n';
+      code += '      scopes: decoded.scopes || []\n';
+      code += '    };\n';
+      code += '    next();\n';
+      code += '  } catch (err) {\n';
+      code += '    if (err.name === "TokenExpiredError") {\n';
+      code += '      return res.status(401).json({ error: "token_expired" });\n';
+      code += '    }\n';
+      code += '    return res.status(401).json({ error: "invalid_token" });\n';
+      code += '  }\n';
+      code += '}\n\n';
+      code += '// Generate token:\n';
+      code += 'function generateTokens(user) {\n';
+      code += '  const accessToken = jwt.sign(\n';
+      code += '    { sub: user.id, email: user.email, scopes: user.scopes },\n';
+      code += '    JWT_SECRET,\n';
+      code += '    { expiresIn: "15m", issuer: JWT_ISSUER, audience: JWT_AUDIENCE }\n';
+      code += '  );\n';
+      code += '  const refreshToken = jwt.sign(\n';
+      code += '    { sub: user.id, type: "refresh" },\n';
+      code += '    JWT_SECRET,\n';
+      code += '    { expiresIn: "7d" }\n';
+      code += '  );\n';
+      code += '  return { accessToken, refreshToken };\n';
+      code += '}';
+    } else if (type === 'jwt' && lang === 'python') {
+      code = '# JWT Bearer Token Authentication (FastAPI)\n';
+      code += 'from datetime import datetime, timedelta\n';
+      code += 'from jose import jwt, JWTError\n';
+      code += 'from fastapi import Depends, HTTPException\n';
+      code += 'from fastapi.security import HTTPBearer\n\n';
+      code += 'JWT_SECRET = os.environ["JWT_SECRET"]\n';
+      code += 'JWT_ALGORITHM = "RS256"\n';
+      code += 'ACCESS_TOKEN_EXPIRE = timedelta(minutes=15)\n\n';
+      code += 'security = HTTPBearer()\n\n';
+      code += 'async def jwt_auth(credentials=Depends(security)):\n';
+      code += '    token = credentials.credentials\n';
+      code += '    try:\n';
+      code += '        payload = jwt.decode(\n';
+      code += '            token, JWT_SECRET,\n';
+      code += '            algorithms=[JWT_ALGORITHM],\n';
+      code += '            options={"require": ["exp", "sub", "iss"]}\n';
+      code += '        )\n';
+      code += '        return {\n';
+      code += '            "user_id": payload["sub"],\n';
+      code += '            "scopes": payload.get("scopes", [])\n';
+      code += '        }\n';
+      code += '    except JWTError as e:\n';
+      code += '        raise HTTPException(status_code=401, detail=str(e))\n\n';
+      code += 'def create_access_token(user_id: str, scopes: list):\n';
+      code += '    payload = {\n';
+      code += '        "sub": user_id,\n';
+      code += '        "scopes": scopes,\n';
+      code += '        "iss": "kappafy.com",\n';
+      code += '        "exp": datetime.utcnow() + ACCESS_TOKEN_EXPIRE\n';
+      code += '    }\n';
+      code += '    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)';
+    } else if (type === 'oauth') {
+      code = '// OAuth 2.0 Authorization Code Flow with PKCE\n';
+      code += '// Step 1: Generate PKCE challenge\n\n';
+      code += 'async function generatePKCE() {\n';
+      code += '  const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));\n';
+      code += '  const hash = await crypto.subtle.digest("SHA-256",\n';
+      code += '    new TextEncoder().encode(verifier));\n';
+      code += '  const challenge = base64url(new Uint8Array(hash));\n';
+      code += '  return { verifier, challenge };\n';
+      code += '}\n\n';
+      code += '// Step 2: Redirect to authorization endpoint\n';
+      code += 'async function startAuth() {\n';
+      code += '  const { verifier, challenge } = await generatePKCE();\n';
+      code += '  sessionStorage.setItem("pkce_verifier", verifier);\n\n';
+      code += '  const params = new URLSearchParams({\n';
+      code += '    response_type: "code",\n';
+      code += '    client_id: CLIENT_ID,\n';
+      code += '    redirect_uri: REDIRECT_URI,\n';
+      code += '    scope: "read write",\n';
+      code += '    state: crypto.randomUUID(),\n';
+      code += '    code_challenge: challenge,\n';
+      code += '    code_challenge_method: "S256"\n';
+      code += '  });\n\n';
+      code += '  window.location.href = AUTH_URL + "?" + params;\n';
+      code += '}\n\n';
+      code += '// Step 3: Exchange code for tokens\n';
+      code += 'async function handleCallback(code) {\n';
+      code += '  const verifier = sessionStorage.getItem("pkce_verifier");\n';
+      code += '  const response = await fetch(TOKEN_URL, {\n';
+      code += '    method: "POST",\n';
+      code += '    headers: { "Content-Type": "application/x-www-form-urlencoded" },\n';
+      code += '    body: new URLSearchParams({\n';
+      code += '      grant_type: "authorization_code",\n';
+      code += '      code: code,\n';
+      code += '      redirect_uri: REDIRECT_URI,\n';
+      code += '      client_id: CLIENT_ID,\n';
+      code += '      code_verifier: verifier\n';
+      code += '    })\n';
+      code += '  });\n';
+      code += '  return response.json();\n';
+      code += '  // Returns: { access_token, refresh_token, expires_in, token_type }\n';
+      code += '}\n\n';
+      code += '// Step 4: Refresh token rotation\n';
+      code += 'async function refreshAccessToken(refreshToken) {\n';
+      code += '  const response = await fetch(TOKEN_URL, {\n';
+      code += '    method: "POST",\n';
+      code += '    headers: { "Content-Type": "application/x-www-form-urlencoded" },\n';
+      code += '    body: new URLSearchParams({\n';
+      code += '      grant_type: "refresh_token",\n';
+      code += '      refresh_token: refreshToken,\n';
+      code += '      client_id: CLIENT_ID\n';
+      code += '    })\n';
+      code += '  });\n';
+      code += '  return response.json();\n';
+      code += '}';
+    } else if (type === 'hybrid') {
+      code = '// Hybrid Authentication Middleware\n';
+      code += '// Routes to correct handler based on auth header format\n\n';
+      code += 'async function hybridAuth(req, res, next) {\n';
+      code += '  const authHeader = req.headers.authorization || "";\n';
+      code += '  const apiKey = req.headers["x-api-key"];\n\n';
+      code += '  // Priority 1: Bearer token (JWT/OAuth)\n';
+      code += '  if (authHeader.startsWith("Bearer ")) {\n';
+      code += '    return jwtAuth(req, res, next);\n';
+      code += '  }\n\n';
+      code += '  // Priority 2: API Key header\n';
+      code += '  if (apiKey) {\n';
+      code += '    return apiKeyAuth(req, res, next);\n';
+      code += '  }\n\n';
+      code += '  // Priority 3: Basic auth (service accounts)\n';
+      code += '  if (authHeader.startsWith("Basic ")) {\n';
+      code += '    return basicAuth(req, res, next);\n';
+      code += '  }\n\n';
+      code += '  return res.status(401).json({\n';
+      code += '    error: "authentication_required",\n';
+      code += '    message: "Provide Bearer token, X-API-Key, or Basic auth",\n';
+      code += '    docs: "https://kappafy.com/docs/authentication"\n';
+      code += '  });\n';
+      code += '}\n\n';
+      code += '// Normalize identity after authentication\n';
+      code += 'function normalizeIdentity(req) {\n';
+      code += '  return {\n';
+      code += '    principalId: req.user?.id || req.apiKeyOwner || req.serviceAccount,\n';
+      code += '    principalType: req.user ? "user" : req.apiKeyOwner ? "apikey" : "service",\n';
+      code += '    scopes: req.user?.scopes || req.apiKeyScopes || ["*"],\n';
+      code += '    authMethod: req.user ? "jwt" : req.apiKeyOwner ? "apikey" : "basic",\n';
+      code += '    expiresAt: req.user?.exp || null\n';
+      code += '  };\n';
+      code += '}';
+    } else {
+      code = '// Generic Authentication Template\n';
+      code += '// Replace with your framework-specific implementation\n\n';
+      code += 'FUNCTION authenticate(request):\n';
+      code += '  auth_header = request.headers["Authorization"]\n';
+      code += '  api_key = request.headers["X-API-Key"]\n\n';
+      code += '  IF auth_header STARTS WITH "Bearer ":\n';
+      code += '    token = auth_header.substring(7)\n';
+      code += '    claims = jwt.verify(token, PUBLIC_KEY, algorithms=["RS256"])\n';
+      code += '    VALIDATE claims.exp > NOW\n';
+      code += '    VALIDATE claims.iss == EXPECTED_ISSUER\n';
+      code += '    RETURN { user: claims.sub, scopes: claims.scopes }\n\n';
+      code += '  ELSE IF api_key EXISTS:\n';
+      code += '    hash = SHA256(api_key)\n';
+      code += '    record = database.find(api_keys, hash=hash)\n';
+      code += '    VALIDATE record EXISTS AND NOT record.revoked\n';
+      code += '    RETURN { owner: record.owner_id, scopes: record.scopes }\n\n';
+      code += '  ELSE:\n';
+      code += '    RETURN ERROR 401 "Authentication required"';
+    }
+
+    output.textContent = code;
+    output.style.display = 'block';
+  };
+
+  window.resetWizard = function() {
+    wizardState = {};
+    var steps = document.querySelectorAll('.wizard-step');
+    for (var i = 0; i < steps.length; i++) {
+      steps[i].classList.remove('selected');
+    }
+    document.getElementById('scoreCards').style.display = 'none';
+    document.getElementById('recommendation').className = 'recommendation-box';
+    document.getElementById('wizardOutput').style.display = 'none';
+    document.getElementById('comparisonResults').style.display = 'none';
+    document.getElementById('templateOutput').style.display = 'none';
+  };
+
+  window.copyRecommendation = function() {
+    var text = document.getElementById('wizardOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.querySelector('.sim-btn-row .btn-sm');
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+  window.copyTemplate = function() {
+    var text = document.getElementById('templateOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+      var btns = document.querySelectorAll('.sim-btn-row .btn-sm');
+      var btn = btns[btns.length - 1];
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

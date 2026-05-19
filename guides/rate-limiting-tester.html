@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rate Limiting Calculator &amp; Tester &mdash; Visualize Token Bucket, Sliding Window &amp; Fixed Window | Kappafy</title>
+<meta name="description" content="Interactive rate limit calculator. Compare fixed window, sliding window, and token bucket algorithms. Visualize request flow, simulate bursts, calculate throughput, burst capacity, and recovery time.">
+<link rel="canonical" href="https://kappafy.com/guides/rate-limiting-tester.html">
+<meta property="og:title" content="Rate Limiting Calculator & Tester — Visualize Token Bucket, Sliding Window & Fixed Window">
+<meta property="og:description" content="Interactive rate limit calculator. Compare algorithms side-by-side. Simulate bursts and visualize request flow over time.">
+<meta property="og:url" content="https://kappafy.com/guides/rate-limiting-tester.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Rate Limiting Calculator & Tester">
+<meta name="twitter:description" content="Interactive rate limit calculator. Compare fixed window, sliding window, and token bucket. Simulate request bursts.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/guides/rate-limiting-tester.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/guides/rate-limiting-tester.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Rate Limiting Calculator & Tester — Visualize Token Bucket, Sliding Window & Fixed Window",
+    "description": "Interactive rate limit calculator. Compare fixed window, sliding window, and token bucket algorithms. Simulate bursts and calculate throughput metrics.",
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://kappafy.com/guides/rate-limiting-tester.html"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Calculate and Test Rate Limits",
+    "description": "Step-by-step guide to understanding, calculating, and testing API rate limits using interactive tools.",
+    "step": [
+      { "@type": "HowToStep", "name": "Configure rate limit parameters", "text": "Set the requests per second limit, burst size, and window duration for your API." },
+      { "@type": "HowToStep", "name": "Select the algorithm", "text": "Choose between fixed window, sliding window, or token bucket rate limiting." },
+      { "@type": "HowToStep", "name": "Simulate a burst", "text": "Click Simulate Burst to send a configurable number of requests and see which pass or fail." },
+      { "@type": "HowToStep", "name": "Analyze the metrics", "text": "Review max sustained throughput, burst capacity, and recovery time calculations." },
+      { "@type": "HowToStep", "name": "Compare algorithms", "text": "Run the same burst against all three algorithms to see how they differ in behavior." }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is the difference between fixed window and sliding window rate limiting?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Fixed window rate limiting resets the request counter at fixed intervals (e.g., every 60 seconds). This creates a boundary problem: a client can send the maximum number of requests at the end of one window and the beginning of the next, effectively doubling throughput for a brief period. Sliding window rate limiting tracks the exact timestamp of each request and enforces the limit over a continuously moving time window, eliminating the boundary spike. Sliding window is fairer but requires more memory to store individual request timestamps."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does the token bucket algorithm work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The token bucket algorithm maintains a bucket that holds tokens. Tokens are added at a fixed rate (e.g., 10 per second). Each request consumes one token. If the bucket is empty, the request is rejected. The bucket has a maximum capacity (burst size), so tokens accumulate up to the limit during idle periods. This allows short bursts of traffic up to the bucket capacity while enforcing an average rate over time. It is the most commonly used algorithm in production APIs including AWS, Stripe, and GitHub."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is a good rate limit for a REST API?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Common rate limits for REST APIs range from 60 requests per minute for free tiers to 1000+ for paid plans. GitHub allows 5000 requests per hour for authenticated users. Stripe allows 100 requests per second in live mode. The right limit depends on your server capacity, the cost per request, and your business model. Start conservative (100/min) and increase based on actual usage patterns. Always return X-RateLimit-Remaining and Retry-After headers so clients can adapt."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I handle 429 Too Many Requests in my frontend?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Read the Retry-After header to determine how long to wait. Implement exponential backoff: wait 1s, then 2s, then 4s between retries. Queue pending requests and release them after the cooldown period. Show users a non-blocking notification that the system is temporarily throttled. Never retry immediately or in a tight loop — this makes the problem worse and can get your API key banned."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is burst capacity in rate limiting?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Burst capacity is the maximum number of requests a client can send instantaneously before being rate limited. In a token bucket, it equals the bucket size. A rate limit of 10 requests/second with a burst of 50 means a client can send 50 requests at once (consuming all tokens) but then must wait 5 seconds for the bucket to fully refill. Burst capacity absorbs natural traffic spikes without rejecting requests, while the sustained rate limit prevents abuse over longer periods."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://kappafy.com/guides/"},{"@type":"ListItem","position":3,"name":"Rate Limiting Tester"}]}</script>
+<style>
+  .rl-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .rl-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .rl-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 700px) {
+    .rl-controls { grid-template-columns: 1fr; }
+  }
+  .rl-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .rl-field select,
+  .rl-field input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .rl-field select:focus,
+  .rl-field input:focus {
+    border-color: var(--accent);
+  }
+  .rl-field select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .rl-btn-row {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+  .rl-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .rl-metric {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .rl-metric .metric-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .rl-metric .metric-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .rl-metric .metric-unit {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: 4px;
+  }
+  .rl-timeline {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  .rl-timeline svg {
+    display: block;
+    width: 100%;
+    min-width: 600px;
+  }
+  .rl-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 12px;
+    color: var(--text);
+  }
+  .log-pass { color: #86efac; }
+  .log-fail { color: #fca5a5; }
+  .log-info { color: #a5b4fc; }
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  @media (max-width: 700px) {
+    .compare-grid { grid-template-columns: 1fr; }
+  }
+  .compare-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .compare-card h4 {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .compare-card .stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-card .stat-row:last-child {
+    border-bottom: none;
+  }
+  .compare-card .stat-label {
+    color: var(--text-muted);
+  }
+  .compare-card .stat-val {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .algo-badge {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 4px;
+  }
+  .badge-fixed { background: #1e1b4b; color: #a5b4fc; }
+  .badge-sliding { background: #064e3b; color: #6ee7b7; }
+  .badge-token { background: #78350f; color: #fde047; }
+  .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .status-table th, .status-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .status-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .status-table td code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    color: var(--bg); flex-shrink: 0;
+  }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span>Rate Limiting Tester</span>
+  </nav>
+
+  <h1>Rate Limiting Calculator &amp; Tester</h1>
+  <div class="meta">May 25, 2026 &middot; 14 min read</div>
+
+  <p>Rate limiting is the mechanism that prevents any single client from overwhelming an API with too many requests. Every major API uses it: GitHub caps authenticated users at 5,000 requests per hour, Stripe allows 100 requests per second in live mode, and OpenAI enforces both request-per-minute and token-per-minute limits. Understanding how rate limiting works is not optional for developers who consume or build APIs. The difference between a smooth integration and a broken one often comes down to whether the frontend correctly handles 429 responses and implements proper backoff strategies.</p>
+
+  <p>This interactive calculator lets you configure rate limit parameters, select the algorithm, simulate bursts of traffic, and visualize exactly which requests pass and which get rejected. You can compare the three major algorithms side by side to understand their trade-offs: fixed window is simplest but has boundary problems, sliding window is fairest but uses more memory, and token bucket is the industry standard that balances burst tolerance with sustained rate enforcement.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#calculator">Interactive Rate Limit Calculator</a></li>
+      <li><a href="#comparison">Algorithm Comparison</a></li>
+      <li><a href="#algorithms">How Rate Limiting Algorithms Work</a></li>
+      <li><a href="#fixed-window">Fixed Window</a></li>
+      <li><a href="#sliding-window">Sliding Window</a></li>
+      <li><a href="#token-bucket">Token Bucket</a></li>
+      <li><a href="#choosing">Choosing the Right Algorithm</a></li>
+      <li><a href="#implementation">Implementation Patterns</a></li>
+      <li><a href="#headers">Rate Limit Response Headers</a></li>
+      <li><a href="#client-side">Client-Side Rate Limit Handling</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="calculator">Interactive Rate Limit Calculator</h2>
+
+  <p>Configure your rate limit parameters below and click <strong>Simulate Burst</strong> to send a batch of requests through the selected algorithm. The timeline visualization shows each request as a dot: green for accepted, red for rejected. Metrics update in real time.</p>
+
+  <div class="rl-panel">
+    <h3>Rate Limit Configuration</h3>
+    <div class="rl-controls">
+      <div class="rl-field">
+        <label for="rateLimit">Requests / Second Limit</label>
+        <input type="number" id="rateLimit" value="10" min="1" max="10000" step="1">
+      </div>
+      <div class="rl-field">
+        <label for="burstSize">Burst Size (bucket capacity)</label>
+        <input type="number" id="burstSize" value="20" min="1" max="10000" step="1">
+      </div>
+      <div class="rl-field">
+        <label for="windowType">Algorithm</label>
+        <select id="windowType">
+          <option value="fixed">Fixed Window</option>
+          <option value="sliding">Sliding Window</option>
+          <option value="token" selected>Token Bucket</option>
+        </select>
+      </div>
+      <div class="rl-field">
+        <label for="windowDuration">Window Duration (seconds)</label>
+        <input type="number" id="windowDuration" value="1" min="1" max="3600" step="1">
+      </div>
+      <div class="rl-field">
+        <label for="burstCount">Requests to Simulate</label>
+        <input type="number" id="burstCount" value="50" min="1" max="500" step="1">
+      </div>
+      <div class="rl-field">
+        <label for="burstSpread">Spread Over (seconds)</label>
+        <input type="number" id="burstSpread" value="5" min="1" max="60" step="1">
+      </div>
+    </div>
+
+    <div class="rl-btn-row">
+      <button class="btn btn-primary" onclick="simulateBurst()">Simulate Burst</button>
+      <button class="btn" onclick="compareAlgorithms()">Compare All Algorithms</button>
+      <button class="btn" onclick="resetSimulation()">Reset</button>
+    </div>
+
+    <div class="rl-metrics" id="metricsContainer">
+      <div class="rl-metric">
+        <div class="metric-label">Max Sustained Throughput</div>
+        <div class="metric-value" id="metricThroughput">--<span class="metric-unit">req/s</span></div>
+      </div>
+      <div class="rl-metric">
+        <div class="metric-label">Burst Capacity</div>
+        <div class="metric-value" id="metricBurst">--<span class="metric-unit">requests</span></div>
+      </div>
+      <div class="rl-metric">
+        <div class="metric-label">Recovery Time</div>
+        <div class="metric-value" id="metricRecovery">--<span class="metric-unit">seconds</span></div>
+      </div>
+      <div class="rl-metric">
+        <div class="metric-label">Accepted / Rejected</div>
+        <div class="metric-value" id="metricAccepted">--<span class="metric-unit">/ --</span></div>
+      </div>
+    </div>
+
+    <div class="rl-timeline" id="timelineContainer">
+      <svg id="timelineSvg" viewBox="0 0 800 120" preserveAspectRatio="xMidYMid meet">
+        <text x="400" y="65" text-anchor="middle" fill="#666" font-family="var(--font-display)" font-size="12">Click "Simulate Burst" to visualize request flow</text>
+      </svg>
+    </div>
+
+    <div class="rl-log" id="simLog">Simulation log will appear here...</div>
+  </div>
+
+  <h2 id="comparison">Algorithm Comparison</h2>
+
+  <p>Click <strong>Compare All Algorithms</strong> above to run the same burst against all three algorithms simultaneously. The results appear below, showing exactly how each algorithm handles the same traffic pattern differently.</p>
+
+  <div class="compare-grid" id="compareContainer">
+    <div class="compare-card">
+      <h4><span class="algo-badge badge-fixed">FIXED</span> Fixed Window</h4>
+      <div class="stat-row"><span class="stat-label">Accepted</span><span class="stat-val" id="cmpFixedAccepted">--</span></div>
+      <div class="stat-row"><span class="stat-label">Rejected</span><span class="stat-val" id="cmpFixedRejected">--</span></div>
+      <div class="stat-row"><span class="stat-label">Max burst allowed</span><span class="stat-val" id="cmpFixedBurst">--</span></div>
+      <div class="stat-row"><span class="stat-label">Boundary spike</span><span class="stat-val" id="cmpFixedSpike">--</span></div>
+    </div>
+    <div class="compare-card">
+      <h4><span class="algo-badge badge-sliding">SLIDING</span> Sliding Window</h4>
+      <div class="stat-row"><span class="stat-label">Accepted</span><span class="stat-val" id="cmpSlidingAccepted">--</span></div>
+      <div class="stat-row"><span class="stat-label">Rejected</span><span class="stat-val" id="cmpSlidingRejected">--</span></div>
+      <div class="stat-row"><span class="stat-label">Max burst allowed</span><span class="stat-val" id="cmpSlidingBurst">--</span></div>
+      <div class="stat-row"><span class="stat-label">Memory per client</span><span class="stat-val" id="cmpSlidingMem">--</span></div>
+    </div>
+    <div class="compare-card">
+      <h4><span class="algo-badge badge-token">TOKEN</span> Token Bucket</h4>
+      <div class="stat-row"><span class="stat-label">Accepted</span><span class="stat-val" id="cmpTokenAccepted">--</span></div>
+      <div class="stat-row"><span class="stat-label">Rejected</span><span class="stat-val" id="cmpTokenRejected">--</span></div>
+      <div class="stat-row"><span class="stat-label">Max burst allowed</span><span class="stat-val" id="cmpTokenBurst">--</span></div>
+      <div class="stat-row"><span class="stat-label">Recovery time</span><span class="stat-val" id="cmpTokenRecovery">--</span></div>
+    </div>
+  </div>
+
+  <h2 id="algorithms">How Rate Limiting Algorithms Work</h2>
+
+  <p>Rate limiting algorithms sit between the client and the server, deciding whether each incoming request should be processed or rejected. The decision is based on how many requests the client has already sent within a defined time period. What differs between algorithms is how they define "within a time period" and how they track request counts. Each algorithm makes a different trade-off between simplicity, fairness, memory usage, and burst tolerance.</p>
+
+  <p>All three major algorithms serve the same purpose: protect the server from being overwhelmed while giving each client a fair share of capacity. The choice between them depends on your specific requirements: how important is it to prevent boundary spikes? How much memory can you allocate per client? Do you need to support legitimate traffic bursts?</p>
+
+  <h2 id="fixed-window">Fixed Window Rate Limiting</h2>
+
+  <p>The fixed window algorithm divides time into discrete intervals of equal length (windows). Each window has a counter that starts at zero. Every request increments the counter. When the counter reaches the limit, all subsequent requests in that window are rejected. When a new window begins, the counter resets to zero.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>class FixedWindowRateLimiter {
+  constructor(limit, windowMs) {
+    this.limit = limit;
+    this.windowMs = windowMs;
+    this.counters = new Map(); // clientId -> { count, windowStart }
+  }
+
+  allow(clientId) {
+    const now = Date.now();
+    const record = this.counters.get(clientId);
+
+    if (!record || now - record.windowStart >= this.windowMs) {
+      this.counters.set(clientId, { count: 1, windowStart: now });
+      return true;
+    }
+
+    if (record.count < this.limit) {
+      record.count++;
+      return true;
+    }
+
+    return false; // rate limited
+  }
+}</code></pre>
+
+  <p>The critical weakness of fixed windows is the <strong>boundary problem</strong>. If a client sends 10 requests at the end of window 1 and 10 requests at the beginning of window 2, they effectively send 20 requests in a short span while the limit is 10. This doubles the effective rate at window boundaries. For many applications this is acceptable, but for APIs that need strict rate enforcement (payment processing, authentication endpoints), it creates a vulnerability window.</p>
+
+  <p>Fixed window is the simplest to implement and uses the least memory: one counter and one timestamp per client. Redis makes this trivial with <code>INCR</code> and <code>EXPIRE</code>. If the boundary problem is acceptable for your use case, fixed window is the right choice. Most public APIs (including GitHub's hourly limit) use fixed windows because the boundary spike is small relative to the window size.</p>
+
+  <h2 id="sliding-window">Sliding Window Rate Limiting</h2>
+
+  <p>The sliding window algorithm eliminates the boundary problem by tracking the exact timestamp of each request. Instead of counting requests within a fixed interval, it counts requests within a moving window that ends at the current moment. Every time a new request arrives, the algorithm looks back exactly <code>windowMs</code> milliseconds and counts how many requests fall within that range.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>class SlidingWindowRateLimiter {
+  constructor(limit, windowMs) {
+    this.limit = limit;
+    this.windowMs = windowMs;
+    this.requests = new Map(); // clientId -> [timestamps]
+  }
+
+  allow(clientId) {
+    const now = Date.now();
+    const cutoff = now - this.windowMs;
+
+    if (!this.requests.has(clientId)) {
+      this.requests.set(clientId, []);
+    }
+
+    const timestamps = this.requests.get(clientId);
+
+    // Remove expired timestamps
+    while (timestamps.length > 0 && timestamps[0] <= cutoff) {
+      timestamps.shift();
+    }
+
+    if (timestamps.length < this.limit) {
+      timestamps.push(now);
+      return true;
+    }
+
+    return false; // rate limited
+  }
+}</code></pre>
+
+  <p>Sliding window is the fairest algorithm. A client can never exceed the limit, regardless of when they send requests relative to any boundary. The trade-off is memory: you need to store every request timestamp within the window for every client. For a limit of 1000 requests per minute with 10,000 active clients, that is up to 10 million timestamps in memory. In practice, a sliding window log uses a Redis sorted set (<code>ZADD</code> + <code>ZRANGEBYSCORE</code> + <code>ZCARD</code>) which handles this efficiently but at higher memory cost than a simple counter.</p>
+
+  <p>A common optimization is the <strong>sliding window counter</strong>, which approximates the sliding window by weighting the previous fixed window's count. If 70% of the current window has elapsed, the count is: <code>currentWindowCount + previousWindowCount * 0.3</code>. This uses the same memory as fixed window (two counters) but eliminates most of the boundary spike.</p>
+
+  <h2 id="token-bucket">Token Bucket Rate Limiting</h2>
+
+  <p>The token bucket is the most widely deployed rate limiting algorithm in production. AWS API Gateway, Stripe, Cloudflare, and GitHub all use variants of it. The mental model is simple: imagine a bucket that holds tokens. Tokens are added at a constant rate (e.g., 10 per second). Each request removes one token. If the bucket is empty, the request is rejected. The bucket has a maximum capacity (the burst size), so tokens accumulate during idle periods up to the cap.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>class TokenBucketRateLimiter {
+  constructor(rate, bucketSize) {
+    this.rate = rate;         // tokens per second
+    this.bucketSize = bucketSize;
+    this.buckets = new Map(); // clientId -> { tokens, lastRefill }
+  }
+
+  allow(clientId) {
+    const now = Date.now();
+
+    if (!this.buckets.has(clientId)) {
+      this.buckets.set(clientId, {
+        tokens: this.bucketSize,
+        lastRefill: now
+      });
+    }
+
+    const bucket = this.buckets.get(clientId);
+    const elapsed = (now - bucket.lastRefill) / 1000;
+    bucket.tokens = Math.min(
+      this.bucketSize,
+      bucket.tokens + elapsed * this.rate
+    );
+    bucket.lastRefill = now;
+
+    if (bucket.tokens >= 1) {
+      bucket.tokens -= 1;
+      return true;
+    }
+
+    return false; // rate limited
+  }
+}</code></pre>
+
+  <p>The token bucket naturally handles two scenarios that the other algorithms struggle with. First, it allows <strong>legitimate bursts</strong>. A client that has been idle accumulates tokens, so they can briefly exceed the sustained rate without being rejected. This matches real traffic patterns: a user loads a dashboard that makes 20 API calls simultaneously, then goes idle for a minute. Second, it enforces a <strong>strict average rate</strong> over time. No matter how the requests are distributed, the long-term average cannot exceed the token refill rate.</p>
+
+  <p>Token bucket uses minimal memory (two numbers per client: token count and last refill time) and requires only a simple calculation per request. It is the best default choice for most APIs and the algorithm this tool defaults to.</p>
+
+  <h2 id="choosing">Choosing the Right Algorithm</h2>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Criterion</th>
+        <th><span class="algo-badge badge-fixed">Fixed</span></th>
+        <th><span class="algo-badge badge-sliding">Sliding</span></th>
+        <th><span class="algo-badge badge-token">Token</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Implementation complexity</td><td>Low</td><td>Medium</td><td>Low</td></tr>
+      <tr><td>Memory per client</td><td>8 bytes</td><td>8 bytes * limit</td><td>16 bytes</td></tr>
+      <tr><td>Boundary spike risk</td><td>Yes (2x)</td><td>None</td><td>None</td></tr>
+      <tr><td>Burst tolerance</td><td>No</td><td>No</td><td>Yes (configurable)</td></tr>
+      <tr><td>Fairness</td><td>Good</td><td>Best</td><td>Good</td></tr>
+      <tr><td>Used by</td><td>GitHub (hourly)</td><td>Cloudflare</td><td>AWS, Stripe, GitHub (per-second)</td></tr>
+    </tbody>
+  </table>
+
+  <p>For most REST APIs, <strong>token bucket is the right default</strong>. It handles bursts gracefully, uses minimal memory, and is straightforward to implement with Redis. Use sliding window when you need the strictest possible enforcement (financial APIs, authentication endpoints). Use fixed window when simplicity is the primary concern and boundary spikes are acceptable.</p>
+
+  <h2 id="implementation">Implementation Patterns</h2>
+
+  <h3>Redis-Based Token Bucket</h3>
+
+  <p>In production, rate limiters run in Redis (or a similar shared store) so all application instances share the same counters. The token bucket maps cleanly to Redis operations.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>-- Redis Lua script for atomic token bucket
+local key = KEYS[1]
+local rate = tonumber(ARGV[1])
+local capacity = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+
+local bucket = redis.call('HMGET', key, 'tokens', 'last_refill')
+local tokens = tonumber(bucket[1]) or capacity
+local last_refill = tonumber(bucket[2]) or now
+
+local elapsed = (now - last_refill) / 1000
+tokens = math.min(capacity, tokens + elapsed * rate)
+
+if tokens >= 1 then
+  tokens = tokens - 1
+  redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+  redis.call('EXPIRE', key, math.ceil(capacity / rate) + 1)
+  return 1 -- allowed
+end
+
+redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+redis.call('EXPIRE', key, math.ceil(capacity / rate) + 1)
+return 0 -- rejected</code></pre>
+
+  <h2 id="headers">Rate Limit Response Headers</h2>
+
+  <p>Well-designed APIs include rate limit information in response headers so clients can adapt proactively. These headers are not standardized in an RFC but are universally adopted by major APIs. Include them in your <a href="/tools/api-response-mocker.html">mock API responses</a> to test your client-side handling.</p>
+
+  <table class="status-table">
+    <thead><tr><th>Header</th><th>Value</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>X-RateLimit-Limit</code></td><td>Integer</td><td>Maximum requests allowed in the window</td></tr>
+      <tr><td><code>X-RateLimit-Remaining</code></td><td>Integer</td><td>Requests remaining in current window</td></tr>
+      <tr><td><code>X-RateLimit-Reset</code></td><td>Unix timestamp</td><td>When the limit resets (for fixed window)</td></tr>
+      <tr><td><code>Retry-After</code></td><td>Seconds</td><td>How long to wait before retrying (on 429)</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="client-side">Client-Side Rate Limit Handling</h2>
+
+  <p>Your frontend must handle 429 responses gracefully. The worst possible behavior is retrying immediately in a tight loop, which amplifies the problem and can get your API key revoked. The correct approach is exponential backoff with Retry-After header support.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>async function fetchWithRateLimitHandling(url, options = {}) {
+  const maxRetries = options.maxRetries || 3;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.status !== 429) return response;
+
+    // Read rate limit headers
+    const retryAfter = response.headers.get('Retry-After');
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    const resetAt = response.headers.get('X-RateLimit-Reset');
+
+    // Calculate wait time
+    let waitMs;
+    if (retryAfter) {
+      waitMs = parseInt(retryAfter) * 1000;
+    } else if (resetAt) {
+      waitMs = (parseInt(resetAt) * 1000) - Date.now();
+    } else {
+      waitMs = Math.pow(2, attempt) * 1000; // exponential backoff
+    }
+
+    console.log(
+      'Rate limited. Remaining:', remaining,
+      'Waiting:', waitMs, 'ms'
+    );
+
+    await new Promise(r => setTimeout(r, Math.max(waitMs, 100)));
+  }
+
+  throw new Error('Rate limit exceeded after ' + maxRetries + ' retries');
+}</code></pre>
+
+  <p>For visualizing and debugging the JSON payloads in rate limit responses, use <a href="/">Kappafy's JSON explorer</a>. If you are <a href="/guides/simulate-api-errors-timeouts.html">simulating API errors</a> during development, combine the error simulator with this rate limit calculator to test the full spectrum of failure modes. Teams building <a href="https://invokebot.com">webhook systems</a> need to understand rate limiting from both the consumer and provider side.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is the difference between fixed window and sliding window rate limiting?</summary>
+    <p>Fixed window rate limiting resets the request counter at fixed intervals (e.g., every 60 seconds). This creates a boundary problem: a client can send the maximum number of requests at the end of one window and the beginning of the next, effectively doubling throughput for a brief period. Sliding window rate limiting tracks the exact timestamp of each request and enforces the limit over a continuously moving time window, eliminating the boundary spike entirely. Sliding window is fairer but requires more memory because it stores individual request timestamps rather than a simple counter.</p>
+  </details>
+  <details>
+    <summary>How does the token bucket algorithm work?</summary>
+    <p>The token bucket maintains a bucket that holds tokens. Tokens are added at a fixed rate (e.g., 10 per second). Each request consumes one token. If the bucket is empty, the request is rejected. The bucket has a maximum capacity (burst size), so tokens accumulate up to the limit during idle periods. This allows short bursts of traffic up to the bucket capacity while enforcing an average rate over time. It uses only 16 bytes per client (token count + last refill timestamp) and is the most commonly used algorithm in production APIs including AWS API Gateway, Stripe, and GitHub.</p>
+  </details>
+  <details>
+    <summary>What is a good rate limit for a REST API?</summary>
+    <p>Common rate limits range from 60 requests per minute for free tiers to 1000+ for paid plans. GitHub allows 5,000 per hour authenticated, 60 per hour unauthenticated. Stripe allows 100/second in live mode, 25/second in test mode. OpenAI uses tiered limits based on usage history. Start conservative (100 req/min) and increase based on actual usage. Always return X-RateLimit-Remaining and Retry-After headers so clients can adapt proactively. The right limit depends on your server capacity, cost per request, and business model.</p>
+  </details>
+  <details>
+    <summary>How do I handle 429 Too Many Requests in my frontend?</summary>
+    <p>Read the Retry-After header to determine how long to wait. Implement exponential backoff: wait 1s, then 2s, then 4s between retries. Queue pending requests and release them after the cooldown period. Show users a non-blocking notification that the system is temporarily throttled. Never retry immediately or in a tight loop because this makes the problem worse and can get your API key permanently revoked. The code example in the Client-Side Rate Limit Handling section above shows the complete pattern with header parsing and backoff.</p>
+  </details>
+  <details>
+    <summary>What is burst capacity in rate limiting?</summary>
+    <p>Burst capacity is the maximum number of requests a client can send instantaneously before being rate limited. In a token bucket algorithm, it equals the bucket size. A rate limit of 10 requests per second with a burst of 50 means a client can send 50 requests at once (consuming all tokens) but then must wait 5 seconds for the bucket to fully refill. Burst capacity absorbs natural traffic spikes, like a dashboard loading 20 widgets simultaneously, without rejecting requests. The sustained rate limit still prevents abuse over longer periods.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/guides/simulate-api-errors-timeouts.html" class="related-card">Simulate API Errors &amp; Timeouts</a>
+      <a href="/answers/http-status-codes-reference.html" class="related-card">HTTP Status Codes Reference</a>
+      <a href="/" class="related-card">Kappafy JSON Explorer</a>
+      <a href="/answers/prettify-json-online.html" class="related-card">Prettify JSON Online</a>
+      <a href="/research/json-api-response-analysis.html" class="related-card">JSON API Response Analysis</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  // Rate Limiter Implementations
+  function FixedWindow(limit, windowSec) {
+    this.limit = limit;
+    this.windowMs = windowSec * 1000;
+    this.count = 0;
+    this.windowStart = 0;
+  }
+  FixedWindow.prototype.allow = function(timeMs) {
+    if (timeMs - this.windowStart >= this.windowMs) {
+      this.count = 0;
+      this.windowStart = Math.floor(timeMs / this.windowMs) * this.windowMs;
+    }
+    if (this.count < this.limit) {
+      this.count++;
+      return true;
+    }
+    return false;
+  };
+
+  function SlidingWindow(limit, windowSec) {
+    this.limit = limit;
+    this.windowMs = windowSec * 1000;
+    this.timestamps = [];
+  }
+  SlidingWindow.prototype.allow = function(timeMs) {
+    var cutoff = timeMs - this.windowMs;
+    while (this.timestamps.length > 0 && this.timestamps[0] <= cutoff) {
+      this.timestamps.shift();
+    }
+    if (this.timestamps.length < this.limit) {
+      this.timestamps.push(timeMs);
+      return true;
+    }
+    return false;
+  };
+
+  function TokenBucket(rate, capacity) {
+    this.rate = rate;
+    this.capacity = capacity;
+    this.tokens = capacity;
+    this.lastRefill = 0;
+  }
+  TokenBucket.prototype.allow = function(timeMs) {
+    if (this.lastRefill === 0) this.lastRefill = timeMs;
+    var elapsed = (timeMs - this.lastRefill) / 1000;
+    this.tokens = Math.min(this.capacity, this.tokens + elapsed * this.rate);
+    this.lastRefill = timeMs;
+    if (this.tokens >= 1) {
+      this.tokens -= 1;
+      return true;
+    }
+    return false;
+  };
+
+  function createLimiter(type, limit, burst, windowSec) {
+    if (type === 'fixed') return new FixedWindow(limit * windowSec, windowSec);
+    if (type === 'sliding') return new SlidingWindow(limit * windowSec, windowSec);
+    return new TokenBucket(limit, burst);
+  }
+
+  function generateRequests(count, spreadSec) {
+    var requests = [];
+    for (var i = 0; i < count; i++) {
+      var t = (i / Math.max(count - 1, 1)) * spreadSec * 1000;
+      requests.push(Math.round(t));
+    }
+    return requests;
+  }
+
+  function runSimulation(limiter, requestTimes) {
+    var results = [];
+    requestTimes.forEach(function(t) {
+      results.push({ time: t, allowed: limiter.allow(t) });
+    });
+    return results;
+  }
+
+  function drawTimeline(results, spreadMs) {
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var svg = document.getElementById('timelineSvg');
+    svg.innerHTML = '';
+
+    var w = 800, h = 120;
+    var padL = 50, padR = 20, padT = 20, padB = 30;
+    var plotW = w - padL - padR;
+    var plotH = h - padT - padB;
+
+    // Axis
+    var axis = document.createElementNS(svgNS, 'line');
+    axis.setAttribute('x1', padL); axis.setAttribute('y1', h - padB);
+    axis.setAttribute('x2', w - padR); axis.setAttribute('y2', h - padB);
+    axis.setAttribute('stroke', '#444'); axis.setAttribute('stroke-width', '1');
+    svg.appendChild(axis);
+
+    // Time labels
+    var maxT = spreadMs || 5000;
+    for (var s = 0; s <= Math.ceil(maxT / 1000); s++) {
+      var x = padL + (s * 1000 / maxT) * plotW;
+      if (x > w - padR) break;
+      var tick = document.createElementNS(svgNS, 'line');
+      tick.setAttribute('x1', x); tick.setAttribute('y1', h - padB);
+      tick.setAttribute('x2', x); tick.setAttribute('y2', h - padB + 5);
+      tick.setAttribute('stroke', '#555'); tick.setAttribute('stroke-width', '1');
+      svg.appendChild(tick);
+
+      var label = document.createElementNS(svgNS, 'text');
+      label.setAttribute('x', x); label.setAttribute('y', h - padB + 18);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('fill', '#888');
+      label.setAttribute('font-family', 'var(--font-display)');
+      label.setAttribute('font-size', '10');
+      label.textContent = s + 's';
+      svg.appendChild(label);
+    }
+
+    // Y label
+    var yLabel = document.createElementNS(svgNS, 'text');
+    yLabel.setAttribute('x', 10); yLabel.setAttribute('y', padT + plotH / 2);
+    yLabel.setAttribute('fill', '#888');
+    yLabel.setAttribute('font-family', 'var(--font-display)');
+    yLabel.setAttribute('font-size', '10');
+    yLabel.setAttribute('transform', 'rotate(-90, 10, ' + (padT + plotH / 2) + ')');
+    yLabel.textContent = 'Requests';
+    svg.appendChild(yLabel);
+
+    // Plot requests
+    results.forEach(function(r, i) {
+      var x = padL + (r.time / maxT) * plotW;
+      var y = padT + 5 + (i / Math.max(results.length - 1, 1)) * (plotH - 10);
+
+      var circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', x);
+      circle.setAttribute('cy', y);
+      circle.setAttribute('r', '4');
+      circle.setAttribute('fill', r.allowed ? '#22c55e' : '#ef4444');
+      circle.setAttribute('opacity', '0.8');
+      svg.appendChild(circle);
+    });
+
+    // Legend
+    var legendItems = [
+      { color: '#22c55e', label: 'Accepted' },
+      { color: '#ef4444', label: 'Rejected' }
+    ];
+    legendItems.forEach(function(item, i) {
+      var lx = w - padR - 130 + i * 80;
+      var ly = 12;
+      var c = document.createElementNS(svgNS, 'circle');
+      c.setAttribute('cx', lx); c.setAttribute('cy', ly); c.setAttribute('r', '4');
+      c.setAttribute('fill', item.color);
+      svg.appendChild(c);
+
+      var t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('x', lx + 8); t.setAttribute('y', ly + 4);
+      t.setAttribute('fill', '#aaa');
+      t.setAttribute('font-family', 'var(--font-display)');
+      t.setAttribute('font-size', '10');
+      t.textContent = item.label;
+      svg.appendChild(t);
+    });
+  }
+
+  window.simulateBurst = function() {
+    var limit = parseInt(document.getElementById('rateLimit').value) || 10;
+    var burst = parseInt(document.getElementById('burstSize').value) || 20;
+    var algoType = document.getElementById('windowType').value;
+    var windowSec = parseInt(document.getElementById('windowDuration').value) || 1;
+    var count = parseInt(document.getElementById('burstCount').value) || 50;
+    var spreadSec = parseInt(document.getElementById('burstSpread').value) || 5;
+
+    var limiter = createLimiter(algoType, limit, burst, windowSec);
+    var requestTimes = generateRequests(count, spreadSec);
+    var results = runSimulation(limiter, requestTimes);
+    var spreadMs = spreadSec * 1000;
+
+    var accepted = results.filter(function(r) { return r.allowed; }).length;
+    var rejected = count - accepted;
+
+    // Metrics
+    document.getElementById('metricThroughput').innerHTML = limit + '<span class="metric-unit">req/s</span>';
+    document.getElementById('metricBurst').innerHTML = (algoType === 'token' ? burst : limit * windowSec) + '<span class="metric-unit">requests</span>';
+    var recoveryTime = algoType === 'token' ? (burst / limit).toFixed(1) : windowSec.toFixed(1);
+    document.getElementById('metricRecovery').innerHTML = recoveryTime + '<span class="metric-unit">seconds</span>';
+    document.getElementById('metricAccepted').innerHTML = accepted + '<span class="metric-unit">/ ' + rejected + '</span>';
+
+    // Timeline
+    drawTimeline(results, spreadMs);
+
+    // Log
+    var logEl = document.getElementById('simLog');
+    var logLines = [];
+    logLines.push('<span class="log-info">Algorithm: ' + algoType.toUpperCase() + ' | Limit: ' + limit + ' req/s | Burst: ' + burst + ' | Window: ' + windowSec + 's</span>');
+    logLines.push('<span class="log-info">Simulating ' + count + ' requests over ' + spreadSec + ' seconds...</span>');
+    logLines.push('');
+
+    results.forEach(function(r, i) {
+      var t = (r.time / 1000).toFixed(3);
+      if (r.allowed) {
+        logLines.push('<span class="log-pass">  [' + t + 's] Request #' + (i + 1) + ' \u2192 ACCEPTED</span>');
+      } else {
+        logLines.push('<span class="log-fail">  [' + t + 's] Request #' + (i + 1) + ' \u2192 REJECTED (429)</span>');
+      }
+    });
+
+    logLines.push('');
+    logLines.push('<span class="log-info">Result: ' + accepted + ' accepted, ' + rejected + ' rejected (' + ((accepted / count) * 100).toFixed(1) + '% pass rate)</span>');
+    logEl.innerHTML = logLines.join('\n');
+  };
+
+  window.compareAlgorithms = function() {
+    var limit = parseInt(document.getElementById('rateLimit').value) || 10;
+    var burst = parseInt(document.getElementById('burstSize').value) || 20;
+    var windowSec = parseInt(document.getElementById('windowDuration').value) || 1;
+    var count = parseInt(document.getElementById('burstCount').value) || 50;
+    var spreadSec = parseInt(document.getElementById('burstSpread').value) || 5;
+
+    var requestTimes = generateRequests(count, spreadSec);
+
+    var fixedLimiter = createLimiter('fixed', limit, burst, windowSec);
+    var slidingLimiter = createLimiter('sliding', limit, burst, windowSec);
+    var tokenLimiter = createLimiter('token', limit, burst, windowSec);
+
+    var fixedResults = runSimulation(fixedLimiter, requestTimes.slice());
+    var slidingResults = runSimulation(slidingLimiter, requestTimes.slice());
+    var tokenResults = runSimulation(tokenLimiter, requestTimes.slice());
+
+    var fixedAccepted = fixedResults.filter(function(r) { return r.allowed; }).length;
+    var slidingAccepted = slidingResults.filter(function(r) { return r.allowed; }).length;
+    var tokenAccepted = tokenResults.filter(function(r) { return r.allowed; }).length;
+
+    document.getElementById('cmpFixedAccepted').textContent = fixedAccepted;
+    document.getElementById('cmpFixedRejected').textContent = count - fixedAccepted;
+    document.getElementById('cmpFixedBurst').textContent = (limit * windowSec) + ' (window limit)';
+    document.getElementById('cmpFixedSpike').textContent = 'Up to ' + (limit * windowSec * 2) + ' at boundary';
+
+    document.getElementById('cmpSlidingAccepted').textContent = slidingAccepted;
+    document.getElementById('cmpSlidingRejected').textContent = count - slidingAccepted;
+    document.getElementById('cmpSlidingBurst').textContent = (limit * windowSec) + ' (strict)';
+    document.getElementById('cmpSlidingMem').textContent = (limit * windowSec * 8) + ' bytes';
+
+    document.getElementById('cmpTokenAccepted').textContent = tokenAccepted;
+    document.getElementById('cmpTokenRejected').textContent = count - tokenAccepted;
+    document.getElementById('cmpTokenBurst').textContent = burst + ' (bucket size)';
+    document.getElementById('cmpTokenRecovery').textContent = (burst / limit).toFixed(1) + 's full refill';
+  };
+
+  window.resetSimulation = function() {
+    document.getElementById('metricThroughput').innerHTML = '--<span class="metric-unit">req/s</span>';
+    document.getElementById('metricBurst').innerHTML = '--<span class="metric-unit">requests</span>';
+    document.getElementById('metricRecovery').innerHTML = '--<span class="metric-unit">seconds</span>';
+    document.getElementById('metricAccepted').innerHTML = '--<span class="metric-unit">/ --</span>';
+    document.getElementById('timelineSvg').innerHTML = '<text x="400" y="65" text-anchor="middle" fill="#666" font-family="var(--font-display)" font-size="12">Click "Simulate Burst" to visualize request flow</text>';
+    document.getElementById('simLog').textContent = 'Simulation log will appear here...';
+    ['cmpFixedAccepted','cmpFixedRejected','cmpFixedBurst','cmpFixedSpike','cmpSlidingAccepted','cmpSlidingRejected','cmpSlidingBurst','cmpSlidingMem','cmpTokenAccepted','cmpTokenRejected','cmpTokenBurst','cmpTokenRecovery'].forEach(function(id) {
+      document.getElementById(id).textContent = '--';
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

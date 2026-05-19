@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Versioning Decision Tree: URL Path vs Header vs Content Negotiation | Kappafy</title>
+<meta name="description" content="Interactive decision tree for choosing the right API versioning strategy. Compare URL path, query parameter, header, and content negotiation approaches. Migration complexity calculator with code examples for each strategy.">
+<link rel="canonical" href="https://kappafy.com/research/api-versioning-strategies.html">
+<meta property="og:title" content="API Versioning Decision Tree: URL Path vs Header vs Content Negotiation">
+<meta property="og:description" content="Interactive decision tree to choose the right API versioning strategy. Compare URL path, query parameter, header, and content negotiation with code examples.">
+<meta property="og:url" content="https://kappafy.com/research/api-versioning-strategies.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="API Versioning Decision Tree: URL Path vs Header vs Content Negotiation">
+<meta name="twitter:description" content="Interactive decision tree to choose the right API versioning strategy with migration complexity calculator. Free tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/research/api-versioning-strategies.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/research/api-versioning-strategies.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "API Versioning Decision Tree: URL Path vs Header vs Content Negotiation",
+    "description": "Interactive decision tree for choosing the right API versioning strategy. Compare URL path, query parameter, header, and content negotiation approaches with migration complexity calculator and code examples.",
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://kappafy.com/research/api-versioning-strategies.html"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is the best API versioning strategy?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "There is no single best strategy. URL path versioning (e.g., /v1/users) is the best default for public APIs because it is explicit, cacheable, and requires zero client configuration. Header versioning is better for internal APIs where you control all clients and want cleaner URLs. Content negotiation is best for APIs that need fine-grained resource-level versioning. Use the decision tree based on your specific constraints: audience (public vs internal), number of clients, breaking change frequency, and caching requirements."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "When should I create a new API version?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Create a new version only for breaking changes: removing a field, changing a field's type, renaming a field, changing authentication requirements, or altering the structure of the response envelope. Additive changes like new optional fields, new endpoints, or new query parameters are backward-compatible and do not require a new version. The rule is: if existing clients will break without code changes, it is a breaking change that requires a new version."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I migrate clients between API versions?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Run both versions simultaneously for a migration window (typically 6-12 months for public APIs). Send deprecation headers (Sunset, Deprecation) on the old version. Monitor traffic on both versions and contact clients still using the old version. Provide a migration guide documenting every breaking change with before/after examples. Set a hard sunset date and return 410 Gone after the deadline. Never remove the old version without at least 3 months of deprecation warnings."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is content negotiation for API versioning?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Content negotiation uses the Accept header to specify the API version along with the media type, for example Accept: application/vnd.myapi.v2+json. This approach keeps URLs clean, allows versioning at the resource level rather than the entire API, and follows HTTP semantics precisely. The downside is that it is harder to test (you need custom headers for every request), not cacheable by URL alone, and unfamiliar to many developers. GitHub uses this approach for their REST API."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How many API versions should I maintain simultaneously?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Maintain at most 2-3 versions simultaneously. Each active version multiplies your testing surface, documentation burden, and bug-fix effort. The current version gets new features. The previous version gets security patches only. Any version older than that should be sunset. For public APIs, plan 12-month version lifecycles. For internal APIs, 3-6 months is sufficient since you control all clients and can coordinate upgrades."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Research","item":"https://kappafy.com/research/"},{"@type":"ListItem","position":3,"name":"API Versioning Strategies"}]}</script>
+<style>
+  .ver-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .ver-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .tree-question {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .tree-question p {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .tree-options {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .tree-opt {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .tree-opt:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .tree-opt.selected {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(168, 85, 247, 0.08);
+  }
+  .tree-result {
+    background: rgba(168, 85, 247, 0.08);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 16px 0;
+    display: none;
+  }
+  .tree-result h4 {
+    color: var(--accent);
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .tree-result p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+  .tree-result.visible { display: block; }
+  .ver-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .ver-controls { grid-template-columns: 1fr; }
+    .compare-grid { grid-template-columns: 1fr !important; }
+  }
+  .ver-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .ver-field select,
+  .ver-field input[type="number"],
+  .ver-field input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .ver-field select:focus,
+  .ver-field input:focus {
+    border-color: var(--accent);
+  }
+  .ver-field select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .ver-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .ver-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .compare-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .compare-card h4 {
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .compare-card .c-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-card .c-row:last-child { border-bottom: none; }
+  .compare-card .c-label { color: var(--text-muted); }
+  .compare-card .c-val { font-family: var(--font-display); font-weight: 600; }
+  .c-good { color: #86efac; }
+  .c-ok { color: #fde047; }
+  .c-bad { color: #fca5a5; }
+  .complexity-result {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.6;
+    display: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .complexity-result.visible { display: block; }
+  .code-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: -1px;
+  }
+  .code-tab {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: var(--radius) var(--radius) 0 0;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 11px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  .code-tab.active {
+    color: var(--accent);
+    background: var(--bg-card);
+    border-color: var(--border);
+  }
+  .code-block {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 0 var(--radius) var(--radius) var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+  }
+  .code-block.active { display: block; }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .status-table th,
+  .status-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .status-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .status-table td code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/research/">Research</a> &rsaquo; <span>API Versioning Strategies</span>
+  </nav>
+
+  <h1>API Versioning Decision Tree: URL Path vs Header vs Content Negotiation</h1>
+  <div class="meta">May 25, 2026 &middot; 15 min read</div>
+
+  <p>Every API that lives long enough will need a new version. A field type changes from string to integer. A required field becomes optional. An authentication scheme switches from API keys to OAuth. The question is not whether you will version your API, but which versioning strategy you will use. The wrong choice creates years of client migration pain, routing complexity, and documentation confusion. The right choice depends on your specific constraints: who consumes the API, how many clients exist, how often breaking changes ship, and whether cacheability matters.</p>
+
+  <p>This guide provides an interactive decision tree that asks the right questions and recommends a versioning strategy based on your answers. Below that, a comparison table scores all four major strategies across eight dimensions, and a migration complexity calculator estimates the engineering effort required to implement each approach. Every recommendation includes production-ready code examples for Express, FastAPI, and nginx so you can implement immediately.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#decision-tree">Interactive Decision Tree</a></li>
+      <li><a href="#comparison">Strategy Comparison Table</a></li>
+      <li><a href="#calculator">Migration Complexity Calculator</a></li>
+      <li><a href="#code-examples">Code Examples by Strategy</a></li>
+      <li><a href="#url-path">URL Path Versioning Deep Dive</a></li>
+      <li><a href="#header">Header Versioning Deep Dive</a></li>
+      <li><a href="#content-neg">Content Negotiation Deep Dive</a></li>
+      <li><a href="#deprecation">Deprecation and Sunset Workflow</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="decision-tree">Interactive Decision Tree</h2>
+
+  <p>Answer the questions below to get a tailored versioning strategy recommendation. Each question narrows the options based on your specific constraints. The decision tree considers five factors: API audience, client count, breaking change frequency, caching requirements, and URL cleanliness preference.</p>
+
+  <div class="ver-panel">
+    <h3>Versioning Strategy Decision Tree</h3>
+    <div id="treeContainer">
+      <div class="tree-question" id="q1">
+        <p>Who consumes your API?</p>
+        <div class="tree-options">
+          <button class="tree-opt" onclick="answerTree(1,'public')">Public / Third-party developers</button>
+          <button class="tree-opt" onclick="answerTree(1,'internal')">Internal / First-party only</button>
+          <button class="tree-opt" onclick="answerTree(1,'partner')">Partner / Limited external</button>
+        </div>
+      </div>
+      <div class="tree-question" id="q2" style="display:none;">
+        <p>How many active API clients exist?</p>
+        <div class="tree-options">
+          <button class="tree-opt" onclick="answerTree(2,'few')">1-10 clients</button>
+          <button class="tree-opt" onclick="answerTree(2,'moderate')">10-100 clients</button>
+          <button class="tree-opt" onclick="answerTree(2,'many')">100+ clients</button>
+        </div>
+      </div>
+      <div class="tree-question" id="q3" style="display:none;">
+        <p>How often do you ship breaking changes?</p>
+        <div class="tree-options">
+          <button class="tree-opt" onclick="answerTree(3,'rarely')">Rarely (1-2x per year)</button>
+          <button class="tree-opt" onclick="answerTree(3,'sometimes')">Sometimes (quarterly)</button>
+          <button class="tree-opt" onclick="answerTree(3,'often')">Often (monthly+)</button>
+        </div>
+      </div>
+      <div class="tree-question" id="q4" style="display:none;">
+        <p>Is HTTP cacheability important?</p>
+        <div class="tree-options">
+          <button class="tree-opt" onclick="answerTree(4,'yes')">Yes, CDN/proxy caching is critical</button>
+          <button class="tree-opt" onclick="answerTree(4,'no')">No, all requests hit origin</button>
+        </div>
+      </div>
+      <div class="tree-question" id="q5" style="display:none;">
+        <p>Do you need per-resource versioning granularity?</p>
+        <div class="tree-options">
+          <button class="tree-opt" onclick="answerTree(5,'api')">No, version entire API at once</button>
+          <button class="tree-opt" onclick="answerTree(5,'resource')">Yes, version individual resources</button>
+        </div>
+      </div>
+    </div>
+    <div class="tree-result" id="treeResult">
+      <h4 id="resultTitle"></h4>
+      <p id="resultDesc"></p>
+      <p id="resultExample" style="font-family:var(--font-display);font-size:12px;background:var(--bg);padding:10px;border-radius:var(--radius);"></p>
+    </div>
+    <div class="ver-btn-row">
+      <button class="btn" onclick="resetTree()">Start Over</button>
+    </div>
+  </div>
+
+  <h2 id="comparison">Strategy Comparison Table</h2>
+
+  <p>This table scores all four versioning strategies across the dimensions that matter most in production. Each score reflects real-world trade-offs observed across hundreds of public APIs. No strategy wins on every dimension, which is why the decision tree exists.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>URL Path</th>
+        <th>Query Param</th>
+        <th>Header</th>
+        <th>Content Neg.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Discoverability</strong></td><td>Excellent</td><td>Good</td><td>Poor</td><td>Poor</td></tr>
+      <tr><td><strong>Cacheability</strong></td><td>Excellent</td><td>Good</td><td>Requires Vary</td><td>Requires Vary</td></tr>
+      <tr><td><strong>URL Cleanliness</strong></td><td>Moderate</td><td>Poor</td><td>Excellent</td><td>Excellent</td></tr>
+      <tr><td><strong>Routing Simplicity</strong></td><td>Simple</td><td>Middleware</td><td>Middleware</td><td>Complex</td></tr>
+      <tr><td><strong>Client Effort</strong></td><td>URL change</td><td>Param change</td><td>Header setup</td><td>Accept header</td></tr>
+      <tr><td><strong>Testing Ease</strong></td><td>Browser/curl</td><td>Browser/curl</td><td>curl only</td><td>curl only</td></tr>
+      <tr><td><strong>Granularity</strong></td><td>Entire API</td><td>Entire API</td><td>Per-request</td><td>Per-resource</td></tr>
+      <tr><td><strong>Adoption</strong></td><td>Stripe, Twilio</td><td>Google, AWS</td><td>Azure</td><td>GitHub</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="calculator">Migration Complexity Calculator</h2>
+
+  <p>Estimate the engineering effort to implement or migrate between versioning strategies. Enter your current setup and the calculator produces an effort estimate based on the number of endpoints, clients, and infrastructure components involved.</p>
+
+  <div class="ver-panel">
+    <h3>Migration Complexity Estimator</h3>
+    <div class="ver-controls">
+      <div class="ver-field">
+        <label for="endpointCount">Number of Endpoints</label>
+        <input type="number" id="endpointCount" value="25" min="1" max="1000">
+      </div>
+      <div class="ver-field">
+        <label for="clientCount">Number of API Clients</label>
+        <input type="number" id="clientCount" value="15" min="1" max="10000">
+      </div>
+      <div class="ver-field">
+        <label for="currentStrategy">Current Strategy</label>
+        <select id="currentStrategy">
+          <option value="none">None (first version)</option>
+          <option value="url">URL Path</option>
+          <option value="query">Query Parameter</option>
+          <option value="header">Header</option>
+          <option value="content">Content Negotiation</option>
+        </select>
+      </div>
+      <div class="ver-field">
+        <label for="targetStrategy">Target Strategy</label>
+        <select id="targetStrategy">
+          <option value="url">URL Path</option>
+          <option value="query">Query Parameter</option>
+          <option value="header">Header</option>
+          <option value="content">Content Negotiation</option>
+        </select>
+      </div>
+    </div>
+    <div class="ver-btn-row">
+      <button class="btn btn-primary" onclick="calcComplexity()">Calculate Complexity</button>
+    </div>
+    <div id="complexityResult" class="complexity-result"></div>
+  </div>
+
+  <h2 id="code-examples">Code Examples by Strategy</h2>
+
+  <p>Each tab below shows production-ready code for implementing that versioning strategy in Express.js, Python FastAPI, and nginx. The examples include the routing logic, version extraction, and response headers required for a clean implementation.</p>
+
+  <div class="ver-panel">
+    <div class="code-tabs">
+      <button class="code-tab active" onclick="switchCodeTab(0)">URL Path</button>
+      <button class="code-tab" onclick="switchCodeTab(1)">Query Param</button>
+      <button class="code-tab" onclick="switchCodeTab(2)">Header</button>
+      <button class="code-tab" onclick="switchCodeTab(3)">Content Neg.</button>
+    </div>
+    <div class="code-block active" id="codeBlock0">// Express.js — URL Path Versioning
+// Routes: /v1/users, /v2/users
+
+const express = require('express');
+const app = express();
+
+// V1 handlers
+const v1Router = express.Router();
+v1Router.get('/users', (req, res) => {
+  res.json({
+    users: [
+      { id: 1, name: "Alice Chen", email: "alice@example.com" }
+    ]
+  });
+});
+
+// V2 handlers (breaking change: nested data envelope)
+const v2Router = express.Router();
+v2Router.get('/users', (req, res) => {
+  res.json({
+    data: {
+      users: [
+        { id: 1, full_name: "Alice Chen", email_address: "alice@example.com" }
+      ]
+    },
+    meta: { total: 1, api_version: "v2" }
+  });
+});
+
+app.use('/v1', v1Router);
+app.use('/v2', v2Router);
+
+// Deprecation header on v1
+app.use('/v1', (req, res, next) => {
+  res.set('Sunset', 'Sat, 01 Nov 2026 00:00:00 GMT');
+  res.set('Deprecation', 'true');
+  res.set('Link', '&lt;https://api.example.com/v2&gt;; rel="successor-version"');
+  next();
+});
+
+# nginx — route by URL prefix
+location /v1/ {
+  proxy_pass http://api-v1-upstream/;
+  add_header Sunset "Sat, 01 Nov 2026 00:00:00 GMT";
+}
+location /v2/ {
+  proxy_pass http://api-v2-upstream/;
+}</div>
+    <div class="code-block" id="codeBlock1">// Express.js — Query Parameter Versioning
+// Routes: /users?version=1, /users?version=2
+
+const express = require('express');
+const app = express();
+
+function versionMiddleware(req, res, next) {
+  req.apiVersion = parseInt(req.query.version) || 2; // default to latest
+  if (req.apiVersion &lt; 1 || req.apiVersion > 2) {
+    return res.status(400).json({
+      error: { code: "INVALID_VERSION", message: "Supported: 1, 2" }
+    });
+  }
+  res.set('X-API-Version', String(req.apiVersion));
+  next();
+}
+
+app.use(versionMiddleware);
+
+app.get('/users', (req, res) => {
+  if (req.apiVersion === 1) {
+    return res.json({
+      users: [{ id: 1, name: "Alice" }]
+    });
+  }
+  // v2
+  res.json({
+    data: { users: [{ id: 1, full_name: "Alice Chen" }] },
+    meta: { api_version: 2 }
+  });
+});
+
+# Python FastAPI
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+@app.get("/users")
+async def get_users(version: int = Query(default=2, ge=1, le=2)):
+    if version == 1:
+        return {"users": [{"id": 1, "name": "Alice"}]}
+    return {
+        "data": {"users": [{"id": 1, "full_name": "Alice Chen"}]},
+        "meta": {"api_version": 2}
+    }</div>
+    <div class="code-block" id="codeBlock2">// Express.js — Header Versioning
+// Header: X-API-Version: 2
+
+const express = require('express');
+const app = express();
+
+function versionMiddleware(req, res, next) {
+  var header = req.get('X-API-Version') || req.get('Api-Version');
+  req.apiVersion = parseInt(header) || 2; // default to latest
+  res.set('X-API-Version', String(req.apiVersion));
+  res.set('Vary', 'X-API-Version'); // critical for caching
+  next();
+}
+
+app.use(versionMiddleware);
+
+app.get('/users', (req, res) => {
+  if (req.apiVersion === 1) {
+    return res.json({
+      users: [{ id: 1, name: "Alice" }]
+    });
+  }
+  res.json({
+    data: { users: [{ id: 1, full_name: "Alice Chen" }] },
+    meta: { api_version: 2 }
+  });
+});
+
+# nginx — route by header
+map $http_x_api_version $api_backend {
+  default  api-v2-upstream;
+  "1"      api-v1-upstream;
+  "2"      api-v2-upstream;
+}
+
+location /api/ {
+  proxy_pass http://$api_backend/;
+  add_header Vary "X-API-Version";
+}
+
+# curl example
+curl -H "X-API-Version: 2" https://api.example.com/users</div>
+    <div class="code-block" id="codeBlock3">// Express.js — Content Negotiation
+// Accept: application/vnd.myapi.v2+json
+
+const express = require('express');
+const app = express();
+
+function parseAcceptVersion(accept) {
+  if (!accept) return 2;
+  var match = accept.match(/application\/vnd\.myapi\.v(\d+)\+json/);
+  return match ? parseInt(match[1]) : 2;
+}
+
+function contentNegMiddleware(req, res, next) {
+  req.apiVersion = parseAcceptVersion(req.get('Accept'));
+  res.set('Content-Type', 'application/vnd.myapi.v' + req.apiVersion + '+json');
+  res.set('Vary', 'Accept');
+  next();
+}
+
+app.use(contentNegMiddleware);
+
+app.get('/users', (req, res) => {
+  if (req.apiVersion === 1) {
+    return res.json({
+      users: [{ id: 1, name: "Alice" }]
+    });
+  }
+  res.json({
+    data: { users: [{ id: 1, full_name: "Alice Chen" }] },
+    meta: { api_version: 2 }
+  });
+});
+
+# GitHub-style content negotiation
+curl -H "Accept: application/vnd.myapi.v2+json" \
+  https://api.example.com/users
+
+# Python FastAPI
+from fastapi import FastAPI, Request
+import re
+
+app = FastAPI()
+
+def get_version(request: Request) -> int:
+    accept = request.headers.get("accept", "")
+    match = re.search(r"vnd\.myapi\.v(\d+)\+json", accept)
+    return int(match.group(1)) if match else 2
+
+@app.get("/users")
+async def get_users(request: Request):
+    version = get_version(request)
+    if version == 1:
+        return {"users": [{"id": 1, "name": "Alice"}]}
+    return {"data": {"users": [{"id": 1, "full_name": "Alice Chen"}]}}</div>
+  </div>
+
+  <h2 id="url-path">URL Path Versioning Deep Dive</h2>
+
+  <p>URL path versioning embeds the version number directly in the URL: <code>/v1/users</code>, <code>/v2/users</code>. It is the most widely adopted strategy for public APIs because it is immediately visible, requires no special client configuration, and works with every HTTP tool from browsers to curl to Postman. Stripe, Twilio, Heroku, and DigitalOcean all use this approach.</p>
+
+  <p>The primary advantage is <strong>routing simplicity</strong>. Each version maps to a separate route prefix, which can point to a completely different codebase, deployment, or even team. There is no middleware to parse headers, no conditional logic in handlers, and no risk of version-detection bugs. The version is right there in the URL where everyone can see it. CDN caching works automatically because <code>/v1/users</code> and <code>/v2/users</code> are different URLs with different cache keys. API documentation is straightforward because each version has its own URL namespace.</p>
+
+  <p>The primary disadvantage is <strong>URL pollution</strong>. Every version adds a prefix to every URL, and clients must update every endpoint URL when migrating. For APIs with 100+ endpoints, this means 100+ URL changes in the client code. Additionally, URL path versioning operates at the API level, not the resource level. You cannot version <code>/users</code> to v2 while keeping <code>/products</code> at v1. When any endpoint needs a breaking change, the entire API moves to the next version, even if 95% of endpoints are unchanged. This leads to "version bloat" where v2 is a copy of v1 with one field renamed on one endpoint.</p>
+
+  <h2 id="header">Header Versioning Deep Dive</h2>
+
+  <p>Header versioning places the version in a custom request header: <code>X-API-Version: 2</code> or <code>Api-Version: 2</code>. Azure, Shopify, and several enterprise API platforms use this approach. The URL stays clean (<code>/users</code> is always <code>/users</code>), and the version travels as metadata alongside the request rather than as part of the resource identifier.</p>
+
+  <p>The key advantage is <strong>URL stability</strong>. Client code that constructs URLs never changes between versions. Only the HTTP client configuration changes, and that is typically centralized in one place (an API client constructor or an interceptor). This reduces the migration surface from N endpoint URLs to 1 header configuration. Header versioning also supports per-request versioning: a client can send v1 for one endpoint and v2 for another within the same session, enabling gradual migration.</p>
+
+  <p>The key disadvantage is <strong>discoverability</strong>. You cannot test a header-versioned API by typing a URL into a browser. Every request requires custom headers, which means developers must use curl, Postman, or an API client. CDN caching requires the <code>Vary: X-API-Version</code> header, which fragments the cache and reduces hit rates. Documentation must explain the header requirement before a developer can make their first request, adding friction to onboarding. For public APIs where developer experience matters, this friction is a real cost.</p>
+
+  <h2 id="content-neg">Content Negotiation Deep Dive</h2>
+
+  <p>Content negotiation uses the HTTP <code>Accept</code> header with a vendor media type: <code>Accept: application/vnd.myapi.v2+json</code>. GitHub is the most prominent example of this approach. It is the most HTTP-correct strategy because it uses the existing content negotiation mechanism that HTTP was designed for, treating the API version as a media type variant rather than a resource identifier or arbitrary metadata.</p>
+
+  <p>The unique advantage is <strong>resource-level granularity</strong>. You can version individual resources independently. The <code>/users</code> endpoint can accept <code>vnd.myapi.users.v3+json</code> while <code>/products</code> stays at <code>vnd.myapi.products.v1+json</code>. This eliminates version bloat because each resource evolves at its own pace. It also opens the door to content-type-based transformation: the same endpoint can return JSON, XML, or CSV based on the Accept header, with versioning built into each format.</p>
+
+  <p>The disadvantage is <strong>complexity</strong>. Developers must understand vendor media types, construct Accept headers correctly, and handle <code>406 Not Acceptable</code> responses when they request an unsupported version. Caching requires <code>Vary: Accept</code>, which fragments the cache significantly since the Accept header has high cardinality. Routing logic must parse the Accept header, extract the version, and map it to the correct handler, which is more complex than checking a URL prefix or a simple header value. For teams without deep HTTP expertise, this complexity creates bugs and confusion.</p>
+
+  <h2 id="deprecation">Deprecation and Sunset Workflow</h2>
+
+  <p>Versioning is only half the problem. The other half is <strong>deprecating old versions</strong> without breaking existing clients. The HTTP Sunset header (<a href="https://www.rfc-editor.org/rfc/rfc8594" target="_blank" rel="noopener">RFC 8594</a>) and the Deprecation header provide a standard mechanism for communicating version end-of-life. Here is the workflow that minimizes client disruption:</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Phase</th>
+        <th>Duration</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Announce</strong></td><td>Day 0</td><td>Add <code>Sunset</code> header to old version. Update docs. Email clients.</td></tr>
+      <tr><td><strong>Warning</strong></td><td>0-6 months</td><td>Return <code>Deprecation: true</code> header. Log clients still on old version.</td></tr>
+      <tr><td><strong>Grace</strong></td><td>6-9 months</td><td>Add warning body to responses. Direct contact with top-traffic clients.</td></tr>
+      <tr><td><strong>Sunset</strong></td><td>9-12 months</td><td>Return <code>410 Gone</code> with migration link. Preserve for 30 more days.</td></tr>
+      <tr><td><strong>Removal</strong></td><td>12+ months</td><td>Remove old version entirely. Redirect to new version docs.</td></tr>
+    </tbody>
+  </table>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>HTTP/1.1 200 OK
+Content-Type: application/json
+Sunset: Sat, 01 Nov 2026 00:00:00 GMT
+Deprecation: true
+Link: &lt;https://api.example.com/v2/users&gt;; rel="successor-version"
+Link: &lt;https://docs.example.com/migration-v1-to-v2&gt;; rel="deprecation"
+
+{
+  "data": { ... },
+  "_deprecation": {
+    "message": "API v1 will be removed on Nov 1, 2026. Migrate to v2.",
+    "migration_guide": "https://docs.example.com/migration-v1-to-v2",
+    "successor": "https://api.example.com/v2/users"
+  }
+}</code></pre>
+
+  <p>For testing how your clients handle deprecated API responses, use <a href="/tools/api-response-mocker.html">Kappafy's mock API generator</a> to simulate Sunset and Deprecation headers. Combine versioning with <a href="/guides/circuit-breaker-pattern.html">circuit breaker patterns</a> to gracefully fall back when a version is sunset unexpectedly. For latency implications of running multiple API versions simultaneously, the <a href="/tools/api-latency-simulator.html">latency simulator</a> can model the overhead.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is the best API versioning strategy?</summary>
+    <p>There is no single best strategy. URL path versioning (e.g., /v1/users) is the best default for public APIs because it is explicit, cacheable, and requires zero client configuration. Header versioning is better for internal APIs where you control all clients and want cleaner URLs. Content negotiation is best for APIs that need fine-grained resource-level versioning. Use the decision tree above based on your specific constraints: audience (public vs internal), number of clients, breaking change frequency, and caching requirements.</p>
+  </details>
+  <details>
+    <summary>When should I create a new API version?</summary>
+    <p>Create a new version only for breaking changes: removing a field, changing a field's type, renaming a field, changing authentication requirements, or altering the structure of the response envelope. Additive changes like new optional fields, new endpoints, or new query parameters are backward-compatible and do not require a new version. The rule is simple: if existing clients will break without code changes, it is a breaking change that requires a new version. Avoid versioning for cosmetic changes or internal refactors that do not affect the contract.</p>
+  </details>
+  <details>
+    <summary>How do I migrate clients between API versions?</summary>
+    <p>Run both versions simultaneously for a migration window of 6-12 months for public APIs. Send deprecation headers (Sunset, Deprecation) on the old version to alert clients programmatically. Monitor traffic on both versions and directly contact the highest-traffic clients still using the old version. Provide a comprehensive migration guide documenting every breaking change with before and after examples. Set a hard sunset date and return 410 Gone after the deadline. Never remove the old version without at least 3 months of deprecation warnings in the response headers.</p>
+  </details>
+  <details>
+    <summary>What is content negotiation for API versioning?</summary>
+    <p>Content negotiation uses the Accept header to specify the API version along with the media type, for example Accept: application/vnd.myapi.v2+json. This approach keeps URLs clean, allows versioning at the resource level rather than the entire API, and follows HTTP semantics precisely. The downside is that it is harder to test (you need custom headers for every request), not cacheable by URL alone (requires Vary: Accept), and unfamiliar to many developers. GitHub is the most prominent API using this approach for their REST API.</p>
+  </details>
+  <details>
+    <summary>How many API versions should I maintain simultaneously?</summary>
+    <p>Maintain at most 2-3 versions simultaneously. Each active version multiplies your testing surface, documentation burden, and bug-fix effort by the number of active versions. The current version receives new features and bug fixes. The previous version receives security patches only. Any version older than N-1 should be actively sunset. For public APIs, plan 12-month version lifecycles with 6-month overlap periods. For internal APIs, 3-6 months is sufficient since you control all clients and can coordinate upgrades.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/guides/circuit-breaker-pattern.html" class="related-card">Circuit Breaker Pattern Guide</a>
+      <a href="/research/json-schema-patterns.html" class="related-card">JSON Schema Patterns Research</a>
+      <a href="/guides/rate-limiting-tester.html" class="related-card">Rate Limiting Calculator &amp; Tester</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var answers = {};
+
+  window.answerTree = function(q, val) {
+    answers[q] = val;
+
+    // Highlight selected button
+    var qEl = document.getElementById('q' + q);
+    var opts = qEl.querySelectorAll('.tree-opt');
+    opts.forEach(function(o) { o.classList.remove('selected'); });
+    event.target.classList.add('selected');
+
+    var nextQ = q + 1;
+    if (nextQ <= 5) {
+      var nextEl = document.getElementById('q' + nextQ);
+      if (nextEl) nextEl.style.display = 'block';
+    }
+
+    if (q === 5 || (q === 4 && val === 'no' && answers[1] === 'internal' && answers[2] === 'few')) {
+      showResult();
+    }
+  };
+
+  function showResult() {
+    var audience = answers[1];
+    var clients = answers[2];
+    var frequency = answers[3];
+    var caching = answers[4];
+    var granularity = answers[5];
+
+    var strategy, desc, example;
+
+    if (granularity === 'resource') {
+      strategy = 'Content Negotiation';
+      desc = 'Your need for per-resource versioning granularity makes content negotiation the best fit. Each resource evolves independently using vendor media types in the Accept header. This is the approach GitHub uses. It requires more HTTP expertise from your clients but eliminates version bloat where the entire API bumps for a single resource change.';
+      example = 'Accept: application/vnd.yourapi.v2+json';
+    } else if (audience === 'public' || clients === 'many') {
+      strategy = 'URL Path Versioning';
+      desc = 'With a public API or 100+ clients, discoverability and simplicity are paramount. URL path versioning (/v1/users, /v2/users) is immediately visible, works in browsers, requires zero client configuration, and caches perfectly. Stripe, Twilio, and DigitalOcean use this approach for exactly these reasons. The trade-off is URL pollution and API-level granularity.';
+      example = 'GET https://api.example.com/v2/users';
+    } else if (audience === 'internal' && clients === 'few' && caching === 'no') {
+      strategy = 'Header Versioning';
+      desc = 'For an internal API with few clients where caching is not critical, header versioning gives you clean URLs and centralized version management. Your clients set X-API-Version once in their HTTP client constructor and every request is versioned automatically. This minimizes migration effort since only the header value changes, not every endpoint URL.';
+      example = 'X-API-Version: 2';
+    } else if (caching === 'yes') {
+      strategy = 'URL Path Versioning';
+      desc = 'CDN and proxy caching works best with URL path versioning because each version has a distinct URL that creates a separate cache key. Header-based and content-negotiation approaches require Vary headers that fragment the cache and reduce hit rates. For caching-critical APIs, URL path versioning provides the best performance with the least caching configuration.';
+      example = 'GET https://api.example.com/v2/users';
+    } else if (audience === 'partner' && frequency === 'often') {
+      strategy = 'Query Parameter Versioning';
+      desc = 'For partner APIs with frequent breaking changes, query parameter versioning (?version=2) offers a pragmatic middle ground. The version is visible in the URL for debugging, defaults to the latest version for new clients, and can be overridden per-request for gradual migration. Google and AWS use variants of this approach.';
+      example = 'GET https://api.example.com/users?version=2';
+    } else if (audience === 'internal') {
+      strategy = 'Header Versioning';
+      desc = 'For internal APIs where you control all clients, header versioning provides clean URLs and simple migration. Set the version in one place (your API client constructor) and every request is versioned. No URL changes, no query parameter clutter. Azure uses this approach for their internal service mesh.';
+      example = 'X-API-Version: 2';
+    } else {
+      strategy = 'URL Path Versioning';
+      desc = 'Based on your answers, URL path versioning is the safest default. It is the most widely understood, most debuggable, and most cache-friendly approach. Start here and migrate to a more sophisticated strategy only if you encounter specific limitations that URL path versioning cannot address.';
+      example = 'GET https://api.example.com/v2/users';
+    }
+
+    document.getElementById('resultTitle').textContent = 'Recommended: ' + strategy;
+    document.getElementById('resultDesc').textContent = desc;
+    document.getElementById('resultExample').textContent = example;
+    var el = document.getElementById('treeResult');
+    el.classList.add('visible');
+  }
+
+  window.resetTree = function() {
+    answers = {};
+    for (var i = 1; i <= 5; i++) {
+      var qEl = document.getElementById('q' + i);
+      if (i === 1) {
+        qEl.style.display = 'block';
+      } else {
+        qEl.style.display = 'none';
+      }
+      var opts = qEl.querySelectorAll('.tree-opt');
+      opts.forEach(function(o) { o.classList.remove('selected'); });
+    }
+    document.getElementById('treeResult').classList.remove('visible');
+  };
+
+  window.switchCodeTab = function(idx) {
+    var tabs = document.querySelectorAll('.code-tab');
+    var blocks = document.querySelectorAll('.code-block');
+    tabs.forEach(function(t, i) {
+      t.classList.toggle('active', i === idx);
+    });
+    blocks.forEach(function(b, i) {
+      b.classList.toggle('active', i === idx);
+    });
+  };
+
+  window.calcComplexity = function() {
+    var endpoints = parseInt(document.getElementById('endpointCount').value) || 25;
+    var clients = parseInt(document.getElementById('clientCount').value) || 15;
+    var current = document.getElementById('currentStrategy').value;
+    var target = document.getElementById('targetStrategy').value;
+
+    var baseCost = {
+      url: { routing: 1, middleware: 0.5, docs: 1, client: 1.5 },
+      query: { routing: 1.5, middleware: 1, docs: 1, client: 0.5 },
+      header: { routing: 2, middleware: 1.5, docs: 1.5, client: 0.3 },
+      content: { routing: 3, middleware: 2, docs: 2, client: 1 }
+    };
+
+    var migrationMultiplier = (current === 'none') ? 0.5 : 1.2;
+    if (current === target) migrationMultiplier = 0.2;
+
+    var costs = baseCost[target];
+    var routingHours = Math.round(costs.routing * endpoints * 0.3 * migrationMultiplier);
+    var middlewareHours = Math.round(costs.middleware * 8 * migrationMultiplier);
+    var docsHours = Math.round(costs.docs * endpoints * 0.15 * migrationMultiplier);
+    var clientHours = Math.round(costs.client * clients * 0.5 * migrationMultiplier);
+    var testHours = Math.round((routingHours + middlewareHours) * 0.4);
+    var totalHours = routingHours + middlewareHours + docsHours + clientHours + testHours;
+
+    var risk = totalHours < 40 ? 'Low' : (totalHours < 120 ? 'Medium' : 'High');
+    var weeks = Math.ceil(totalHours / 40);
+
+    var strategyNames = { url: 'URL Path', query: 'Query Parameter', header: 'Header', content: 'Content Negotiation' };
+    var currentName = current === 'none' ? 'None (greenfield)' : strategyNames[current];
+    var targetName = strategyNames[target];
+
+    var output = '';
+    output += 'Migration Complexity Estimate\n';
+    output += '============================================\n\n';
+    output += 'From: ' + currentName + '\n';
+    output += 'To:   ' + targetName + '\n';
+    output += 'Endpoints: ' + endpoints + ' | Clients: ' + clients + '\n\n';
+    output += 'Effort Breakdown:\n';
+    output += '  Route/handler changes:  ' + routingHours + ' hours\n';
+    output += '  Middleware/infra:       ' + middlewareHours + ' hours\n';
+    output += '  Documentation:          ' + docsHours + ' hours\n';
+    output += '  Client migration:       ' + clientHours + ' hours\n';
+    output += '  Testing:                ' + testHours + ' hours\n';
+    output += '  ─────────────────────────────\n';
+    output += '  Total:                  ' + totalHours + ' hours (~' + weeks + ' engineer-week' + (weeks !== 1 ? 's' : '') + ')\n\n';
+    output += 'Risk Level: ' + risk + '\n';
+    output += 'Recommended migration window: ' + (clients > 50 ? '6-12' : (clients > 10 ? '3-6' : '1-3')) + ' months';
+
+    var resultEl = document.getElementById('complexityResult');
+    resultEl.textContent = output;
+    resultEl.classList.add('visible');
+  };
+
+})();
+</script>
+</body>
+</html>

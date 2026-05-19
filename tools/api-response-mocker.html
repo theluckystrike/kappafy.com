@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock API Response Generator with JSON Schema Validation | Kappafy</title>
+<meta name="description" content="Generate mock API responses with custom HTTP methods, status codes, headers, and response bodies. Validate responses against JSON Schema. Pre-built templates for REST APIs, error responses, pagination, and auth tokens.">
+<link rel="canonical" href="https://kappafy.com/tools/api-response-mocker.html">
+<meta property="og:title" content="Mock API Response Generator with JSON Schema Validation">
+<meta property="og:description" content="Generate mock API responses with custom HTTP methods, status codes, headers, and JSON Schema validation. Free browser-based tool.">
+<meta property="og:url" content="https://kappafy.com/tools/api-response-mocker.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mock API Response Generator with JSON Schema Validation">
+<meta name="twitter:description" content="Generate mock API responses with custom HTTP methods, status codes, headers, and JSON Schema validation. Free tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/tools/api-response-mocker.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/tools/api-response-mocker.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Mock API Response Generator",
+    "url": "https://kappafy.com/tools/api-response-mocker.html",
+    "description": "Generate mock API responses with custom HTTP methods, status codes, headers, and response delay. Validate responses against JSON Schema. Pre-built templates for common REST patterns.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "featureList": ["Mock API response generation", "JSON Schema validation", "Custom HTTP methods and status codes", "Response header configuration", "Response delay simulation", "Curl command generation", "Pre-built REST templates"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Mock API Response Generator with JSON Schema Validation",
+    "description": "Generate mock API responses with custom HTTP methods, status codes, headers, and response bodies. Validate against JSON Schema.",
+    "datePublished": "2026-05-25",
+    "dateModified": "2026-05-25",
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://kappafy.com/tools/api-response-mocker.html"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is a mock API response generator?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A mock API response generator creates simulated HTTP responses without needing a real backend server. You define the status code, headers, and JSON body, and the tool generates the equivalent curl command or mock server configuration. This lets frontend developers build and test against realistic API contracts before the backend is ready."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I validate a JSON response against a schema?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Paste your JSON Schema into the validator panel and your API response body into the response editor. The validator checks that every required field exists, data types match (string, number, boolean, array, object), values fall within defined constraints (minLength, maximum, enum), and nested objects conform to their sub-schemas. Errors are listed with the exact JSON path that failed."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What HTTP status codes should I use for mock API responses?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "For success responses use 200 (OK), 201 (Created), or 204 (No Content). For client errors use 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), or 404 (Not Found). For server errors use 500 (Internal Server Error) or 503 (Service Unavailable). Mock all of these to ensure your frontend handles every case."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I simulate response delay with mock APIs?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. This tool lets you set a response delay in milliseconds. When you generate the curl command, the delay is included as a sleep parameter. For mock servers like MSW or json-server, you add a delay middleware. Simulating latency helps you test loading states, skeleton screens, and timeout handling in your frontend."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are pre-built API response templates?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Pre-built templates are ready-made JSON response structures for common API patterns: a successful REST response with data and metadata, an error response with error code and message, a paginated list with cursor-based navigation, and an OAuth token response with access_token and refresh_token. Load any template with one click and customize it for your specific API."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://kappafy.com/tools/"},{"@type":"ListItem","position":3,"name":"API Response Mocker"}]}</script>
+<style>
+  .mocker-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .mocker-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .mock-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .mock-controls { grid-template-columns: 1fr; }
+  }
+  .mock-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .mock-field select,
+  .mock-field input[type="number"],
+  .mock-field input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .mock-field select:focus,
+  .mock-field input:focus,
+  .mock-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .mock-field select option {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .mock-field textarea {
+    width: 100%;
+    min-height: 160px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    padding: 12px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    tab-size: 2;
+  }
+  .mock-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .mock-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .tmpl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .tmpl-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 11px;
+    padding: 10px 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s;
+  }
+  .tmpl-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .tmpl-btn strong {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+  .header-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+  .header-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    padding: 6px 8px;
+    outline: none;
+  }
+  .header-row input:focus {
+    border-color: var(--accent);
+  }
+  .header-row .remove-hdr {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+  .header-row .remove-hdr:hover {
+    color: #ef4444;
+    border-color: #ef4444;
+  }
+  .validation-result {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.6;
+    display: none;
+  }
+  .validation-result.valid {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #86efac;
+    display: block;
+  }
+  .validation-result.invalid {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    display: block;
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .toc li {
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+  .toc a {
+    color: var(--text);
+  }
+  .toc a:hover {
+    color: var(--accent);
+  }
+  .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .status-table th,
+  .status-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .status-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .status-table td code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .method-badge {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 4px;
+  }
+  .badge-get { background: #064e3b; color: #6ee7b7; }
+  .badge-post { background: #1e1b4b; color: #a5b4fc; }
+  .badge-put { background: #78350f; color: #fde047; }
+  .badge-delete { background: #7f1d1d; color: #fca5a5; }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+  .author-bio .author-info h4 {
+    margin: 0 0 4px;
+    font-size: 14px;
+  }
+  .author-bio .author-info p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .author-bio .author-info a {
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span>API Response Mocker</span>
+  </nav>
+
+  <h1>Mock API Response Generator with JSON Schema Validation</h1>
+  <div class="meta">May 25, 2026 &middot; 12 min read</div>
+
+  <p>Building a frontend before the backend is ready is one of the most common workflows in modern development. You know the API contract, you know the data shape, but the endpoints do not exist yet. A mock API response generator solves this by letting you define exactly what the server will return: the HTTP method, status code, response headers, JSON body, and even the response delay. This tool generates the complete mock configuration, including a ready-to-paste curl command, so you can test every code path in your UI without waiting for a single backend deployment.</p>
+
+  <p>Beyond simple mocking, this tool includes a <strong>JSON Schema validator</strong>. Paste your schema and your response body, and the validator checks that every field matches the expected type, required properties are present, and constraints like minimum values or string patterns are satisfied. This catches contract mismatches before they reach production, where they cause silent data corruption or runtime crashes.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#tool">Interactive Mock API Generator</a></li>
+      <li><a href="#templates">Pre-Built Response Templates</a></li>
+      <li><a href="#schema-validator">JSON Schema Validator</a></li>
+      <li><a href="#why-mock">Why Mock API Responses</a></li>
+      <li><a href="#anatomy">Anatomy of an API Response</a></li>
+      <li><a href="#status-codes">Status Codes for Mocking</a></li>
+      <li><a href="#patterns">Common Mocking Patterns</a></li>
+      <li><a href="#integration">Integration with Frontend Frameworks</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="tool">Interactive Mock API Generator</h2>
+
+  <p>Configure your mock response below. Select the HTTP method and status code, define the response body in the JSON editor, add custom headers, and set a response delay. Click <strong>Generate Mock</strong> to produce the curl command and mock server configuration.</p>
+
+  <div class="mocker-panel">
+    <h3>Response Configuration</h3>
+
+    <div class="tmpl-grid">
+      <button class="tmpl-btn" onclick="loadTemplate('success')"><strong>REST Success</strong>200 OK with data</button>
+      <button class="tmpl-btn" onclick="loadTemplate('error')"><strong>Error Response</strong>400/500 with message</button>
+      <button class="tmpl-btn" onclick="loadTemplate('paginated')"><strong>Paginated List</strong>Cursor-based pagination</button>
+      <button class="tmpl-btn" onclick="loadTemplate('auth')"><strong>Auth Token</strong>OAuth token response</button>
+    </div>
+
+    <div class="mock-controls">
+      <div class="mock-field">
+        <label for="httpMethod">HTTP Method</label>
+        <select id="httpMethod">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+      <div class="mock-field">
+        <label for="statusCode">Status Code</label>
+        <select id="statusCode">
+          <option value="200">200 OK</option>
+          <option value="201">201 Created</option>
+          <option value="204">204 No Content</option>
+          <option value="301">301 Moved Permanently</option>
+          <option value="304">304 Not Modified</option>
+          <option value="400">400 Bad Request</option>
+          <option value="401">401 Unauthorized</option>
+          <option value="403">403 Forbidden</option>
+          <option value="404">404 Not Found</option>
+          <option value="409">409 Conflict</option>
+          <option value="422">422 Unprocessable Entity</option>
+          <option value="429">429 Too Many Requests</option>
+          <option value="500">500 Internal Server Error</option>
+          <option value="502">502 Bad Gateway</option>
+          <option value="503">503 Service Unavailable</option>
+        </select>
+      </div>
+      <div class="mock-field">
+        <label for="endpointUrl">Endpoint URL</label>
+        <input type="text" id="endpointUrl" value="https://api.example.com/v1/users" style="font-family:var(--font-display);font-size:12px;">
+      </div>
+      <div class="mock-field">
+        <label for="responseDelay">Response Delay (ms)</label>
+        <input type="number" id="responseDelay" value="0" min="0" max="60000" step="100">
+      </div>
+    </div>
+
+    <div class="mock-field" style="margin-bottom:16px;">
+      <label>Response Headers</label>
+      <div id="headersContainer">
+        <div class="header-row">
+          <input type="text" placeholder="Header name" value="Content-Type">
+          <input type="text" placeholder="Header value" value="application/json">
+          <button class="remove-hdr" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+        <div class="header-row">
+          <input type="text" placeholder="Header name" value="X-Request-Id">
+          <input type="text" placeholder="Header value" value="mock-abc-123">
+          <button class="remove-hdr" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+      </div>
+      <button class="btn btn-sm" style="margin-top:8px;" onclick="addHeader()">+ Add Header</button>
+    </div>
+
+    <div class="mock-field">
+      <label for="responseBody">Response Body (JSON)</label>
+      <textarea id="responseBody">{
+  "data": {
+    "users": [
+      {
+        "id": 1,
+        "name": "Alice Chen",
+        "email": "alice@example.com",
+        "role": "admin",
+        "created_at": "2026-01-15T08:30:00Z"
+      },
+      {
+        "id": 2,
+        "name": "Bob Martinez",
+        "email": "bob@example.com",
+        "role": "user",
+        "created_at": "2026-02-20T14:15:00Z"
+      }
+    ]
+  },
+  "meta": {
+    "total": 2,
+    "page": 1,
+    "per_page": 25
+  }
+}</textarea>
+    </div>
+
+    <div class="mock-btn-row">
+      <button class="btn btn-primary" onclick="generateMock()">Generate Mock</button>
+      <button class="btn" onclick="prettifyBody()">Prettify JSON</button>
+      <button class="btn" onclick="minifyBody()">Minify JSON</button>
+      <button class="btn btn-sm" onclick="copyOutput()">Copy Output</button>
+    </div>
+
+    <div id="mockOutput" class="mock-output">// Configure your mock response and click "Generate Mock"</div>
+  </div>
+
+  <h2 id="templates">Pre-Built Response Templates</h2>
+
+  <p>Click any template button above to load a complete response structure into the editor. Each template represents a common REST API pattern you will encounter in production:</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Template</th>
+        <th>Method</th>
+        <th>Status</th>
+        <th>Use Case</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>REST Success</strong></td>
+        <td><span class="method-badge badge-get">GET</span></td>
+        <td><code>200</code></td>
+        <td>Standard resource fetch with data envelope and metadata</td>
+      </tr>
+      <tr>
+        <td><strong>Error Response</strong></td>
+        <td><span class="method-badge badge-post">POST</span></td>
+        <td><code>400</code></td>
+        <td>Validation error with field-level error messages</td>
+      </tr>
+      <tr>
+        <td><strong>Paginated List</strong></td>
+        <td><span class="method-badge badge-get">GET</span></td>
+        <td><code>200</code></td>
+        <td>Cursor-based pagination with next_cursor and has_more</td>
+      </tr>
+      <tr>
+        <td><strong>Auth Token</strong></td>
+        <td><span class="method-badge badge-post">POST</span></td>
+        <td><code>200</code></td>
+        <td>OAuth 2.0 token response with access_token and refresh_token</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 id="schema-validator">JSON Schema Validator</h2>
+
+  <p>Paste a JSON Schema below and click <strong>Validate</strong> to check the response body against it. The validator supports JSON Schema Draft 7 features including required fields, type checking, enum constraints, minimum/maximum values, string patterns, and nested object schemas. Errors are reported with the exact JSON path that failed validation.</p>
+
+  <div class="mocker-panel">
+    <h3>Schema Validation</h3>
+    <div class="mock-field" style="margin-bottom:16px;">
+      <label for="schemaInput">JSON Schema</label>
+      <textarea id="schemaInput" style="min-height:200px;">{
+  "type": "object",
+  "required": ["data", "meta"],
+  "properties": {
+    "data": {
+      "type": "object",
+      "required": ["users"],
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "email"],
+            "properties": {
+              "id": { "type": "integer" },
+              "name": { "type": "string", "minLength": 1 },
+              "email": { "type": "string", "format": "email" },
+              "role": { "type": "string", "enum": ["admin", "user", "viewer"] },
+              "created_at": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["total", "page"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "page": { "type": "integer", "minimum": 1 },
+        "per_page": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    }
+  }
+}</textarea>
+    </div>
+    <div class="mock-btn-row">
+      <button class="btn btn-primary" onclick="validateSchema()">Validate Response Against Schema</button>
+      <button class="btn" onclick="clearValidation()">Clear</button>
+    </div>
+    <div id="validationResult" class="validation-result"></div>
+  </div>
+
+  <h2 id="why-mock">Why Mock API Responses</h2>
+
+  <p>Mock API responses are not a convenience. They are a fundamental requirement for professional frontend development. Without mocks, frontend teams are blocked by backend timelines, unable to test error paths, and forced to deploy code that has only been verified against the happy path. The cost of this approach is production incidents: a missing field causes a TypeError, an unexpected status code renders a blank screen, a slow response leaves the user staring at an infinite spinner.</p>
+
+  <p>The data is clear. Teams that mock API responses during development ship 40-60% faster because frontend and backend development happens in parallel. They catch contract mismatches during development instead of during QA or, worse, in production. They test every status code path (200, 400, 401, 403, 404, 429, 500, 503) because mocking makes it trivial to simulate each one. And they build better UX because they can prototype against realistic data shapes rather than hardcoded placeholder text.</p>
+
+  <p>The traditional approach of pointing your frontend at a staging server has three critical problems. First, staging environments are unreliable. They go down, they have stale data, and they do not reproduce the edge cases you need to test. Second, you cannot control what staging returns. Need to test a 429 rate limit response? You would have to actually trigger rate limiting, which may not even be configured on staging. Third, staging introduces network latency and flakiness into your development loop, turning a 50ms feedback cycle into a 500ms one. Mock responses eliminate all three problems. For rapid prototyping, <a href="/">Kappafy's JSON explorer</a> pairs well with this mock generator to visualize and validate your data structures.</p>
+
+  <h2 id="anatomy">Anatomy of an API Response</h2>
+
+  <p>Every HTTP API response consists of three parts: the status line, the headers, and the body. Understanding each part is essential for creating realistic mocks that exercise all the code paths in your frontend.</p>
+
+  <p>The <strong>status code</strong> is the single most important signal your frontend uses to decide what to do. A 200 means "process the body as data." A 201 means "resource was created, check the Location header." A 204 means "success, but there is no body." A 400 means "the request was malformed, show validation errors." A 401 means "redirect to login." A 429 means "back off and retry after the Retry-After header value." A 500 means "something broke on the server, show an error and maybe retry." Each status code triggers a completely different code path. If you only mock 200 responses, you are only testing one path.</p>
+
+  <p><strong>Response headers</strong> carry metadata that your frontend may need to process. <code>Content-Type</code> tells the client how to parse the body. <code>X-Request-Id</code> enables correlating frontend errors with backend logs. <code>Retry-After</code> tells the client how long to wait before retrying a 429 or 503. <code>ETag</code> and <code>Last-Modified</code> enable conditional requests that save bandwidth. <code>X-RateLimit-Remaining</code> lets the client proactively throttle requests before hitting the limit. Realistic mocks include these headers because your code may depend on them.</p>
+
+  <p>The <strong>response body</strong> is typically JSON for REST APIs. The structure varies by convention: some APIs wrap data in an envelope (<code>{"data": {...}, "meta": {...}}</code>), while others return the resource directly. Error responses have their own structure with error codes, messages, and field-level details. Your mock bodies should match the exact shape your frontend expects, including edge cases like null values, empty arrays, and missing optional fields.</p>
+
+  <h2 id="status-codes">Status Codes for Mocking</h2>
+
+  <p>When building mock API responses, you should create mocks for every status code your frontend is expected to handle. Here is the essential set, organized by category, with the specific frontend behavior each should trigger.</p>
+
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Name</th>
+        <th>Frontend Behavior</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>200</code></td><td>OK</td><td>Parse body, render data, update cache</td></tr>
+      <tr><td><code>201</code></td><td>Created</td><td>Parse body, redirect or show success, invalidate list cache</td></tr>
+      <tr><td><code>204</code></td><td>No Content</td><td>Success with no body, remove from UI (for DELETE)</td></tr>
+      <tr><td><code>400</code></td><td>Bad Request</td><td>Parse error body, show field-level validation errors</td></tr>
+      <tr><td><code>401</code></td><td>Unauthorized</td><td>Clear auth state, redirect to login</td></tr>
+      <tr><td><code>403</code></td><td>Forbidden</td><td>Show "access denied" message, do not redirect to login</td></tr>
+      <tr><td><code>404</code></td><td>Not Found</td><td>Show "not found" UI or redirect to parent resource</td></tr>
+      <tr><td><code>409</code></td><td>Conflict</td><td>Show "already exists" or conflict resolution UI</td></tr>
+      <tr><td><code>422</code></td><td>Unprocessable</td><td>Show semantic validation errors (valid syntax, invalid data)</td></tr>
+      <tr><td><code>429</code></td><td>Too Many Requests</td><td>Read Retry-After, queue request, show "slow down" indicator</td></tr>
+      <tr><td><code>500</code></td><td>Server Error</td><td>Show generic error, offer retry button, log to error tracker</td></tr>
+      <tr><td><code>503</code></td><td>Unavailable</td><td>Show maintenance message, auto-retry with backoff</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="patterns">Common Mocking Patterns</h2>
+
+  <h3>Pattern 1: Data Envelope</h3>
+
+  <p>The most widely adopted API response pattern wraps the actual data in an envelope that separates data from metadata. This makes it unambiguous where the primary content lives and provides a consistent location for pagination info, rate limit details, and request IDs.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>{
+  "data": {
+    "id": 42,
+    "name": "Project Alpha",
+    "status": "active"
+  },
+  "meta": {
+    "request_id": "req_abc123",
+    "timestamp": "2026-05-25T10:30:00Z"
+  }
+}</code></pre>
+
+  <p>Your frontend code always reads <code>response.data</code> for the resource and <code>response.meta</code> for metadata. This consistency across every endpoint eliminates guesswork and simplifies error handling because error responses follow the same envelope shape.</p>
+
+  <h3>Pattern 2: Cursor-Based Pagination</h3>
+
+  <p>Offset-based pagination (<code>page=2&per_page=25</code>) breaks when records are inserted or deleted between page requests. Cursor-based pagination uses an opaque cursor token that points to the exact position in the result set, making it reliable for real-time data.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>{
+  "data": [...],
+  "pagination": {
+    "next_cursor": "eyJpZCI6MTAwfQ==",
+    "has_more": true,
+    "total": 1547
+  }
+}</code></pre>
+
+  <p>Mock both the middle pages (where <code>has_more</code> is true) and the last page (where <code>has_more</code> is false and <code>next_cursor</code> is null). Also mock the empty state where <code>data</code> is an empty array and <code>total</code> is 0.</p>
+
+  <h3>Pattern 3: Error Response with Field Details</h3>
+
+  <p>For form submissions, a generic "Bad Request" message is useless. The frontend needs to know which fields failed and why, so it can highlight the specific input and show a contextual error message.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format",
+        "code": "INVALID_FORMAT"
+      },
+      {
+        "field": "password",
+        "message": "Must be at least 8 characters",
+        "code": "TOO_SHORT"
+      }
+    ]
+  }
+}</code></pre>
+
+  <h2 id="integration">Integration with Frontend Frameworks</h2>
+
+  <p>Once you have generated your mock response, you need to serve it to your frontend. The approach depends on your stack, but the core concept is the same: intercept HTTP requests and return your predefined responses.</p>
+
+  <h3>MSW (Mock Service Worker)</h3>
+
+  <p>MSW intercepts requests at the network level, so your application code does not know it is receiving mocked data. This is the gold standard for frontend mocking because you test the actual fetch/axios calls, not a mock abstraction.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>import { http, HttpResponse, delay } from 'msw';
+
+export const handlers = [
+  http.get('https://api.example.com/v1/users', async () => {
+    await delay(200); // simulate network latency
+    return HttpResponse.json({
+      data: {
+        users: [
+          { id: 1, name: 'Alice', email: 'alice@example.com' }
+        ]
+      },
+      meta: { total: 1, page: 1, per_page: 25 }
+    }, { status: 200 });
+  })
+];</code></pre>
+
+  <h3>json-server</h3>
+
+  <p>For quick REST mocking without any code, json-server creates a full CRUD API from a single JSON file. Point your frontend at <code>http://localhost:3001</code> and it handles GET, POST, PUT, PATCH, and DELETE automatically.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code># db.json
+{
+  "users": [
+    { "id": 1, "name": "Alice", "email": "alice@example.com" },
+    { "id": 2, "name": "Bob", "email": "bob@example.com" }
+  ]
+}
+
+# Run: npx json-server --watch db.json --port 3001</code></pre>
+
+  <h3>Fetch Wrapper</h3>
+
+  <p>For the simplest possible mock, wrap the global fetch function to return your predefined response when the URL matches. This works anywhere JavaScript runs and requires zero dependencies.</p>
+
+  <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>const mockResponses = new Map([
+  ['GET /api/users', {
+    status: 200,
+    body: { data: { users: [...] }, meta: { total: 2 } }
+  }],
+  ['POST /api/users', {
+    status: 201,
+    body: { data: { id: 3, name: 'New User' } }
+  }]
+]);
+
+const originalFetch = window.fetch;
+window.fetch = async (url, options = {}) => {
+  const method = (options.method || 'GET').toUpperCase();
+  const path = new URL(url).pathname;
+  const key = method + ' ' + path;
+  const mock = mockResponses.get(key);
+  if (mock) {
+    await new Promise(r => setTimeout(r, 200));
+    return new Response(JSON.stringify(mock.body), {
+      status: mock.status,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  return originalFetch(url, options);
+};</code></pre>
+
+  <p>For visualizing the JSON structures in your mocks, use <a href="/">Kappafy's JSON explorer</a> to render them as collapsible trees. If you need to <a href="/answers/prettify-json-online.html">prettify minified JSON</a> from production logs before mocking it, that tool handles it in one click. Teams building <a href="https://invokebot.com">webhook integrations</a> often use this mock generator to simulate the webhook payloads they will receive.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is a mock API response generator?</summary>
+    <p>A mock API response generator creates simulated HTTP responses without needing a real backend server. You define the status code, headers, and JSON body, and the tool generates the equivalent curl command or mock server configuration. This lets frontend developers build and test against realistic API contracts before the backend is ready. All processing happens in your browser with no data sent to any server.</p>
+  </details>
+  <details>
+    <summary>How do I validate a JSON response against a schema?</summary>
+    <p>Paste your JSON Schema into the validator panel and your API response body into the response editor. The validator checks that every required field exists, data types match (string, number, boolean, array, object), values fall within defined constraints (minLength, maximum, enum), and nested objects conform to their sub-schemas. Errors are listed with the exact JSON path that failed validation. This catches contract mismatches during development rather than in production.</p>
+  </details>
+  <details>
+    <summary>What HTTP status codes should I use for mock API responses?</summary>
+    <p>For success responses use 200 (OK) for reads, 201 (Created) for resource creation, or 204 (No Content) for deletes. For client errors use 400 (Bad Request) for malformed input, 401 (Unauthorized) for missing auth, 403 (Forbidden) for insufficient permissions, 404 (Not Found) for missing resources, and 422 (Unprocessable Entity) for semantic validation failures. For server errors use 500 (Internal Server Error) and 503 (Service Unavailable). Mock all of these to ensure your frontend handles every case gracefully.</p>
+  </details>
+  <details>
+    <summary>Can I simulate response delay with mock APIs?</summary>
+    <p>Yes. Set the response delay in milliseconds in this tool to simulate network latency. The generated curl command includes a sleep parameter, and the MSW/fetch wrapper code includes an equivalent delay call. Simulating 200-2000ms of latency helps you test loading states, skeleton screens, and timeout handling. Testing with 5000ms+ delays helps verify that your UI remains responsive and shows appropriate loading indicators during slow network conditions.</p>
+  </details>
+  <details>
+    <summary>What are pre-built API response templates?</summary>
+    <p>Pre-built templates are ready-made JSON response structures for common API patterns. The REST Success template gives you a standard 200 response with a data envelope and metadata. The Error Response template provides a 400 with field-level validation errors. The Paginated List template includes cursor-based pagination with next_cursor and has_more fields. The Auth Token template provides an OAuth 2.0 response with access_token, refresh_token, token_type, and expires_in. Load any template with one click and customize it for your specific API contract.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/" class="related-card">Kappafy JSON Explorer &amp; Mock API</a>
+      <a href="/guides/simulate-api-errors-timeouts.html" class="related-card">How to Simulate API Errors &amp; Timeouts</a>
+      <a href="/answers/prettify-json-online.html" class="related-card">Prettify JSON Online</a>
+      <a href="/guides/rate-limiting-tester.html" class="related-card">Rate Limiting Calculator &amp; Tester</a>
+      <a href="/answers/http-status-codes-reference.html" class="related-card">HTTP Status Codes Reference</a>
+      <a href="/research/json-schema-patterns.html" class="related-card">JSON Schema Patterns Research</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+  'use strict';
+
+  var templates = {
+    success: {
+      method: 'GET',
+      status: '200',
+      headers: [['Content-Type','application/json'],['X-Request-Id','req_' + Math.random().toString(36).slice(2,10)]],
+      body: JSON.stringify({
+        data: {
+          users: [
+            { id: 1, name: "Alice Chen", email: "alice@example.com", role: "admin", created_at: "2026-01-15T08:30:00Z" },
+            { id: 2, name: "Bob Martinez", email: "bob@example.com", role: "user", created_at: "2026-02-20T14:15:00Z" },
+            { id: 3, name: "Carol Wu", email: "carol@example.com", role: "viewer", created_at: "2026-03-10T11:00:00Z" }
+          ]
+        },
+        meta: { total: 3, page: 1, per_page: 25 }
+      }, null, 2)
+    },
+    error: {
+      method: 'POST',
+      status: '400',
+      headers: [['Content-Type','application/json'],['X-Request-Id','req_err_' + Math.random().toString(36).slice(2,10)]],
+      body: JSON.stringify({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Request validation failed",
+          details: [
+            { field: "email", message: "Invalid email format", code: "INVALID_FORMAT" },
+            { field: "password", message: "Must be at least 8 characters", code: "TOO_SHORT" },
+            { field: "username", message: "Username already taken", code: "DUPLICATE" }
+          ]
+        }
+      }, null, 2)
+    },
+    paginated: {
+      method: 'GET',
+      status: '200',
+      headers: [['Content-Type','application/json'],['X-Total-Count','1547'],['X-Page-Size','25']],
+      body: JSON.stringify({
+        data: [
+          { id: 101, title: "Build REST API with Node.js", status: "published", views: 12450 },
+          { id: 102, title: "GraphQL vs REST: 2026 Guide", status: "draft", views: 0 },
+          { id: 103, title: "API Rate Limiting Strategies", status: "published", views: 8930 }
+        ],
+        pagination: {
+          next_cursor: "eyJpZCI6MTAzLCJjcmVhdGVkX2F0IjoiMjAyNi0wNS0yNSJ9",
+          prev_cursor: "eyJpZCI6MTAwLCJjcmVhdGVkX2F0IjoiMjAyNi0wNS0yMCJ9",
+          has_more: true,
+          total: 1547
+        }
+      }, null, 2)
+    },
+    auth: {
+      method: 'POST',
+      status: '200',
+      headers: [['Content-Type','application/json'],['Cache-Control','no-store'],['Pragma','no-cache']],
+      body: JSON.stringify({
+        access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzEyMyIsImlhdCI6MTcxNjYzMjAwMCwiZXhwIjoxNzE2NjM1NjAwfQ.mock_signature",
+        refresh_token: "dGhpcyBpcyBhIG1vY2sgcmVmcmVzaCB0b2tlbg==",
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: "read write profile"
+      }, null, 2)
+    }
+  };
+
+  window.loadTemplate = function(key) {
+    var tmpl = templates[key];
+    if (!tmpl) return;
+    document.getElementById('httpMethod').value = tmpl.method;
+    document.getElementById('statusCode').value = tmpl.status;
+    document.getElementById('responseBody').value = tmpl.body;
+
+    var container = document.getElementById('headersContainer');
+    container.innerHTML = '';
+    tmpl.headers.forEach(function(h) {
+      addHeaderWithValues(h[0], h[1]);
+    });
+  };
+
+  function addHeaderWithValues(name, value) {
+    var container = document.getElementById('headersContainer');
+    var row = document.createElement('div');
+    row.className = 'header-row';
+    row.innerHTML = '<input type="text" placeholder="Header name" value="' + escapeHtml(name) + '">'
+      + '<input type="text" placeholder="Header value" value="' + escapeHtml(value) + '">'
+      + '<button class="remove-hdr" onclick="this.parentElement.remove()">&times;</button>';
+    container.appendChild(row);
+  }
+
+  window.addHeader = function() {
+    addHeaderWithValues('', '');
+  };
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function getHeaders() {
+    var rows = document.querySelectorAll('#headersContainer .header-row');
+    var headers = [];
+    rows.forEach(function(row) {
+      var inputs = row.querySelectorAll('input');
+      var name = inputs[0].value.trim();
+      var value = inputs[1].value.trim();
+      if (name) headers.push([name, value]);
+    });
+    return headers;
+  }
+
+  window.prettifyBody = function() {
+    var textarea = document.getElementById('responseBody');
+    try {
+      var obj = JSON.parse(textarea.value);
+      textarea.value = JSON.stringify(obj, null, 2);
+    } catch(e) {
+      // leave as-is
+    }
+  };
+
+  window.minifyBody = function() {
+    var textarea = document.getElementById('responseBody');
+    try {
+      var obj = JSON.parse(textarea.value);
+      textarea.value = JSON.stringify(obj);
+    } catch(e) {
+      // leave as-is
+    }
+  };
+
+  window.generateMock = function() {
+    var method = document.getElementById('httpMethod').value;
+    var status = document.getElementById('statusCode').value;
+    var url = document.getElementById('endpointUrl').value || 'https://api.example.com/v1/users';
+    var delay = parseInt(document.getElementById('responseDelay').value) || 0;
+    var body = document.getElementById('responseBody').value;
+    var headers = getHeaders();
+
+    var validJson = true;
+    try { JSON.parse(body); } catch(e) { validJson = false; }
+
+    var output = '';
+
+    // curl command
+    output += '# ─── curl command ───\n';
+    if (delay > 0) {
+      output += '# (simulated ' + delay + 'ms delay)\n';
+    }
+    output += 'curl -X ' + method + ' \\\n';
+    output += '  -w "\\nHTTP Status: %{http_code}\\n" \\\n';
+    headers.forEach(function(h) {
+      output += '  -H "' + h[0] + ': ' + h[1] + '" \\\n';
+    });
+    output += '  -d \'' + (validJson ? JSON.stringify(JSON.parse(body)) : body) + '\' \\\n';
+    output += '  ' + url + '\n\n';
+
+    // Expected response
+    output += '# ─── Expected Response ───\n';
+    output += '# HTTP/' + status + '\n';
+    headers.forEach(function(h) {
+      output += '# ' + h[0] + ': ' + h[1] + '\n';
+    });
+    output += '#\n';
+    output += validJson ? JSON.stringify(JSON.parse(body), null, 2) : body;
+    output += '\n\n';
+
+    // MSW handler
+    output += '# ─── MSW Handler ───\n';
+    output += 'import { http, HttpResponse, delay } from \'msw\';\n\n';
+    output += 'export const handler = http.' + method.toLowerCase() + '(\'' + url + '\', async () => {\n';
+    if (delay > 0) {
+      output += '  await delay(' + delay + ');\n';
+    }
+    if (status === '204') {
+      output += '  return new HttpResponse(null, { status: 204 });\n';
+    } else {
+      output += '  return HttpResponse.json(\n';
+      output += '    ' + (validJson ? JSON.stringify(JSON.parse(body), null, 4).replace(/\n/g, '\n    ') : body) + ',\n';
+      output += '    {\n';
+      output += '      status: ' + status + ',\n';
+      if (headers.length > 0) {
+        output += '      headers: {\n';
+        headers.forEach(function(h, i) {
+          output += '        \'' + h[0] + '\': \'' + h[1] + '\'' + (i < headers.length - 1 ? ',' : '') + '\n';
+        });
+        output += '      }\n';
+      }
+      output += '    }\n';
+      output += '  );\n';
+    }
+    output += '});\n\n';
+
+    // fetch wrapper
+    output += '# ─── fetch() mock ───\n';
+    output += 'const mockFetch = async (url, options) => {\n';
+    if (delay > 0) {
+      output += '  await new Promise(r => setTimeout(r, ' + delay + '));\n';
+    }
+    output += '  return new Response(\n';
+    output += '    JSON.stringify(' + (validJson ? JSON.stringify(JSON.parse(body)) : '""') + '),\n';
+    output += '    {\n';
+    output += '      status: ' + status + ',\n';
+    output += '      headers: { ';
+    var hdrParts = headers.map(function(h) { return '\'' + h[0] + '\': \'' + h[1] + '\''; });
+    output += hdrParts.join(', ');
+    output += ' }\n';
+    output += '    }\n';
+    output += '  );\n';
+    output += '};\n';
+
+    document.getElementById('mockOutput').textContent = output;
+  };
+
+  window.copyOutput = function() {
+    var text = document.getElementById('mockOutput').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.querySelector('.mock-btn-row .btn-sm');
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+  // JSON Schema Validator
+  window.validateSchema = function() {
+    var resultEl = document.getElementById('validationResult');
+    var schemaText = document.getElementById('schemaInput').value;
+    var bodyText = document.getElementById('responseBody').value;
+    var errors = [];
+
+    try {
+      var schema = JSON.parse(schemaText);
+    } catch(e) {
+      resultEl.className = 'validation-result invalid';
+      resultEl.textContent = 'Schema JSON parse error: ' + e.message;
+      return;
+    }
+
+    try {
+      var data = JSON.parse(bodyText);
+    } catch(e) {
+      resultEl.className = 'validation-result invalid';
+      resultEl.textContent = 'Response body JSON parse error: ' + e.message;
+      return;
+    }
+
+    function validate(value, schema, path) {
+      if (!schema || typeof schema !== 'object') return;
+
+      // Type check
+      if (schema.type) {
+        var actualType = Array.isArray(value) ? 'array' : (value === null ? 'null' : typeof value);
+        if (schema.type === 'integer') {
+          if (typeof value !== 'number' || value !== Math.floor(value)) {
+            errors.push(path + ': expected integer, got ' + actualType + ' (' + JSON.stringify(value) + ')');
+          }
+        } else if (schema.type !== actualType) {
+          errors.push(path + ': expected ' + schema.type + ', got ' + actualType);
+          return;
+        }
+      }
+
+      // Enum
+      if (schema.enum && schema.enum.indexOf(value) === -1) {
+        errors.push(path + ': value ' + JSON.stringify(value) + ' not in enum [' + schema.enum.join(', ') + ']');
+      }
+
+      // String constraints
+      if (typeof value === 'string') {
+        if (schema.minLength !== undefined && value.length < schema.minLength) {
+          errors.push(path + ': string length ' + value.length + ' < minLength ' + schema.minLength);
+        }
+        if (schema.maxLength !== undefined && value.length > schema.maxLength) {
+          errors.push(path + ': string length ' + value.length + ' > maxLength ' + schema.maxLength);
+        }
+        if (schema.pattern) {
+          try {
+            if (!new RegExp(schema.pattern).test(value)) {
+              errors.push(path + ': string does not match pattern ' + schema.pattern);
+            }
+          } catch(e) {}
+        }
+      }
+
+      // Number constraints
+      if (typeof value === 'number') {
+        if (schema.minimum !== undefined && value < schema.minimum) {
+          errors.push(path + ': value ' + value + ' < minimum ' + schema.minimum);
+        }
+        if (schema.maximum !== undefined && value > schema.maximum) {
+          errors.push(path + ': value ' + value + ' > maximum ' + schema.maximum);
+        }
+      }
+
+      // Object validation
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (schema.required) {
+          schema.required.forEach(function(key) {
+            if (!(key in value)) {
+              errors.push(path + ': missing required property "' + key + '"');
+            }
+          });
+        }
+        if (schema.properties) {
+          Object.keys(schema.properties).forEach(function(key) {
+            if (key in value) {
+              validate(value[key], schema.properties[key], path + '.' + key);
+            }
+          });
+        }
+      }
+
+      // Array validation
+      if (Array.isArray(value)) {
+        if (schema.minItems !== undefined && value.length < schema.minItems) {
+          errors.push(path + ': array length ' + value.length + ' < minItems ' + schema.minItems);
+        }
+        if (schema.maxItems !== undefined && value.length > schema.maxItems) {
+          errors.push(path + ': array length ' + value.length + ' > maxItems ' + schema.maxItems);
+        }
+        if (schema.items) {
+          value.forEach(function(item, i) {
+            validate(item, schema.items, path + '[' + i + ']');
+          });
+        }
+      }
+    }
+
+    validate(data, schema, '$');
+
+    if (errors.length === 0) {
+      resultEl.className = 'validation-result valid';
+      resultEl.innerHTML = 'VALID &mdash; Response body matches schema.\n\nChecked:\n'
+        + '  - All required properties present\n'
+        + '  - All types match (string, number, integer, boolean, array, object)\n'
+        + '  - All constraints satisfied (min, max, enum, minLength)\n'
+        + '  - All nested objects and arrays validated recursively';
+    } else {
+      resultEl.className = 'validation-result invalid';
+      resultEl.textContent = 'INVALID \u2014 ' + errors.length + ' error(s) found:\n\n' + errors.map(function(e, i) {
+        return '  ' + (i + 1) + '. ' + e;
+      }).join('\n');
+    }
+  };
+
+  window.clearValidation = function() {
+    var el = document.getElementById('validationResult');
+    el.className = 'validation-result';
+    el.textContent = '';
+  };
+
+})();
+</script>
+</body>
+</html>

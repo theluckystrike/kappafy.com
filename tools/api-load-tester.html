@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Load Testing Calculator — Estimate Capacity &amp; Bottlenecks | Kappafy</title>
+<meta name="description" content="Calculate API throughput, queuing delay, and error rate at capacity. Generate a ramp-up load test plan with a visual throughput curve. Free browser-based tool, no sign-up.">
+<link rel="canonical" href="https://kappafy.com/tools/api-load-tester.html">
+<meta property="og:title" content="API Load Testing Calculator — Estimate Capacity &amp; Bottlenecks">
+<meta property="og:description" content="Enter RPS target, response time, concurrency, and timeout to calculate theoretical throughput, queuing delay, and error rate. Generates a ramp-up load test plan with visual chart.">
+<meta property="og:url" content="https://kappafy.com/tools/api-load-tester.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="API Load Testing Calculator — Estimate Capacity &amp; Bottlenecks">
+<meta name="twitter:description" content="Calculate API throughput, queuing delay, error rate, and generate a ramp-up load test plan. Free tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/tools/api-load-tester.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/tools/api-load-tester.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "API Load Testing Calculator",
+    "url": "https://kappafy.com/tools/api-load-tester.html",
+    "description": "Calculate theoretical API throughput, queuing delay, and error rate at capacity. Generate a ramp-up load test plan with visual throughput curve chart.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-28",
+    "dateModified": "2026-05-28",
+    "featureList": ["Throughput calculation using Little's Law", "Queuing delay estimation", "Error rate at capacity", "Ramp-up load test plan generator", "Visual throughput curve chart", "Concurrency and timeout modeling"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "API Load Testing Calculator — Estimate Capacity &amp; Bottlenecks",
+    "url": "https://kappafy.com/tools/api-load-tester.html",
+    "datePublished": "2026-05-28",
+    "dateModified": "2026-05-28",
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "description": "Calculate theoretical API throughput, queuing delay, and error rate at capacity using Little's Law and M/M/c queuing theory."
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Little's Law and how does it apply to API load testing?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Little's Law states that the average number of items in a queuing system (L) equals the arrival rate (lambda) multiplied by the average time an item spends in the system (W): L = lambda * W. For APIs, this means: concurrent requests in flight = RPS * average response time in seconds. If you target 1000 RPS with a 200ms average response time, you need at least 200 concurrent connections open at any moment. Little's Law gives you the minimum concurrency required to sustain a target throughput without queueing."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What happens to an API when requests exceed concurrency capacity?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "When incoming requests exceed the concurrency limit, they queue or are rejected. Queued requests experience additional wait time on top of their processing time, which inflates tail latency. If the queue fills up or if you have no queue, requests are dropped with 503 Service Unavailable. At utilization above 80%, queuing delay grows non-linearly: a server at 90% utilization has roughly 9x the queuing delay of a server at 50% utilization. This is why capacity planning targets 60-70% peak utilization rather than 100%."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is a ramp-up schedule in load testing?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A ramp-up schedule gradually increases load from zero to the target RPS over a defined period rather than applying full load instantly. Ramping up prevents cold-start effects like JIT compilation, connection pool warming, and cache misses from appearing in your steady-state metrics. A typical ramp-up starts at 10% of target RPS, adds 10% every 30-60 seconds, holds at 100% for 5-10 minutes for steady-state measurement, then reduces load. Tools like k6, Locust, and JMeter all support configurable ramp-up stages."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I choose the right concurrency limit for my API?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Concurrency limit depends on your server thread pool or async event loop capacity. For thread-per-request servers (Spring Boot, Django WSGI), concurrency equals the number of threads: typically 50-500. For async servers (Node.js, FastAPI, Go), concurrency is much higher because threads can handle multiple in-flight requests. A safe starting point is: concurrency = target_RPS * P99_response_time_seconds * 2. The 2x safety margin handles burst traffic. Load test to find the exact point where latency starts degrading, then set your concurrency limit 20% below that."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What error rate is acceptable during load testing?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Error rate thresholds depend on your SLA, but common targets are: under 0.1% for payment APIs, under 0.5% for user-facing APIs, and under 1% for internal services. During a load test, error rate typically remains near zero until you hit the concurrency or processing ceiling, then rises sharply. The RPS at which error rate crosses 1% is often used as the maximum capacity figure. Errors at capacity are usually 503 (connection refused or queue full) or 504 (gateway timeout) rather than application-level 500 errors."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://kappafy.com/tools/"},{"@type":"ListItem","position":3,"name":"API Load Testing Calculator"}]}</script>
+<style>
+  .sim-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .sim-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .sim-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) {
+    .sim-controls { grid-template-columns: 1fr; }
+    .metric-grid { grid-template-columns: 1fr 1fr !important; }
+    .ramp-table { font-size: 12px; }
+  }
+  .sim-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .sim-field input[type="number"],
+  .sim-field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .sim-field input:focus,
+  .sim-field select:focus { border-color: var(--accent); }
+  .sim-field select option { background: var(--bg); color: var(--text); }
+  .sim-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .metric-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .metric-card .m-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .metric-card .m-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .metric-card .m-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .metric-card.warn .m-value { color: #f59e0b; }
+  .metric-card.danger .m-value { color: #ef4444; }
+  .chart-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 16px;
+  }
+  .chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    min-width: 320px;
+  }
+  #throughputChart {
+    display: block;
+    width: 100%;
+    height: 220px;
+  }
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .chart-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .ramp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .ramp-table th, .ramp-table td {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .ramp-table th {
+    background: var(--bg-card);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+  }
+  .ramp-table td:first-child { font-family: var(--font-display); color: var(--accent); }
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-ok { background: rgba(34,197,94,0.15); color: #86efac; }
+  .badge-warn { background: rgba(245,158,11,0.15); color: #fcd34d; }
+  .badge-danger { background: rgba(239,68,68,0.15); color: #fca5a5; }
+  .sim-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--text);
+    margin-top: 12px;
+    display: none;
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    color: var(--bg); flex-shrink: 0;
+  }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/tools/">Tools</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span>API Load Testing Calculator</span>
+  </nav>
+
+  <h1>API Load Testing Calculator &mdash; Estimate Capacity &amp; Bottlenecks</h1>
+  <div class="meta">May 28, 2026 &middot; 12 min read</div>
+
+  <p>Before you run a load test, you should already know the answer. The math behind API capacity is deterministic: given a target throughput, an average response time, and a concurrency ceiling, you can calculate exactly how many requests will queue, how long they will wait, and at what point your error rate will spike. This calculator applies <a href="#littles-law">Little's Law</a> and <abbr title="Markov queuing model with c servers">M/M/c</abbr> queuing theory to your specific numbers, then generates a ramp-up load test plan with the stages, durations, and assertion thresholds your team needs to validate the result in a real tool like <a href="https://k6.io">k6</a>, Locust, or JMeter.</p>
+
+  <p>Understanding your theoretical ceiling before testing prevents the most common load testing mistake: running at 100% target load from second one, which floods connection pools, blows through cold-start JIT warmup, and produces metrics that mix initialization noise with steady-state performance. The ramp-up schedule generated here gives you clean, stageable phases that isolate the behavior you actually care about.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#calculator">Interactive Load Test Calculator</a></li>
+      <li><a href="#chart">Visual Throughput Curve</a></li>
+      <li><a href="#ramp-plan">Ramp-Up Test Plan</a></li>
+      <li><a href="#littles-law">Little's Law Explained</a></li>
+      <li><a href="#queuing">Queuing Theory for APIs</a></li>
+      <li><a href="#concurrency">Choosing Concurrency Limits</a></li>
+      <li><a href="#bottlenecks">Identifying Bottlenecks</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="calculator">Interactive Load Test Calculator</h2>
+
+  <p>Enter your target RPS, average response time, concurrency limit (max simultaneous open requests your server handles), and request timeout. The calculator will show theoretical throughput at utilization, estimated queuing delay, error rate projection, and the minimum concurrency required to avoid queuing.</p>
+
+  <div class="sim-panel">
+    <h3>Load Parameters</h3>
+    <div class="sim-controls">
+      <div class="sim-field">
+        <label for="targetRps">Target RPS</label>
+        <input type="number" id="targetRps" value="500" min="1" max="100000" step="1">
+      </div>
+      <div class="sim-field">
+        <label for="avgRespMs">Avg Response Time (ms)</label>
+        <input type="number" id="avgRespMs" value="120" min="1" max="60000" step="1">
+      </div>
+      <div class="sim-field">
+        <label for="concLimit">Concurrency Limit (threads/conns)</label>
+        <input type="number" id="concLimit" value="200" min="1" max="100000" step="1">
+      </div>
+      <div class="sim-field">
+        <label for="timeoutMs">Request Timeout (ms)</label>
+        <input type="number" id="timeoutMs" value="5000" min="100" max="120000" step="100">
+      </div>
+      <div class="sim-field">
+        <label for="rampStyle">Ramp-Up Style</label>
+        <select id="rampStyle">
+          <option value="linear">Linear (10% steps)</option>
+          <option value="aggressive">Aggressive (25% steps)</option>
+          <option value="conservative">Conservative (5% steps)</option>
+        </select>
+      </div>
+      <div class="sim-field">
+        <label for="testDuration">Steady-State Duration (min)</label>
+        <input type="number" id="testDuration" value="10" min="1" max="60" step="1">
+      </div>
+    </div>
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" onclick="calcLoad()">Calculate &amp; Generate Plan</button>
+      <button class="btn btn-sm" onclick="resetCalc()">Reset</button>
+    </div>
+  </div>
+
+  <h2 id="chart">Visual Throughput Curve</h2>
+  <p>The chart below shows estimated effective throughput across the utilization range (0% to 110% of capacity). The green zone is safe operating range, yellow is caution territory where queuing delay grows quickly, and red is beyond capacity where error rate spikes.</p>
+
+  <div class="sim-panel" id="chartPanel" style="display:none;">
+    <h3>Throughput vs. Utilization</h3>
+    <div id="metricsRow" class="metric-grid"></div>
+    <div class="chart-container">
+      <div class="chart-canvas-wrap">
+        <canvas id="throughputChart" role="img" aria-label="API throughput curve chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-legend">
+      <span><span class="legend-dot" style="background:#22c55e;"></span>Safe (&lt;70% util)</span>
+      <span><span class="legend-dot" style="background:#f59e0b;"></span>Caution (70-90%)</span>
+      <span><span class="legend-dot" style="background:#ef4444;"></span>Over capacity (&gt;90%)</span>
+      <span><span class="legend-dot" style="background:#818cf8;"></span>Your target RPS</span>
+    </div>
+  </div>
+
+  <h2 id="ramp-plan">Ramp-Up Test Plan</h2>
+  <p>The table below is your generated load test plan. Each stage specifies the RPS, duration, expected concurrency in flight, expected queuing delay, and pass/fail assertion for error rate. Import these stages directly into k6 or Locust scenarios.</p>
+
+  <div class="sim-panel" id="planPanel" style="display:none;">
+    <h3>Generated Ramp-Up Schedule</h3>
+    <div style="overflow-x:auto;">
+      <table class="ramp-table" id="rampTable">
+        <thead>
+          <tr>
+            <th>Stage</th>
+            <th>RPS</th>
+            <th>Duration</th>
+            <th>Concurrent In-Flight</th>
+            <th>Est. Queue Delay</th>
+            <th>Error Rate Assertion</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="rampTbody"></tbody>
+      </table>
+    </div>
+    <pre class="sim-output" id="k6Output" style="display:block;"></pre>
+    <div class="sim-btn-row">
+      <button class="btn btn-sm" onclick="copyK6()">Copy k6 Config</button>
+    </div>
+  </div>
+
+  <h2 id="littles-law">Little's Law Explained</h2>
+  <p>Little's Law is the foundational equation of queuing theory: <strong>L = &lambda; &times; W</strong>, where L is the average number of items in the system, &lambda; (lambda) is the arrival rate, and W is the average time each item spends in the system. For an API:</p>
+  <ul>
+    <li><strong>L</strong> = concurrent requests in flight at any moment</li>
+    <li><strong>&lambda;</strong> = requests per second (RPS)</li>
+    <li><strong>W</strong> = average response time in seconds</li>
+  </ul>
+  <p>This means that at 500 RPS with a 200ms average response time, you have 500 &times; 0.2 = 100 requests in flight at any given moment. If your concurrency limit is 80 threads, requests queue the moment they arrive because the in-flight demand (100) exceeds the supply (80). Little's Law lets you compute required concurrency before the test runs: concurrency_needed = RPS &times; avg_response_seconds.</p>
+
+  <h2 id="queuing">Queuing Theory for APIs</h2>
+  <p>When concurrency demand exceeds server capacity, requests queue. The queuing delay &mdash; the time a request waits before a thread is available &mdash; is described by the M/D/1 queue model for deterministic service times and M/M/1 for exponential. The key insight is that queuing delay grows non-linearly with utilization (&rho; = actual_concurrency / max_concurrency):</p>
+  <ul>
+    <li>At &rho; = 0.50: average queue delay = W &times; &rho;/(1&minus;&rho;) = W &times; 1.0&times; (doubles response time)</li>
+    <li>At &rho; = 0.80: queue delay multiplier = 4.0x (adds 4 response times of wait)</li>
+    <li>At &rho; = 0.90: queue delay multiplier = 9.0x</li>
+    <li>At &rho; = 0.95: queue delay multiplier = 19.0x</li>
+  </ul>
+  <p>This explains why capacity planning targets 60&ndash;70% utilization. At 70%, the queue delay is about 2.3x the base response time &mdash; painful but recoverable. At 90%, the queue delay is 9x, which blows through most request timeouts and causes cascading failures.</p>
+
+  <h2 id="concurrency">Choosing Concurrency Limits</h2>
+  <p>Concurrency limit (the maximum number of requests your server actively handles simultaneously) depends on your server model:</p>
+  <ul>
+    <li><strong>Thread-per-request (Spring Boot, Django WSGI, Rails Puma)</strong>: Concurrency = thread pool size. Typically 50&ndash;500. Exceeding it blocks new connections or returns 503 immediately depending on backlog config.</li>
+    <li><strong>Event loop (Node.js, Python asyncio/FastAPI)</strong>: Concurrency is much higher because a single thread handles many I/O-bound in-flight requests. CPU-bound work still blocks. Practical concurrency: 1000&ndash;10,000.</li>
+    <li><strong>Goroutine-based (Go net/http)</strong>: Each connection gets a goroutine with 4KB stack. Practical limit is RAM-bound, often 50,000&ndash;500,000 concurrent goroutines.</li>
+  </ul>
+  <p>A safe rule of thumb: set concurrency limit to target_RPS &times; P99_response_seconds &times; 3. The 3x multiplier gives headroom for traffic spikes. Load test to the exact inflection point where error rate exceeds 0.1%, then set the production limit 30% below that.</p>
+
+  <h2 id="bottlenecks">Identifying Bottlenecks</h2>
+  <p>The load test plan targets a specific RPS ceiling, but bottlenecks can appear anywhere in the stack. Common signs during load testing:</p>
+  <ul>
+    <li><strong>Latency rises at low RPS</strong>: CPU or single-core bottleneck. The server is doing too much work per request. Profile for hot loops, inefficient serialization, or unoptimized queries.</li>
+    <li><strong>Latency stable until sharp cliff then errors spike</strong>: Thread/connection pool exhaustion. Increase pool size or reduce response time to handle the same RPS with less concurrency.</li>
+    <li><strong>Errors are 503, latency stays low</strong>: Load balancer or upstream proxy is rejecting before the app. Check nginx worker_connections, ALB connection limits, or Kubernetes service backlog.</li>
+    <li><strong>Memory grows throughout the test</strong>: Memory leak or connection leak. Connections are not being closed, or objects are retained across requests.</li>
+    <li><strong>Error rate grows gradually rather than spiking</strong>: Database connection pool saturation. Queries are queuing in the DB driver rather than in the HTTP layer.</li>
+  </ul>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>What is Little's Law and how does it apply to API load testing?</summary>
+    <p>Little's Law states that the average number of items in a queuing system (L) equals the arrival rate (lambda) multiplied by the average time an item spends in the system (W): L = lambda * W. For APIs, this means: concurrent requests in flight = RPS * average response time in seconds. If you target 1000 RPS with a 200ms average response time, you need at least 200 concurrent connections open at any moment. Little's Law gives you the minimum concurrency required to sustain a target throughput without queueing.</p>
+  </details>
+  <details>
+    <summary>What happens to an API when requests exceed concurrency capacity?</summary>
+    <p>When incoming requests exceed the concurrency limit, they queue or are rejected. Queued requests experience additional wait time on top of their processing time, which inflates tail latency. If the queue fills up or there is no queue, requests are dropped with 503 Service Unavailable. At utilization above 80%, queuing delay grows non-linearly: a server at 90% utilization has roughly 9x the queuing delay of a server at 50% utilization. This is why capacity planning targets 60-70% peak utilization.</p>
+  </details>
+  <details>
+    <summary>What is a ramp-up schedule in load testing?</summary>
+    <p>A ramp-up schedule gradually increases load from zero to the target RPS rather than applying full load instantly. Ramping up prevents cold-start effects like JIT compilation, connection pool warming, and cache misses from polluting your steady-state metrics. A typical ramp-up starts at 10% of target RPS, adds 10% every 30-60 seconds, holds at 100% for 5-10 minutes for steady-state measurement, then reduces load. Tools like k6, Locust, and JMeter all support configurable ramp-up stages.</p>
+  </details>
+  <details>
+    <summary>How do I choose the right concurrency limit?</summary>
+    <p>Concurrency limit depends on your server thread pool or async event loop capacity. A safe starting point is: concurrency = target_RPS * P99_response_time_seconds * 2. The 2x safety margin handles burst traffic. Load test to find the exact point where latency starts degrading, then set your concurrency limit 20% below that. For thread-per-request servers, check your framework's thread pool configuration. For async servers, the limit is much higher and is usually RAM-constrained.</p>
+  </details>
+  <details>
+    <summary>What error rate is acceptable during load testing?</summary>
+    <p>Error rate thresholds depend on your SLA, but common targets are: under 0.1% for payment APIs, under 0.5% for user-facing APIs, and under 1% for internal services. During a load test, error rate typically remains near zero until you hit the concurrency or processing ceiling, then rises sharply. The RPS at which error rate crosses 1% is often used as the maximum capacity figure. Errors at capacity are usually 503 or 504 rather than application-level 500 errors.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/guides/rate-limiting-tester.html" class="related-card">Rate Limiting Calculator &amp; Tester</a>
+      <a href="/guides/circuit-breaker-pattern.html" class="related-card">Circuit Breaker Pattern Guide</a>
+      <a href="/answers/api-error-handling-patterns.html" class="related-card">API Error Handling Patterns</a>
+      <a href="/tools/api-response-mocker.html" class="related-card">Mock API Response Generator</a>
+      <a href="/answers/rest-vs-graphql-decision-tool.html" class="related-card">REST vs GraphQL Decision Guide</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-28">Last updated: May 28, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  var lastPlan = null;
+
+  // ---- Queuing model helpers ----
+  function utilization(rps, avgSec, conc) {
+    // rho = lambda * W / c  (M/M/c utilization per server)
+    return (rps * avgSec) / conc;
+  }
+
+  // M/M/1 approximation: queue delay = W * rho / (1 - rho)  for rho < 1
+  function queueDelay(rps, avgSec, conc) {
+    var rho = utilization(rps, avgSec, conc);
+    if (rho >= 1) return Infinity;
+    // Simplified Pollaczek-Khinchine: Wq = (rho * W) / (1 - rho)
+    var Wq = (rho * avgSec) / (1 - rho);
+    return Wq * 1000; // ms
+  }
+
+  // Estimated error rate at this RPS — near 0 below capacity, rises sharply above
+  function errorRate(rps, avgSec, conc, timeoutMs) {
+    var rho = utilization(rps, avgSec, conc);
+    if (rho < 0.90) return 0;
+    if (rho >= 1) {
+      // Over capacity: fraction of requests that cannot be served = 1 - capacity/rps
+      var capRps = conc / avgSec;
+      var overflow = Math.max(0, (rps - capRps) / rps);
+      return Math.min(1, overflow + 0.05);
+    }
+    // Between 90-100% util: some requests time out due to queue delay exceeding timeout
+    var Wq = (rho * avgSec) / (1 - rho);
+    var timeoutSec = timeoutMs / 1000;
+    // Fraction of exponential queue wait exceeding timeout
+    var fracTimeout = Math.exp(-timeoutSec / Wq);
+    return Math.min(0.5, fracTimeout);
+  }
+
+  // Effective throughput = RPS * (1 - error_rate), capped at capacity
+  function effectiveThroughput(rps, avgSec, conc, timeoutMs) {
+    var err = errorRate(rps, avgSec, conc, timeoutMs);
+    return rps * (1 - err);
+  }
+
+  function formatMs(ms) {
+    if (!isFinite(ms)) return '&infin;';
+    if (ms >= 1000) return (ms / 1000).toFixed(2) + 's';
+    return ms.toFixed(1) + 'ms';
+  }
+
+  function statusBadge(rho) {
+    if (rho < 0.70) return '<span class="status-badge badge-ok">Safe</span>';
+    if (rho < 0.90) return '<span class="status-badge badge-warn">Caution</span>';
+    return '<span class="status-badge badge-danger">Over capacity</span>';
+  }
+
+  window.calcLoad = function() {
+    var rps      = parseFloat(document.getElementById('targetRps').value) || 500;
+    var avgMs    = parseFloat(document.getElementById('avgRespMs').value) || 120;
+    var conc     = parseFloat(document.getElementById('concLimit').value) || 200;
+    var timeout  = parseFloat(document.getElementById('timeoutMs').value) || 5000;
+    var style    = document.getElementById('rampStyle').value;
+    var durMin   = parseFloat(document.getElementById('testDuration').value) || 10;
+
+    var avgSec = avgMs / 1000;
+    var rho = utilization(rps, avgSec, conc);
+    var Wq  = queueDelay(rps, avgSec, conc);
+    var err = errorRate(rps, avgSec, conc, timeout) * 100;
+    var minConc = Math.ceil(rps * avgSec);
+    var capRps = conc / avgSec;
+
+    // Metric cards
+    var metricsEl = document.getElementById('metricsRow');
+    var rhoClass = rho < 0.70 ? '' : (rho < 0.90 ? ' warn' : ' danger');
+    var errClass = err < 0.5 ? '' : (err < 5 ? ' warn' : ' danger');
+    metricsEl.innerHTML =
+      '<div class="metric-card' + rhoClass + '"><div class="m-label">Utilization</div><div class="m-value">' + (rho * 100).toFixed(1) + '%</div><div class="m-unit">of capacity</div></div>' +
+      '<div class="metric-card"><div class="m-label">Queue Delay</div><div class="m-value" style="font-size:18px;">' + (isFinite(Wq) ? Wq.toFixed(0) + 'ms' : '&infin;') + '</div><div class="m-unit">added latency</div></div>' +
+      '<div class="metric-card' + errClass + '"><div class="m-label">Error Rate</div><div class="m-value">' + err.toFixed(2) + '%</div><div class="m-unit">at target RPS</div></div>' +
+      '<div class="metric-card"><div class="m-label">Min Concurrency</div><div class="m-value">' + minConc + '</div><div class="m-unit">required (' + conc + ' available)</div></div>';
+
+    // Draw chart using canvas
+    drawChart(rps, avgSec, conc, timeout);
+
+    // Build ramp stages
+    var stepPct;
+    if (style === 'aggressive') stepPct = 25;
+    else if (style === 'conservative') stepPct = 5;
+    else stepPct = 10;
+
+    var stages = [];
+    for (var pct = stepPct; pct <= 100; pct += stepPct) {
+      stages.push(pct);
+    }
+    if (stages[stages.length - 1] !== 100) stages.push(100);
+    // Add ramp-down
+    stages.push('steady');
+
+    var stageDurSec = Math.max(30, Math.round((durMin * 60) / (stages.length + 2)));
+
+    var rows = '';
+    var k6Stages = [];
+    var stageNum = 1;
+
+    stages.forEach(function(p) {
+      var isLast = (p === 'steady');
+      var stageRps = isLast ? rps : Math.round(rps * p / 100);
+      var dur = isLast ? (durMin * 60) : stageDurSec;
+      var inf = Math.ceil(stageRps * avgSec);
+      var Wqi = queueDelay(stageRps, avgSec, conc);
+      var erri = errorRate(stageRps, avgSec, conc, timeout) * 100;
+      var rhoi = utilization(stageRps, avgSec, conc);
+
+      rows += '<tr>';
+      rows += '<td>' + (isLast ? 'Steady State' : 'Ramp ' + stageNum) + '</td>';
+      rows += '<td>' + stageRps + '</td>';
+      rows += '<td>' + (isLast ? durMin + 'm' : Math.round(dur / 60 * 10) / 10 + 'm') + '</td>';
+      rows += '<td>' + inf + '</td>';
+      rows += '<td>' + (isFinite(Wqi) ? Wqi.toFixed(0) + 'ms' : '&infin;') + '</td>';
+      rows += '<td>&lt;' + (erri < 0.1 ? '0.1' : erri.toFixed(1)) + '%</td>';
+      rows += '<td>' + statusBadge(rhoi) + '</td>';
+      rows += '</tr>';
+
+      k6Stages.push('  { duration: "' + (isLast ? durMin + 'm' : Math.ceil(dur) + 's') + '", target: ' + stageRps + ' }');
+      if (!isLast) stageNum++;
+    });
+
+    // Ramp down
+    rows += '<tr><td>Ramp Down</td><td>0</td><td>1m</td><td>0</td><td>0ms</td><td>&lt;0.1%</td><td><span class="status-badge badge-ok">Safe</span></td></tr>';
+    k6Stages.push('  { duration: "60s", target: 0 }');
+
+    document.getElementById('rampTbody').innerHTML = rows;
+
+    var k6Script = '// Generated by kappafy.com/tools/api-load-tester.html\n' +
+      '// Target: ' + rps + ' RPS | Avg resp: ' + avgMs + 'ms | Concurrency: ' + conc + '\n' +
+      '// Capacity: ' + capRps.toFixed(0) + ' RPS | Utilization at target: ' + (rho * 100).toFixed(1) + '%\n\n' +
+      'import http from \'k6/http\';\n' +
+      'import { check, sleep } from \'k6\';\n\n' +
+      'export const options = {\n' +
+      '  stages: [\n' + k6Stages.join(',\n') + '\n  ],\n' +
+      '  thresholds: {\n' +
+      '    http_req_duration: [\'p(95)<' + Math.round(avgMs * 3) + '\'],\n' +
+      '    http_req_failed:   [\'rate<0.01\'],\n' +
+      '  },\n};\n\n' +
+      'export default function() {\n' +
+      '  const res = http.get(\'https://your-api.example.com/endpoint\', {\n' +
+      '    timeout: \'' + timeout + 'ms\',\n' +
+      '  });\n' +
+      '  check(res, {\n' +
+      '    \'status is 200\': (r) => r.status === 200,\n' +
+      '    \'response time < ' + Math.round(avgMs * 3) + 'ms\': (r) => r.timings.duration < ' + Math.round(avgMs * 3) + ',\n' +
+      '  });\n' +
+      '  sleep(0.001);\n' +
+      '}\n';
+
+    document.getElementById('k6Output').textContent = k6Script;
+
+    lastPlan = { k6Script: k6Script };
+
+    document.getElementById('chartPanel').style.display = 'block';
+    document.getElementById('planPanel').style.display = 'block';
+  };
+
+  function drawChart(targetRps, avgSec, conc, timeoutMs) {
+    var canvas = document.getElementById('throughputChart');
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.parentElement.clientWidth || 600;
+    var H = 220;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    var padL = 56, padR = 20, padT = 16, padB = 36;
+    var plotW = W - padL - padR;
+    var plotH = H - padT - padB;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = '#0d0d1a';
+    ctx.fillRect(0, 0, W, H);
+
+    var capRps = conc / avgSec;
+    var maxX = capRps * 1.2;
+    var maxY = capRps * 1.05;
+
+    function toPixX(rps) { return padL + (rps / maxX) * plotW; }
+    function toPixY(eff) { return padT + plotH - (eff / maxY) * plotH; }
+
+    // Grid lines
+    ctx.strokeStyle = '#1e1e3a';
+    ctx.lineWidth = 1;
+    var gridSteps = 5;
+    for (var g = 0; g <= gridSteps; g++) {
+      var gy = padT + (g / gridSteps) * plotH;
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + plotW, gy); ctx.stroke();
+      var label = ((1 - g / gridSteps) * maxY).toFixed(0);
+      ctx.fillStyle = '#555577';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(label, padL - 6, gy + 4);
+    }
+
+    // Zone backgrounds
+    var x70 = toPixX(capRps * 0.70);
+    var x90 = toPixX(capRps * 0.90);
+    var xCap = toPixX(capRps);
+
+    ctx.fillStyle = 'rgba(34,197,94,0.06)';
+    ctx.fillRect(padL, padT, x70 - padL, plotH);
+    ctx.fillStyle = 'rgba(245,158,11,0.06)';
+    ctx.fillRect(x70, padT, x90 - x70, plotH);
+    ctx.fillStyle = 'rgba(239,68,68,0.06)';
+    ctx.fillRect(x90, padT, padL + plotW - x90, plotH);
+
+    // Capacity line
+    ctx.strokeStyle = 'rgba(239,68,68,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(xCap, padT); ctx.lineTo(xCap, padT + plotH); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Throughput curve
+    var N = 200;
+    ctx.beginPath();
+    var first = true;
+    for (var i = 0; i <= N; i++) {
+      var rpsI = (i / N) * maxX;
+      var eff = effectiveThroughput(rpsI, avgSec, conc, timeoutMs);
+      var px = toPixX(rpsI);
+      var py = toPixY(eff);
+      var rho = utilization(rpsI, avgSec, conc);
+      if (rho < 0.70) ctx.strokeStyle = '#22c55e';
+      else if (rho < 0.90) ctx.strokeStyle = '#f59e0b';
+      else ctx.strokeStyle = '#ef4444';
+      if (first) { ctx.moveTo(px, py); first = false; }
+      else { ctx.lineTo(px, py); ctx.stroke(); ctx.beginPath(); ctx.moveTo(px, py); }
+    }
+
+    // Target RPS vertical line
+    var txPx = toPixX(targetRps);
+    ctx.strokeStyle = '#818cf8';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath(); ctx.moveTo(txPx, padT); ctx.lineTo(txPx, padT + plotH); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Target dot
+    var targetEff = effectiveThroughput(targetRps, avgSec, conc, timeoutMs);
+    ctx.fillStyle = '#818cf8';
+    ctx.beginPath();
+    ctx.arc(txPx, toPixY(targetEff), 5, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // X axis labels
+    ctx.fillStyle = '#555577';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    for (var xi = 0; xi <= 4; xi++) {
+      var xv = (xi / 4) * maxX;
+      ctx.fillText(xv.toFixed(0) + ' RPS', toPixX(xv), padT + plotH + 22);
+    }
+    ctx.fillStyle = '#aaa';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('Effective RPS', padL, padT - 4);
+  }
+
+  window.resetCalc = function() {
+    document.getElementById('chartPanel').style.display = 'none';
+    document.getElementById('planPanel').style.display = 'none';
+    lastPlan = null;
+  };
+
+  window.copyK6 = function() {
+    if (!lastPlan) return;
+    navigator.clipboard.writeText(lastPlan.k6Script).then(function() {
+      var btn = document.querySelector('#planPanel .btn-sm');
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  };
+
+})();
+</script>
+</body>
+</html>

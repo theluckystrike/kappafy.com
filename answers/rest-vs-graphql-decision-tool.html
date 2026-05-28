@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REST vs GraphQL — Interactive Decision Guide for Your API | Kappafy</title>
+<meta name="description" content="8-question interactive wizard to choose REST, GraphQL, or gRPC for your API. Scores data shape, caching, client diversity, real-time needs, team experience. Shows recommendation with pros, cons, and migration checklist.">
+<link rel="canonical" href="https://kappafy.com/answers/rest-vs-graphql-decision-tool.html">
+<meta property="og:title" content="REST vs GraphQL — Interactive Decision Guide for Your API">
+<meta property="og:description" content="Answer 8 questions about your API requirements and get a scored recommendation: REST, GraphQL, or gRPC. With pros, cons, and migration checklist.">
+<meta property="og:url" content="https://kappafy.com/answers/rest-vs-graphql-decision-tool.html">
+<meta property="og:image" content="https://kappafy.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="REST vs GraphQL — Interactive Decision Guide for Your API">
+<meta name="twitter:description" content="8-question wizard: get a scored REST vs GraphQL vs gRPC recommendation with migration checklist. Free tool.">
+<meta name="twitter:image" content="https://kappafy.com/assets/og-image.png">
+<link rel="alternate" hreflang="en" href="https://kappafy.com/answers/rest-vs-graphql-decision-tool.html">
+<link rel="alternate" hreflang="x-default" href="https://kappafy.com/answers/rest-vs-graphql-decision-tool.html">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "REST vs GraphQL Decision Tool",
+    "url": "https://kappafy.com/answers/rest-vs-graphql-decision-tool.html",
+    "description": "Interactive 8-question wizard that scores REST vs GraphQL vs gRPC for your specific API requirements. Covers data shape, caching, client diversity, real-time requirements, team experience, and schema evolution.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "datePublished": "2026-05-28",
+    "dateModified": "2026-05-28",
+    "featureList": ["8-question decision wizard", "Scored REST vs GraphQL vs gRPC recommendation", "Pros and cons per technology", "Migration checklist", "Client diversity scoring", "Caching and real-time requirements analysis"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "REST vs GraphQL — Interactive Decision Guide for Your API",
+    "url": "https://kappafy.com/answers/rest-vs-graphql-decision-tool.html",
+    "datePublished": "2026-05-28",
+    "dateModified": "2026-05-28",
+    "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+    "publisher": { "@type": "Organization", "name": "Kappafy", "url": "https://kappafy.com" },
+    "description": "An interactive 8-question wizard that evaluates data shape, caching needs, client diversity, real-time requirements, team experience, and schema evolution to recommend REST, GraphQL, or gRPC."
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "When should you use REST instead of GraphQL?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use REST when your clients have uniform data requirements, you rely heavily on HTTP caching (CDN, browser cache), your team is unfamiliar with GraphQL, your data model is stable with infrequent changes, or you expose a public API to third-party developers who expect REST conventions. REST is also preferable when you need fine-grained HTTP status codes, file upload streams, or when your resources map cleanly to CRUD operations. REST is battle-tested, universally understood, and has mature tooling."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "When should you use GraphQL instead of REST?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use GraphQL when different clients (mobile, web, third-party) need different shapes of the same data, when you have significant over-fetching or under-fetching problems with REST, when your schema evolves frequently and you want to deprecate fields without versioning, or when you need to aggregate data from multiple backend services into one query. GraphQL excels for product APIs where the frontend team needs to iterate on data requirements without backend changes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between REST and GraphQL caching?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "REST uses HTTP caching natively: GET requests are cacheable by CDNs, browsers, and reverse proxies using standard Cache-Control and ETag headers. Each resource URL has a distinct cache key. GraphQL typically sends all queries as POST requests to a single endpoint, which HTTP caches cannot cache by default. GraphQL caching requires client-side solutions (Apollo InMemoryCache, Relay store), persisted queries, or CDN-level workarounds that hash query content. If CDN or edge caching is critical, REST has a significant built-in advantage."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is gRPC and when should you use it instead of REST or GraphQL?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "gRPC is a high-performance RPC framework using Protocol Buffers for serialization and HTTP/2 for transport. It serializes to binary (significantly smaller than JSON), supports streaming in both directions, and generates strongly typed clients in 10+ languages from a single .proto schema. Use gRPC for internal service-to-service communication where performance matters, when you need bidirectional streaming, or when you have polyglot microservices that need a shared contract. Avoid gRPC for public APIs or browser clients where gRPC-web adds complexity."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can you migrate from REST to GraphQL incrementally?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The most common approach is to run a GraphQL layer alongside existing REST endpoints. The GraphQL resolvers call the REST APIs internally, so no data layer migration is required upfront. New clients adopt GraphQL while existing clients continue using REST. Over time, resolvers are migrated to call the data layer directly as REST endpoints are deprecated. Apollo Federation or schema stitching can aggregate multiple REST-backed GraphQL services into a unified schema. The migration can take months to years and does not require a big-bang cutover."
+        }
+      }
+    ]
+  }
+]
+</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://kappafy.com/"},{"@type":"ListItem","position":2,"name":"Answers","item":"https://kappafy.com/answers/"},{"@type":"ListItem","position":3,"name":"REST vs GraphQL Decision Tool"}]}</script>
+<style>
+  .wizard-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin: 24px 0;
+  }
+  .wizard-progress {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+  .wizard-progress .prog-step {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .wizard-progress .prog-step.done { background: var(--accent); }
+  .wizard-progress .prog-step.active { background: var(--accent); opacity: 0.5; }
+  .wizard-counter {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-left: 10px;
+    flex-shrink: 0;
+  }
+  .question-block { display: none; }
+  .question-block.active { display: block; }
+  .question-block h3 {
+    font-size: 17px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .question-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .option-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 12px 16px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    line-height: 1.4;
+  }
+  .option-btn:hover { border-color: var(--accent); background: var(--bg-card); }
+  .option-btn.selected { border-color: var(--accent); background: rgba(99,102,241,0.12); }
+  .option-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    vertical-align: middle;
+    text-transform: uppercase;
+  }
+  .tag-rest { background: rgba(34,197,94,0.15); color: #86efac; }
+  .tag-graphql { background: rgba(239,68,68,0.15); color: #fca5a5; }
+  .tag-grpc { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+  .tag-neutral { background: rgba(245,158,11,0.12); color: #fcd34d; }
+  .wizard-nav {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .wizard-nav-right { display: flex; gap: 8px; }
+  .result-block {
+    display: none;
+    margin-top: 8px;
+  }
+  .result-winner {
+    text-align: center;
+    padding: 28px 20px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    border: 2px solid transparent;
+  }
+  .result-winner.rest-win { border-color: #22c55e; background: rgba(34,197,94,0.06); }
+  .result-winner.gql-win { border-color: #ef4444; background: rgba(239,68,68,0.06); }
+  .result-winner.grpc-win { border-color: #818cf8; background: rgba(129,140,248,0.06); }
+  .result-winner .win-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .result-winner .win-name {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .result-winner.rest-win .win-name { color: #22c55e; }
+  .result-winner.gql-win .win-name { color: #ef4444; }
+  .result-winner.grpc-win .win-name { color: #818cf8; }
+  .result-winner .win-reason {
+    font-size: 14px;
+    color: var(--text-muted);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  .score-bars {
+    margin: 20px 0;
+  }
+  .score-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .score-bar-label {
+    width: 80px;
+    text-align: right;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+  .score-bar-track {
+    flex: 1;
+    height: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+  .fill-rest { background: #22c55e; }
+  .fill-graphql { background: #ef4444; }
+  .fill-grpc { background: #818cf8; }
+  .score-bar-num {
+    width: 30px;
+    text-align: right;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .pros-cons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  @media (max-width: 600px) {
+    .pros-cons-grid { grid-template-columns: 1fr; }
+    .wizard-wrap { padding: 18px; }
+  }
+  .pc-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .pc-panel h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    color: var(--text-muted);
+  }
+  .pc-panel ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .checklist {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin: 20px 0;
+  }
+  .checklist h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .check-box {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .check-box.checked { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc h3 { font-size: 14px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  .author-bio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 32px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .author-bio .author-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    color: var(--bg); flex-shrink: 0;
+  }
+  .author-bio .author-info h4 { margin: 0 0 4px; font-size: 14px; }
+  .author-bio .author-info p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .author-bio .author-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">kappafy</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/tools/">Tools</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=kappafy.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article" style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/answers/">Answers</a> &rsaquo; <span>REST vs GraphQL Decision Tool</span>
+  </nav>
+
+  <h1>REST vs GraphQL &mdash; Interactive Decision Guide for Your API</h1>
+  <div class="meta">May 28, 2026 &middot; 10 min read</div>
+
+  <p>The REST vs GraphQL debate is context-dependent. Teams pick one based on familiarity, cargo-culting the tech stack of large companies, or architectural dogma rather than their actual requirements. This tool asks the eight questions that actually matter for the decision: how varied are your client data requirements, how critical is HTTP caching, do you need subscriptions, how experienced is your team with schema design, and how stable is your data model. It scores REST, GraphQL, and gRPC against your answers and produces a specific recommendation with the reasoning, tradeoffs, and a migration checklist.</p>
+
+  <p>There is no universally correct answer. Large companies run both: GitHub offers both a REST API (v3) and a GraphQL API (v4). Shopify runs GraphQL for their storefront API and REST for their admin API. The right choice is the one that fits your client diversity, team experience, and operational constraints &mdash; not the one with the most recent conference talks.</p>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#wizard">Interactive Decision Wizard</a></li>
+      <li><a href="#rest-primer">REST: Strengths &amp; Weaknesses</a></li>
+      <li><a href="#graphql-primer">GraphQL: Strengths &amp; Weaknesses</a></li>
+      <li><a href="#grpc-primer">gRPC: When Binary Wins</a></li>
+      <li><a href="#caching">Caching: REST's Built-In Advantage</a></li>
+      <li><a href="#overfetching">Over-Fetching and Under-Fetching</a></li>
+      <li><a href="#migration">Incremental Migration Strategies</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="wizard">Interactive Decision Wizard</h2>
+
+  <p>Answer all 8 questions. Each answer adjusts the score for REST, GraphQL, and gRPC. Your final recommendation appears with a score breakdown, pros/cons for your context, and a migration checklist.</p>
+
+  <div class="wizard-wrap">
+    <!-- Progress bar -->
+    <div class="wizard-progress" id="wizardProgress" aria-label="Wizard progress">
+      <div class="prog-step active" id="ps0"></div>
+      <div class="prog-step" id="ps1"></div>
+      <div class="prog-step" id="ps2"></div>
+      <div class="prog-step" id="ps3"></div>
+      <div class="prog-step" id="ps4"></div>
+      <div class="prog-step" id="ps5"></div>
+      <div class="prog-step" id="ps6"></div>
+      <div class="prog-step" id="ps7"></div>
+      <span class="wizard-counter" id="wizCounter">1 / 8</span>
+    </div>
+
+    <!-- Q1 -->
+    <div class="question-block active" id="q0">
+      <h3>1. How varied are your clients' data requirements?</h3>
+      <p class="question-hint">Different clients needing different shapes of data is the core problem GraphQL was built to solve.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(0,0,'rest',3)">All clients need the same data shape <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(0,1,'rest',1)">Mostly the same, minor differences <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(0,2,'graphql',2)">Moderately different (mobile vs web) <span class="option-tag tag-graphql">GraphQL</span></button>
+        <button class="option-btn" onclick="pick(0,3,'graphql',3)">Very different across many client types <span class="option-tag tag-graphql">GraphQL</span></button>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="question-block" id="q1">
+      <h3>2. How important is HTTP caching (CDN, browser, reverse proxy)?</h3>
+      <p class="question-hint">REST GET requests cache natively. GraphQL POSTs require explicit caching workarounds.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(1,0,'rest',3)">Critical — we rely on CDN caching heavily <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(1,1,'rest',2)">Important — we use some edge/browser caching <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(1,2,'graphql',1)">Minor — we cache at the application layer <span class="option-tag tag-neutral">Neutral</span></button>
+        <button class="option-btn" onclick="pick(1,3,'graphql',2)">Not important — mostly private/authenticated data <span class="option-tag tag-graphql">GraphQL</span></button>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="question-block" id="q2">
+      <h3>3. Do you need real-time data (live updates, subscriptions)?</h3>
+      <p class="question-hint">GraphQL has native subscription support. REST requires WebSocket or SSE add-ons.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(2,0,'rest',2)">No real-time — all request/response <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(2,1,'graphql',1)">Nice to have — SSE or polling is acceptable <span class="option-tag tag-neutral">Neutral</span></button>
+        <button class="option-btn" onclick="pick(2,2,'graphql',2)">Yes — live feeds, dashboards, notifications <span class="option-tag tag-graphql">GraphQL</span></button>
+        <button class="option-btn" onclick="pick(2,3,'grpc',3)">Bidirectional streaming required <span class="option-tag tag-grpc">gRPC</span></button>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="question-block" id="q3">
+      <h3>4. Who are the primary API consumers?</h3>
+      <p class="question-hint">Public third-party developers expect REST conventions. Internal services can use any protocol.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(3,0,'rest',3)">External / public third-party developers <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(3,1,'rest',2)">Partner integrations with existing REST clients <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(3,2,'graphql',2)">Internal frontend teams (web, mobile) <span class="option-tag tag-graphql">GraphQL</span></button>
+        <button class="option-btn" onclick="pick(3,3,'grpc',3)">Internal microservices / backend-to-backend <span class="option-tag tag-grpc">gRPC</span></button>
+      </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="question-block" id="q4">
+      <h3>5. How experienced is your team with GraphQL / schema design?</h3>
+      <p class="question-hint">GraphQL schema design, N+1 query prevention, and DataLoader patterns have a real learning curve.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(4,0,'rest',3)">No GraphQL experience — starting from scratch <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(4,1,'rest',1)">Some exposure, no production experience <span class="option-tag tag-neutral">Neutral</span></button>
+        <button class="option-btn" onclick="pick(4,2,'graphql',2)">Moderate — shipped GraphQL, know the patterns <span class="option-tag tag-graphql">GraphQL</span></button>
+        <button class="option-btn" onclick="pick(4,3,'graphql',3)">Experienced — DataLoader, Federation, subscriptions <span class="option-tag tag-graphql">GraphQL</span></button>
+      </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="question-block" id="q5">
+      <h3>6. How often does your data model change?</h3>
+      <p class="question-hint">GraphQL deprecates individual fields without versioning. REST APIs require version bumps for breaking changes.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(5,0,'rest',3)">Stable — changes are rare and planned <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(5,1,'rest',1)">Occasional — a few changes per quarter <span class="option-tag tag-neutral">Neutral</span></button>
+        <button class="option-btn" onclick="pick(5,2,'graphql',2)">Frequent — new fields and types every sprint <span class="option-tag tag-graphql">GraphQL</span></button>
+        <button class="option-btn" onclick="pick(5,3,'graphql',3)">Very frequent — schema is constantly evolving <span class="option-tag tag-graphql">GraphQL</span></button>
+      </div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="question-block" id="q6">
+      <h3>7. Is performance or payload size a primary concern?</h3>
+      <p class="question-hint">gRPC binary serialization is 5-10x smaller than JSON. GraphQL reduces over-fetching. REST requires explicit versioning for payload optimization.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(6,0,'rest',1)">Not particularly — standard JSON payloads are fine <span class="option-tag tag-neutral">Neutral</span></button>
+        <button class="option-btn" onclick="pick(6,1,'graphql',2)">Yes — mobile bandwidth is expensive <span class="option-tag tag-graphql">GraphQL</span></button>
+        <button class="option-btn" onclick="pick(6,2,'grpc',2)">Yes — high-frequency inter-service calls <span class="option-tag tag-grpc">gRPC</span></button>
+        <button class="option-btn" onclick="pick(6,3,'grpc',3)">Extreme — millions of RPS, every byte counts <span class="option-tag tag-grpc">gRPC</span></button>
+      </div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="question-block" id="q7">
+      <h3>8. How does your current infrastructure look?</h3>
+      <p class="question-hint">Existing REST infrastructure has significant tooling inertia. Greenfield services have full freedom.</p>
+      <div class="options-list">
+        <button class="option-btn" onclick="pick(7,0,'rest',3)">Large existing REST API — migration is costly <span class="option-tag tag-rest">REST</span></button>
+        <button class="option-btn" onclick="pick(7,1,'rest',2)">REST API with some services, could add GraphQL layer <span class="option-tag tag-neutral">Neutral</span></button>
+        <button class="option-btn" onclick="pick(7,2,'graphql',2)">Greenfield product-facing API <span class="option-tag tag-graphql">GraphQL</span></button>
+        <button class="option-btn" onclick="pick(7,3,'grpc',3)">Greenfield microservices, polyglot services <span class="option-tag tag-grpc">gRPC</span></button>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-block" id="resultBlock">
+      <div class="result-winner" id="resultWinner">
+        <div class="win-label">Recommended for your context</div>
+        <div class="win-name" id="winnerName"></div>
+        <div class="win-reason" id="winnerReason"></div>
+      </div>
+
+      <h4 style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Score Breakdown</h4>
+      <div class="score-bars">
+        <div class="score-bar-row">
+          <span class="score-bar-label">REST</span>
+          <div class="score-bar-track"><div class="score-bar-fill fill-rest" id="barRest" style="width:0%"></div></div>
+          <span class="score-bar-num" id="numRest">0</span>
+        </div>
+        <div class="score-bar-row">
+          <span class="score-bar-label">GraphQL</span>
+          <div class="score-bar-track"><div class="score-bar-fill fill-graphql" id="barGraphql" style="width:0%"></div></div>
+          <span class="score-bar-num" id="numGraphql">0</span>
+        </div>
+        <div class="score-bar-row">
+          <span class="score-bar-label">gRPC</span>
+          <div class="score-bar-track"><div class="score-bar-fill fill-grpc" id="barGrpc" style="width:0%"></div></div>
+          <span class="score-bar-num" id="numGrpc">0</span>
+        </div>
+      </div>
+
+      <div class="pros-cons-grid" id="prosConsGrid"></div>
+
+      <div class="checklist" id="migrationChecklist">
+        <h4 id="checklistTitle">Migration &amp; Adoption Checklist</h4>
+        <div id="checkItems"></div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="resetWizard()">Start Over</button>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="wizard-nav" id="wizNav">
+      <button class="btn btn-sm" onclick="prevQ()" id="btnPrev" style="display:none;">Back</button>
+      <div class="wizard-nav-right">
+        <button class="btn btn-primary" onclick="nextQ()" id="btnNext" disabled>Next</button>
+      </div>
+    </div>
+  </div>
+
+  <h2 id="rest-primer">REST: Strengths &amp; Weaknesses</h2>
+  <p>REST (Representational State Transfer) maps resources to URLs and operations to HTTP methods: GET for read, POST for create, PUT/PATCH for update, DELETE for remove. It inherits the HTTP spec's built-in semantics: status codes communicate outcome, Cache-Control and ETags enable caching, and content negotiation handles format.</p>
+  <p><strong>Strengths:</strong> Universal tooling support, native HTTP caching, simple security model (per-resource authorization), straightforward debugging with curl or a browser, clear versioning via URL or header, excellent CDN compatibility.</p>
+  <p><strong>Weaknesses:</strong> Over-fetching (getting more data than the client needs), under-fetching (needing multiple requests to assemble a view), proliferation of endpoints as product requirements grow, no native subscription model, versioning required for breaking changes.</p>
+
+  <h2 id="graphql-primer">GraphQL: Strengths &amp; Weaknesses</h2>
+  <p>GraphQL is a query language for APIs where the client specifies exactly the fields it needs. A single endpoint (<code>/graphql</code>) handles all queries, mutations, and subscriptions. The schema defines all available types and their relationships.</p>
+  <p><strong>Strengths:</strong> Eliminates over-fetching and under-fetching, schema introspection enables self-documenting APIs, field-level deprecation without URL versioning, subscriptions for real-time data, excellent for aggregating multiple data sources, strong typing reduces integration bugs.</p>
+  <p><strong>Weaknesses:</strong> No native HTTP caching (all POST), N+1 query problem requires DataLoader patterns, complex authorization at field level, higher latency for simple read operations, learning curve for schema design and resolver optimization, harder to implement rate limiting per operation.</p>
+
+  <h2 id="grpc-primer">gRPC: When Binary Wins</h2>
+  <p>gRPC uses Protocol Buffers (protobuf) for binary serialization and HTTP/2 for multiplexed transport. A <code>.proto</code> file defines the service contract and generates typed clients in Go, Python, Java, Node.js, C++, and more. Payload sizes are typically 60-80% smaller than equivalent JSON.</p>
+  <p><strong>Best fit:</strong> Internal microservice communication, high-throughput inter-datacenter calls, bidirectional streaming (real-time chat, sensor data ingestion), polyglot service meshes where a shared contract prevents type drift.</p>
+  <p><strong>Avoid for:</strong> Public APIs (browser clients require gRPC-web proxy), teams without binary protocol experience, APIs where human-readable payloads aid debugging, simple CRUD where the overhead of protobuf compilation is not justified.</p>
+
+  <h2 id="caching">Caching: REST's Built-In Advantage</h2>
+  <p>HTTP caching is one of the most overlooked advantages of REST. A CDN can cache a <code>GET /products/123</code> response globally and serve millions of requests without touching your origin server. GraphQL queries sent as POST requests are not cached by standard HTTP infrastructure.</p>
+  <p>GraphQL caching workarounds exist but add complexity: <strong>persisted queries</strong> (hash the query body, send the hash as a GET parameter), <strong>Apollo Client's InMemoryCache</strong> (client-side, not CDN-level), and <strong>CDN query hashing</strong> (Fastly, CloudFront Lambda@Edge). Each requires significant infrastructure investment. If your API serves public, read-heavy, unauthenticated content, REST's native caching provides an order-of-magnitude advantage in origin load reduction.</p>
+
+  <h2 id="overfetching">Over-Fetching and Under-Fetching</h2>
+  <p>Over-fetching means the API returns more fields than the client uses. A mobile app fetching a user profile might need 5 fields but receives a JSON object with 40 fields, wasting bandwidth and serialization time. Under-fetching means the client must make multiple sequential requests to assemble one view: first <code>GET /user/123</code>, then <code>GET /user/123/orders</code>, then <code>GET /order/456/items</code>.</p>
+  <p>GraphQL solves both problems by letting the client specify exactly the fields and nested relations it needs in a single query. However, the solution introduces new complexity: the resolver graph must be optimized to prevent N+1 database queries (fetching each related record individually), which requires DataLoader batching and careful resolver design. The trade-off is reduced bandwidth at the cost of backend complexity.</p>
+
+  <h2 id="migration">Incremental Migration Strategies</h2>
+  <p>The most practical migration from REST to GraphQL is the <strong>GraphQL wrapper pattern</strong>: stand up a GraphQL server whose resolvers call your existing REST endpoints. No database changes, no backend refactoring. Clients adopt GraphQL incrementally while REST clients continue working unchanged. Over time, hot resolvers bypass REST and call the data layer directly.</p>
+  <p><strong>Apollo Federation</strong> lets you split a GraphQL schema across multiple services, each owning part of the graph. A gateway stitches them together. This lets teams migrate one domain at a time rather than requiring a monolithic GraphQL schema from day one.</p>
+  <p>For migrating from REST to gRPC, start with the highest-frequency inter-service calls that benefit most from binary serialization. Keep REST for external-facing endpoints. Most production systems run both: REST for external clients, gRPC for internal service mesh.</p>
+
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <details>
+    <summary>When should you use REST instead of GraphQL?</summary>
+    <p>Use REST when your clients have uniform data requirements, you rely heavily on HTTP caching (CDN, browser cache), your team is unfamiliar with GraphQL, your data model is stable, or you expose a public API to third-party developers who expect REST conventions. REST is also preferable when you need fine-grained HTTP status codes, file upload streams, or when your resources map cleanly to CRUD operations.</p>
+  </details>
+  <details>
+    <summary>When should you use GraphQL instead of REST?</summary>
+    <p>Use GraphQL when different clients need different shapes of the same data, when you have significant over-fetching or under-fetching problems, when your schema evolves frequently and you want field deprecation without URL versioning, or when you need to aggregate data from multiple backend services in one request. GraphQL excels for product APIs where the frontend team iterates on data requirements without backend changes.</p>
+  </details>
+  <details>
+    <summary>What is the difference between REST and GraphQL caching?</summary>
+    <p>REST uses HTTP caching natively: GET requests are cacheable by CDNs and browsers using Cache-Control and ETag headers. GraphQL sends all queries as POST requests to a single endpoint, which HTTP caches cannot cache by default. GraphQL requires client-side caching (Apollo InMemoryCache), persisted queries, or CDN-level query hashing. If CDN or edge caching is critical, REST has a significant built-in advantage.</p>
+  </details>
+  <details>
+    <summary>What is gRPC and when should you use it?</summary>
+    <p>gRPC is a high-performance RPC framework using Protocol Buffers for binary serialization and HTTP/2 for transport. Payload sizes are 60-80% smaller than JSON. Use gRPC for internal service-to-service communication where performance matters, when you need bidirectional streaming, or in polyglot microservices that need a shared contract. Avoid gRPC for public APIs or browser clients, where gRPC-web adds complexity.</p>
+  </details>
+  <details>
+    <summary>Can you migrate from REST to GraphQL incrementally?</summary>
+    <p>Yes. The most common approach is the GraphQL wrapper pattern: stand up a GraphQL server whose resolvers call your existing REST endpoints. New clients adopt GraphQL while existing clients continue using REST. Over time, resolvers are migrated to call the data layer directly. Apollo Federation or schema stitching can aggregate multiple REST-backed GraphQL services into a unified schema. The migration does not require a big-bang cutover and can take months to years.</p>
+  </details>
+
+  <section class="related-links" style="margin-top:2rem;">
+    <h2>Related Tools &amp; Guides</h2>
+    <div class="related-grid">
+      <a href="/answers/api-authentication-comparison.html" class="related-card">OAuth vs API Key vs JWT Decision Wizard</a>
+      <a href="/tools/api-load-tester.html" class="related-card">API Load Testing Calculator</a>
+      <a href="/tools/api-latency-simulator.html" class="related-card">API Latency Simulator</a>
+      <a href="/answers/api-error-handling-patterns.html" class="related-card">API Error Handling Patterns</a>
+      <a href="/research/graphql-vs-rest-analyzer.html" class="related-card">GraphQL vs REST Deep Dive Research</a>
+      <a href="/tools/api-documentation-generator.html" class="related-card">API Documentation Generator</a>
+    </div>
+  </section>
+
+  <div class="author-bio">
+    <div class="author-avatar">ML</div>
+    <div class="author-info">
+      <h4>Michael Lip</h4>
+      <p>Solo developer building free tools at <a href="https://zovo.one">Zovo</a>. Kappafy helps developers work with JSON and APIs faster. No tracking, no accounts, no data collection. <a href="/about.html">Learn more</a>.</p>
+    </div>
+  </div>
+
+  <div class="last-updated"><time datetime="2026-05-28">Last updated: May 28, 2026</time></div>
+</article>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=kappafy.com&utm_medium=satellite&utm_campaign=footer-link" class="footer-cta">Zovo Lifetime &mdash; $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex &mdash; A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow &mdash; Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ &mdash; AI Code Tools &amp; Fixes</a>
+            <a href="https://claudkit.com">ClaudKit &mdash; API</a>
+            <a href="https://enhio.com">Enhio &mdash; Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot &mdash; Timestamps</a>
+            <a href="https://gen8x.com">Gen8X &mdash; Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X &mdash; AI Models</a>
+            <a href="https://heytensor.com">HeyTensor &mdash; ML Tools</a>
+            <a href="https://invokebot.com">InvokeBot &mdash; Webhooks</a>
+            <a href="https://kappakit.com">KappaKit &mdash; Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM &mdash; LLM Costs</a>
+            <a href="https://krzen.com">Krzen &mdash; Image Tools</a>
+            <a href="https://lochbot.com">LochBot &mdash; Security</a>
+            <a href="https://lockml.com">LockML &mdash; ML Compare</a>
+            <a href="https://ml3x.com">ML3X &mdash; Matrix Math</a>
+        </div>
+    </div>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  var TOTAL = 8;
+  var current = 0;
+  var answers = new Array(TOTAL).fill(null); // { winner, score }
+  var scores = { rest: 0, graphql: 0, grpc: 0 };
+
+  function updateProgress() {
+    for (var i = 0; i < TOTAL; i++) {
+      var el = document.getElementById('ps' + i);
+      if (answers[i] !== null) el.className = 'prog-step done';
+      else if (i === current) el.className = 'prog-step active';
+      else el.className = 'prog-step';
+    }
+    document.getElementById('wizCounter').textContent = (current + 1) + ' / ' + TOTAL;
+  }
+
+  function showQ(idx) {
+    for (var i = 0; i < TOTAL; i++) {
+      document.getElementById('q' + i).classList.remove('active');
+    }
+    document.getElementById('q' + idx).classList.add('active');
+    document.getElementById('resultBlock').style.display = 'none';
+    document.getElementById('wizNav').style.display = '';
+    document.getElementById('btnPrev').style.display = idx > 0 ? '' : 'none';
+    document.getElementById('btnNext').disabled = (answers[idx] === null);
+    updateProgress();
+  }
+
+  window.pick = function(qIdx, optIdx, winner, pts) {
+    // Undo previous answer for this question
+    if (answers[qIdx] !== null) {
+      scores[answers[qIdx].winner] -= answers[qIdx].score;
+    }
+    answers[qIdx] = { winner: winner, score: pts };
+    scores[winner] += pts;
+
+    // Highlight selected
+    var btns = document.querySelectorAll('#q' + qIdx + ' .option-btn');
+    btns.forEach(function(b, i) { b.classList.toggle('selected', i === optIdx); });
+    document.getElementById('btnNext').disabled = false;
+  };
+
+  window.nextQ = function() {
+    if (answers[current] === null) return;
+    if (current < TOTAL - 1) {
+      current++;
+      showQ(current);
+    } else {
+      showResult();
+    }
+  };
+
+  window.prevQ = function() {
+    if (current > 0) {
+      current--;
+      showQ(current);
+    }
+  };
+
+  function showResult() {
+    document.getElementById('wizNav').style.display = 'none';
+    for (var i = 0; i < TOTAL; i++) {
+      document.getElementById('q' + i).classList.remove('active');
+    }
+    document.getElementById('resultBlock').style.display = 'block';
+    updateProgress();
+
+    // Determine winner
+    var s = scores;
+    var maxScore = Math.max(s.rest, s.graphql, s.grpc);
+    var winner = s.rest >= s.graphql && s.rest >= s.grpc ? 'rest' : (s.graphql >= s.grpc ? 'graphql' : 'grpc');
+
+    var winnerEl = document.getElementById('resultWinner');
+    var winnerNameEl = document.getElementById('winnerName');
+    var winnerReasonEl = document.getElementById('winnerReason');
+
+    var reasons = {
+      rest: 'Your context prioritizes HTTP caching, stable data shapes, and/or external developer consumers — all areas where REST\'s simplicity and universal tooling win.',
+      graphql: 'Your context has varied client data requirements, frequent schema evolution, and/or a team with GraphQL experience — the primary reasons GraphQL was built.',
+      grpc: 'Your context demands high-performance binary transport, bidirectional streaming, or tightly coupled internal services where a shared protobuf contract prevents type drift.'
+    };
+    var displayNames = { rest: 'REST', graphql: 'GraphQL', grpc: 'gRPC' };
+    var winClasses = { rest: 'rest-win', graphql: 'gql-win', grpc: 'grpc-win' };
+
+    winnerEl.className = 'result-winner ' + winClasses[winner];
+    winnerNameEl.textContent = displayNames[winner];
+    winnerReasonEl.textContent = reasons[winner];
+
+    // Score bars
+    var barMax = Math.max(s.rest, s.graphql, s.grpc, 1);
+    document.getElementById('barRest').style.width = ((s.rest / barMax) * 100) + '%';
+    document.getElementById('barGraphql').style.width = ((s.graphql / barMax) * 100) + '%';
+    document.getElementById('barGrpc').style.width = ((s.grpc / barMax) * 100) + '%';
+    document.getElementById('numRest').textContent = s.rest;
+    document.getElementById('numGraphql').textContent = s.graphql;
+    document.getElementById('numGrpc').textContent = s.grpc;
+
+    // Pros/Cons
+    var pc = {
+      rest: {
+        pros: ['Native HTTP caching works out of the box', 'Universal tooling and developer familiarity', 'Simple per-resource authorization', 'Standard HTTP status codes', 'CDN-friendly for public content'],
+        cons: ['Over-fetching wastes bandwidth', 'Under-fetching requires multiple round trips', 'URL versioning required for breaking changes', 'No native subscription model', 'Endpoint proliferation as app grows']
+      },
+      graphql: {
+        pros: ['Clients request exactly the fields they need', 'One endpoint, one request for complex data', 'Field-level deprecation without versioning', 'Native subscription support', 'Strong schema introspection and typing'],
+        cons: ['No native HTTP caching (all POST)', 'N+1 query problem needs DataLoader', 'Complex field-level authorization', 'Higher learning curve for schema design', 'Harder to implement per-operation rate limiting']
+      },
+      grpc: {
+        pros: ['Binary serialization 60-80% smaller than JSON', 'Bidirectional streaming support', 'Strongly typed contracts via .proto files', 'Auto-generated clients in 10+ languages', 'HTTP/2 multiplexing reduces latency'],
+        cons: ['Not browser-native (requires gRPC-web proxy)', 'Binary payloads are harder to debug', 'Requires protobuf toolchain', 'Less familiar to API consumers', 'Overkill for simple CRUD services']
+      }
+    };
+
+    var winPc = pc[winner];
+    var gridEl = document.getElementById('prosConsGrid');
+    gridEl.innerHTML =
+      '<div class="pc-panel"><h4>Pros for your context</h4><ul>' +
+      winPc.pros.map(function(p) { return '<li>' + p + '</li>'; }).join('') +
+      '</ul></div>' +
+      '<div class="pc-panel"><h4>Cons to plan around</h4><ul>' +
+      winPc.cons.map(function(c) { return '<li>' + c + '</li>'; }).join('') +
+      '</ul></div>';
+
+    // Checklist
+    var checklists = {
+      rest: [
+        'Define resource URLs and HTTP methods for all entities',
+        'Plan versioning strategy (URL prefix /v1/ or Accept header)',
+        'Set up Cache-Control and ETag headers for GET responses',
+        'Design error response format (RFC 7807 Problem Details)',
+        'Implement pagination (cursor-based or offset)',
+        'Add OpenAPI/Swagger documentation',
+        'Configure CORS for browser clients',
+        'Set up rate limiting per endpoint'
+      ],
+      graphql: [
+        'Define GraphQL schema with all types, queries, mutations',
+        'Implement DataLoader for batching to prevent N+1 queries',
+        'Set up persisted queries for CDN caching support',
+        'Configure field-level authorization middleware',
+        'Add query depth and complexity limits to prevent abuse',
+        'Set up subscriptions via WebSocket (Apollo Server / graphql-ws)',
+        'Generate client SDK from schema (codegen)',
+        'Monitor resolver performance with tracing'
+      ],
+      grpc: [
+        'Define .proto service and message types',
+        'Generate client stubs in all required languages',
+        'Set up TLS for all gRPC connections',
+        'Implement deadlines and timeouts on all RPCs',
+        'Configure gRPC-web gateway for any browser clients',
+        'Add health checking via grpc.health.v1.Health service',
+        'Set up retries and load balancing (gRPC client-side LB)',
+        'Version proto files and implement backward compatibility policy'
+      ]
+    };
+
+    var items = checklists[winner];
+    document.getElementById('checklistTitle').textContent = displayNames[winner] + ' Adoption Checklist';
+    var checkEl = document.getElementById('checkItems');
+    checkEl.innerHTML = items.map(function(item, i) {
+      return '<div class="check-item">' +
+        '<div class="check-box" id="cb' + i + '" onclick="toggleCheck(' + i + ')"></div>' +
+        '<span>' + item + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  window.toggleCheck = function(i) {
+    var el = document.getElementById('cb' + i);
+    el.classList.toggle('checked');
+    el.textContent = el.classList.contains('checked') ? '\u2713' : '';
+  };
+
+  window.resetWizard = function() {
+    current = 0;
+    answers = new Array(TOTAL).fill(null);
+    scores = { rest: 0, graphql: 0, grpc: 0 };
+    // Clear selections
+    for (var i = 0; i < TOTAL; i++) {
+      var btns = document.querySelectorAll('#q' + i + ' .option-btn');
+      btns.forEach(function(b) { b.classList.remove('selected'); });
+    }
+    showQ(0);
+  };
+
+  // Init
+  showQ(0);
+
+  // Handle Enter key on wizard
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('wizNav').style.display !== 'none') {
+      if (!document.getElementById('btnNext').disabled) nextQ();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

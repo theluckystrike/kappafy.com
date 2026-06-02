@@ -27,4 +27,10 @@
   <url><loc>https://kappafy.com/tools/api-load-tester.html</loc></url>
   <url><loc>https://kappafy.com/tools/api-response-mocker.html</loc></url>
   <url><loc>https://kappafy.com/tools/json-schema-validator.html</loc></url>
+  <url>
+    <loc>https://kappafy.com/tools/api-load-test-planner-calculate-concurrent-users-rps</loc>
+    <lastmod>2026-06-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

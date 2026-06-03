@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>API Rate Limit Calculator — Plan Request Budgets</title>
+  <meta name="description" content="Calculate API rate limit budgets, peak capacity, retry intervals, and exponential backoff. Interactive tool with code snippets for Python and JavaScript.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://kappafy.com/tools/rate-limit-calculator">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I calculate requests per second capacity?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Divide the rate limit (per minute) by 60 to get requests per second. For per‑hour limits, divide by 3600."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is a safe daily request budget?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Multiply your rate limit (per minute) by 1440 (minutes per day) to get the theoretical maximum. Then apply a safety margin (e.g., 80%) to avoid hitting limits."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does exponential backoff work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "After a rate limit hit, wait progressively longer intervals: base delay × (2^attempt) plus random jitter. Typical base delay is 1–2 seconds."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      line-height: 1.5;
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+    .subhead {
+      color: #94a3b8;
+      font-size: 1.1rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.8rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.6);
+      border: 1px solid #334155;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    @media (max-width: 700px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      h1 { font-size: 1.8rem; }
+      .card { padding: 1.2rem; }
+    }
+    .input-group {
+      margin-bottom: 1.4rem;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.01em;
+    }
+    .input-hint {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.2rem;
+    }
+    input[type="number"], input[type="range"] {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      color: #f1f5f9;
+      font-size: 1rem;
+      transition: border 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    input[type="number"]:focus, input[type="range"]:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+    input[type="range"] {
+      padding: 0.3rem 0;
+      background: transparent;
+      accent-color: #38bdf8;
+    }
+    .range-value {
+      display: inline-block;
+      background: #0f172a;
+      padding: 0.2rem 0.9rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      margin-top: 0.3rem;
+    }
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 1.5rem 0 1rem;
+    }
+    @media (max-width: 500px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+    .stat {
+      background: #0f172a;
+      border-radius: 18px;
+      padding: 1rem 1.2rem;
+      border-left: 4px solid #38bdf8;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #94a3b8;
+    }
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #f8fafc;
+      line-height: 1.2;
+      margin-top: 0.2rem;
+    }
+    .stat-value small {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #94a3b8;
+    }
+    .timeline-container {
+      margin: 1.8rem 0 1rem;
+      background: #0f172a;
+      border-radius: 20px;
+      padding: 1.2rem 1rem;
+    }
+    .timeline-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 60px;
+      width: 100%;
+      background: #1e293b;
+      border-radius: 40px;
+      padding: 0 8px;
+      overflow-x: auto;
+    }
+    .tl-segment {
+      flex: 1;
+      min-width: 6px;
+      height: 70%;
+      background: #334155;
+      border-radius: 20px;
+      transition: background 0.2s, height 0.2s;
+      position: relative;
+    }
+    .tl-segment.active {
+      background: #38bdf8;
+      height: 100%;
+    }
+    .tl-segment.peak {
+      background: #f97316;
+      height: 100%;
+    }
+    .tl-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-top: 6px;
+    }
+    .backoff-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 0.5rem;
+      font-size: 0.9rem;
+    }
+    .backoff-table th {
+      text-align: left;
+      color: #94a3b8;
+      font-weight: 500;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #334155;
+    }
+    .backoff-table td {
+      padding: 0.5rem 0.2rem;
+      border-bottom: 1px solid #1e293b;
+    }
+    .backoff-table tr:last-child td { border-bottom: none; }
+    .code-snippets {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .code-block {
+      background: #0f172a;
+      border-radius: 18px;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      border: 1px solid #2d3a4e;
+    }
+    .code-block pre {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.02em;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #1e293b;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+    .accent {
+      color: #38bdf8;
+    }
+    .btn-copy {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 0.2rem 0.8rem;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-copy:hover {
+      background: #1e293b;
+      border-color: #38bdf8;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+
+    <meta property="og:title" content="API Rate Limit Calculator — Plan Request Budgets">
+    <meta property="og:description" content="Calculate API rate limit budgets, peak capacity, retry intervals, and exponential backoff. Interactive tool with code snippets for Python and JavaScript.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://kappafy.com/tools/rate-limit-calculator">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⚡ API Rate Limit Calculator</h1>
+    <div class="subhead">Plan request budgets · avoid throttling · smart backoff</div>
+  </header>
+
+  <div class="card">
+    <div class="grid-2">
+      <!-- Inputs -->
+      <div>
+        <div class="input-group">
+          <label for="rateLimit">Rate limit (requests per minute)</label>
+          <input type="number" id="rateLimit" value="100" min="1" max="100000" step="1">
+          <div class="input-hint">Typical: 60–1000 req/min</div>
+        </div>
+        <div class="input-group">
+          <label for="dailyRequests">Expected daily requests</label>
+          <input type="number" id="dailyRequests" value="50000" min="1" max="10000000" step="100">
+          <div class="input-hint">Average number of requests per day</div>
+        </div>
+        <div class="input-group">
+          <label for="peakMultiplier">Peak multiplier <span id="peakLabel">3.0x</span></label>
+          <input type="range" id="peakMultiplier" min="1" max="10" step="0.1" value="3.0">
+          <div class="flex-between"><span>1x</span><span>10x</span></div>
+        </div>
+        <div class="input-group">
+          <label for="avgResponseTime">Average response time (ms)</label>
+          <input type="number" id="avgResponseTime" value="200" min="1" max="30000" step="10">
+          <div class="input-hint">Includes network latency</div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div>
+        <div class="results-grid">
+          <div class="stat"><div class="stat-label">Req/sec capacity</div><div class="stat-value" id="rpsValue">1.67</div></div>
+          <div class="stat"><div class="stat-label">Daily budget (safe)</div><div class="stat-value" id="dailyBudget">86,400</div></div>
+          <div class="stat"><div class="stat-label">Time to limit @ peak</div><div class="stat-value" id="timeToLimit">20.0 <small>sec</small></div></div>
+          <div class="stat"><div class="stat-label">Recommended retry (base)</div><div class="stat-value" id="retryInterval">1.2 <small>sec</small></div></div>
+        </div>
+        <!-- Timeline -->
+        <div class="timeline-container">
+          <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; margin-bottom:6px;">
+            <span>Request distribution (30s window)</span>
+            <span>peak █</span>
+          </div>
+          <div class="timeline-bar" id="timelineBar">
+            <!-- 30 segments generated by JS -->
+          </div>
+          <div class="tl-label"><span>normal</span><span>peak</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exponential backoff + code snippets -->
+  <div class="grid-2" style="margin-bottom:2rem;">
+    <div class="card">
+      <h3 style="font-weight:500; margin-bottom:0.8rem; color:#f1f5f9;">⏱ Exponential backoff schedule</h3>
+      <table class="backoff-table" id="backoffTable">
+        <thead><tr><th>Attempt</th><th>Delay (sec)</th><th>Jitter</th></tr></thead>
+        <tbody id="backoffBody"></tbody>
+      </table>
+      <p style="font-size:0.75rem; color:#64748b; margin-top:0.8rem;">Base delay = retry interval × (2^attempt) + random(0, 0.5)</p>
+    </div>
+    <div class="card">
+      <h3 style="font-weight:500; margin-bottom:1rem; color:#f1f5f9;">📋 Code snippets</h3>
+      <div class="code-snippets">
+        <div class="code-block">
+          <div class="code-header"><span>Python — token bucket / sleep</span><span class="btn-copy" onclick="copyCode('pyCode')">📋 copy</span></div>
+          <pre id="pyCode">import time, threading
+
+# Token bucket (rate: 100 req/min)
+rate = 100  # per minute
+tokens = rate
+last_refill = time.monotonic()
+
+def allow_request():
+    global tokens, last_refill
+    now = time.monotonic()
+    elapsed = now - last_refill
+    tokens = min(rate, tokens + elapsed * (rate/60))
+    last_refill = now
+    if tokens >= 1:
+        tokens -= 1
+        return True
+    return False
+
+# Exponential backoff
+def retry_with_backoff(attempt):
+    delay = 1.2 * (2 ** attempt) + 0.2  # base 1.2s
+    time.sleep(delay)</pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span>JavaScript — setTimeout / queue</span><span class="btn-copy" onclick="copyCode('jsCode')">📋 copy</span></div>
+          <pre id="jsCode">// Rate limiter with queue (100 req/min)
+const queue = [];
+let tokens = 100;
+const refillRate = 100 / 60; // per second
+
+setInterval(() => {
+  tokens = Math.min(100, tokens + refillRate);
+  processQueue();
+}, 1000);
+
+function processQueue() {
+  while (queue.length && tokens >= 1) {
+    tokens--;
+    const req = queue.shift();
+    req();
+  }
+}
+
+// Exponential backoff (base 1.2s)
+function backoff(attempt, callback) {
+  const delay = 1.2 * Math.pow(2, attempt) + Math.random() * 0.5;
+  setTimeout(callback, delay * 1000);
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    © 2025 kappafy.com — API Rate Limit Calculator
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // DOM refs
+    const rateLimitInput = document.getElementById('rateLimit');
+    const dailyRequestsInput = document.getElementById('dailyRequests');
+    const peakMultiplierInput = document.getElementById('peakMultiplier');
+    const peakLabel = document.getElementById('peakLabel');
+    const avgResponseTimeInput = document.getElementById('avgResponseTime');
+
+    const rpsValue = document.getElementById('rpsValue');
+    const dailyBudget = document.getElementById('dailyBudget');
+    const timeToLimit = document.getElementById('timeToLimit');
+    const retryInterval = document.getElementById('retryInterval');
+    const timelineBar = document.getElementById('timelineBar');
+    const backoffBody = document.getElementById('backoffBody');
+
+    function formatNumber(num) {
+      if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+      if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
+      return num.toFixed(1);
+    }
+
+    function computeAll() {
+      const rateLimit = parseFloat(rateLimitInput.value) || 100;
+      const dailyReq = parseFloat(dailyRequestsInput.value) || 50000;
+      const peakMult = parseFloat(peakMultiplierInput.value) || 3.0;
+      const avgResp = parseFloat(avgResponseTimeInput.value) || 200;
+
+      // Requests per second capacity
+      const rps = rateLimit / 60.0;
+      rpsValue.textContent = rps.toFixed(2);
+
+      // Daily budget (safe: 80% of max)
+      const maxDaily = rateLimit * 1440; // 1440 minutes
+      const safeBudget = maxDaily * 0.8;
+      dailyBudget.textContent = formatNumber(safeBudget) + ' req';
+
+      // Time until limit hit at peak (seconds)
+      const peakRps = rps * peakMult;
+      const timeToLimitSec = peakRps > 0 ? (rateLimit / peakRps) : 0;
+      timeToLimit.textContent = timeToLimitSec.toFixed(1) + ' sec';
+
+      // Recommended retry interval (base) = avg response time * 2 + 0.5s buffer, but at least 1s
+      let retrySec = Math.max(1.0, (avgResp / 1000) * 2 + 0.5);
+      retrySec = Math.round(retrySec * 10) / 10;
+      retryInterval.textContent = retrySec.toFixed(1) + ' sec';
+
+      // Timeline (30 segments, each ~1s)
+      renderTimeline(rps, peakMult, rateLimit);
+
+      // Backoff schedule (attempts 1-5)
+      renderBackoff(retrySec);
+    }
+
+    function renderTimeline(baseRps, peakMult, rateLimit) {
+      const segments = 30;
+      timelineBar.innerHTML = '';
+      const peakRps = baseRps * peakMult;
+      // simulate request distribution: normal ~ baseRps, peak in middle 6 segments
+      const normalHeight = Math.min(0.6, baseRps / (peakRps || 1));
+      for (let i = 0; i < segments; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'tl-segment';
+        let isPeak = (i >= 12 && i <= 18);
+        let height = isPeak ? 1.0 : Math.max(0.2, normalHeight);
+        // add some variation
+        if (!isPeak) height = Math.min(0.7, height * (0.7 + Math.random() * 0.6));
+        seg.style.height = (height * 100) + '%';
+        if (isPeak) seg.classList.add('peak');
+        else if (height > 0.5) seg.classList.add('active');
+        timelineBar.appendChild(seg);
+      }
+    }
+
+    function renderBackoff(baseDelay) {
+      const attempts = [1,2,3,4,5];
+      let html = '';
+      for (let att of attempts) {
+        const delay = baseDelay * Math.pow(2, att - 1);
+        const jitter = (Math.random() * 0.5).toFixed(2);
+        const total = (delay + parseFloat(jitter)).toFixed(2);
+        html += `<tr><td>${att}</td><td>${delay.toFixed(2)}</td><td>±${jitter}s → ${total}s</td></tr>`;
+      }
+      backoffBody.innerHTML = html;
+    }
+
+    // copy code
+    window.copyCode = function(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = el.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = el.parentElement.querySelector('.btn-copy');
+        if (btn) { btn.textContent = '✅ copied'; setTimeout(() => btn.textContent = '📋 copy', 2000); }
+      }).catch(() => {});
+    };
+
+    // event listeners
+    [rateLimitInput, dailyRequestsInput, peakMultiplierInput, avgResponseTimeInput].forEach(el => {
+      el.addEventListener('input', () => {
+        peakLabel.textContent = parseFloat(peakMultiplierInput.value).toFixed(1) + 'x';
+        computeAll();
+      });
+    });
+    // initial
+    peakLabel.textContent = parseFloat(peakMultiplierInput.value).toFixed(1) + 'x';
+    computeAll();
+
+    // also recalc on change
+    window.addEventListener('load', computeAll);
+  })();
+</script>
+</body>
+</html>

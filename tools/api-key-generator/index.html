@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+  <title>API Key Generator — Create Secure Random Keys & Tokens</title>
+  <meta name="description" content="Generate secure API keys with custom prefixes, entropy display, and brute-force time estimates. Supports hex, base64, UUID v4, alphanumeric and more.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://kappafy.com/tools/api-key-generator">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What key formats are supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Hex, Base64, Base64url, Alphanumeric, and UUID v4."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is entropy calculated?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Entropy (bits) = log2(alphabet size) × key length. We use the effective character set based on your toggles."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What does brute-force time mean?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Estimated time to guess the key at 10 billion attempts per second, assuming ideal conditions."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      padding: 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    .subhead {
+      color: #94a3b8;
+      margin-top: 0.25rem;
+      font-size: 1.05rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.8rem 1.5rem;
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.6);
+      margin-bottom: 2rem;
+      border: 1px solid #334155;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.8rem;
+    }
+    .control-group {
+      margin-bottom: 1.4rem;
+    }
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    select, input[type="number"], input[type="text"] {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 0.65rem 1rem;
+      border-radius: 40px;
+      font-size: 0.95rem;
+      width: 100%;
+      transition: 0.2s;
+    }
+    select:focus, input:focus {
+      outline: 2px solid #38bdf8;
+      outline-offset: 2px;
+    }
+    .range-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: #334155;
+      border-radius: 10px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #38bdf8;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+    .range-value {
+      min-width: 3rem;
+      text-align: center;
+      font-weight: 600;
+      color: #38bdf8;
+    }
+    .toggle-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.8rem;
+      margin-top: 0.3rem;
+    }
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .toggle-item input[type="checkbox"] {
+      width: 1.1rem;
+      height: 1.1rem;
+      accent-color: #38bdf8;
+    }
+    .btn {
+      background: #38bdf8;
+      border: none;
+      color: #0f172a;
+      font-weight: 600;
+      padding: 0.7rem 1.8rem;
+      border-radius: 40px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(56,189,248,0.3);
+    }
+    .btn:hover {
+      background: #7dd3fc;
+      transform: scale(1.02);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      box-shadow: none;
+    }
+    .btn-outline:hover {
+      background: #1e293b;
+    }
+    .key-list {
+      margin-top: 1.5rem;
+    }
+    .key-item {
+      background: #0f172a;
+      border-radius: 18px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 0.8rem;
+      border-left: 4px solid #38bdf8;
+      word-break: break-all;
+      transition: 0.1s;
+    }
+    .key-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .key-value {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 1rem;
+      background: #1e293b;
+      padding: 0.2rem 0.8rem;
+      border-radius: 40px;
+      letter-spacing: 0.01em;
+      color: #e2e8f0;
+      flex: 1;
+    }
+    .key-meta {
+      display: flex;
+      gap: 1.2rem;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 0.4rem;
+    }
+    .key-meta span {
+      background: #1e293b;
+      padding: 0.2rem 0.8rem;
+      border-radius: 30px;
+    }
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      padding: 0.3rem 1rem;
+      border-radius: 30px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .copy-btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
+      border-color: #38bdf8;
+    }
+    .best-practices {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.8rem 1.5rem;
+      border: 1px solid #334155;
+      margin-top: 1rem;
+    }
+    .best-practices h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #38bdf8;
+    }
+    .best-practices ul {
+      list-style: none;
+    }
+    .best-practices li {
+      padding: 0.4rem 0;
+      display: flex;
+      gap: 0.8rem;
+      align-items: baseline;
+    }
+    .best-practices li::before {
+      content: "▹";
+      color: #38bdf8;
+      font-weight: bold;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: #64748b;
+      font-size: 0.9rem;
+      border-top: 1px solid #1e293b;
+      padding-top: 2rem;
+    }
+    @media (max-width: 700px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+      }
+      h1 { font-size: 1.8rem; }
+      .card { padding: 1.2rem; }
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .mt-2 { margin-top: 1rem; }
+    .mb-1 { margin-bottom: 0.5rem; }
+    .gap-1 { gap: 1rem; }
+  </style>
+
+    <meta property="og:title" content="API Key Generator — Create Secure Random Keys & Tokens">
+    <meta property="og:description" content="Generate secure API keys with custom prefixes, entropy display, and brute-force time estimates. Supports hex, base64, UUID v4, alphanumeric and more.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://kappafy.com/tools/api-key-generator">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔑 API Key Generator</h1>
+    <div class="subhead">Secure random keys & tokens with entropy & brute-force estimates</div>
+  </header>
+
+  <div class="card">
+    <div class="grid-2">
+      <div>
+        <div class="control-group">
+          <label for="format">Key format</label>
+          <select id="format">
+            <option value="hex">Hex</option>
+            <option value="base64">Base64</option>
+            <option value="base64url">Base64url</option>
+            <option value="alphanumeric">Alphanumeric</option>
+            <option value="uuid">UUID v4</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="lengthSlider">Length: <span id="lengthDisplay" class="range-value">32</span></label>
+          <div class="range-wrapper">
+            <input type="range" id="lengthSlider" min="16" max="128" value="32" step="1">
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="prefix">Prefix (optional)</label>
+          <input type="text" id="prefix" placeholder="e.g. sk_live_, pk_test_" value="">
+        </div>
+      </div>
+      <div>
+        <div class="control-group">
+          <label>Character set toggles</label>
+          <div class="toggle-group">
+            <div class="toggle-item"><input type="checkbox" id="useUpper" checked> <span>Uppercase</span></div>
+            <div class="toggle-item"><input type="checkbox" id="useLower" checked> <span>Lowercase</span></div>
+            <div class="toggle-item"><input type="checkbox" id="useDigits" checked> <span>Numbers</span></div>
+            <div class="toggle-item"><input type="checkbox" id="useSpecial" checked> <span>Special</span></div>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="keyCount">Number of keys (1–10)</label>
+          <input type="number" id="keyCount" min="1" max="10" value="3" style="max-width: 100px;">
+        </div>
+        <div class="flex-between mt-2">
+          <button class="btn" id="generateBtn">⚡ Generate keys</button>
+          <button class="btn btn-outline" id="clearBtn">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="outputArea" class="key-list"></div>
+
+  <!-- Best practices -->
+  <div class="best-practices">
+    <h2>🔐 Best practices</h2>
+    <ul>
+      <li><strong>Storage:</strong> Hash keys with SHA-256 before storing; never store plaintext.</li>
+      <li><strong>Rotation:</strong> Rotate keys every 90 days (or less for high-security).</li>
+      <li><strong>Scoping:</strong> Use separate keys for read-only, write, admin scopes.</li>
+      <li><strong>Prefix conventions:</strong> Use prefixes like <code>sk_live_</code> (secret), <code>pk_test_</code> (public test) to identify environment &amp; type.</li>
+      <li><strong>Rate limiting:</strong> Apply per-key rate limits to reduce abuse.</li>
+    </ul>
+  </div>
+
+  <footer>© 2025 kappafy.com</footer>
+</div>
+
+<script>
+  (function() {
+    const formatSelect = document.getElementById('format');
+    const lengthSlider = document.getElementById('lengthSlider');
+    const lengthDisplay = document.getElementById('lengthDisplay');
+    const prefixInput = document.getElementById('prefix');
+    const useUpper = document.getElementById('useUpper');
+    const useLower = document.getElementById('useLower');
+    const useDigits = document.getElementById('useDigits');
+    const useSpecial = document.getElementById('useSpecial');
+    const keyCountInput = document.getElementById('keyCount');
+    const generateBtn = document.getElementById('generateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const outputArea = document.getElementById('outputArea');
+
+    // sync length display
+    lengthSlider.addEventListener('input', () => {
+      lengthDisplay.textContent = lengthSlider.value;
+    });
+
+    // random helpers
+    function getRandomBytes(n) {
+      const arr = new Uint8Array(n);
+      crypto.getRandomValues(arr);
+      return arr;
+    }
+
+    function toHex(bytes) {
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function toBase64(bytes) {
+      return btoa(String.fromCharCode(...bytes));
+    }
+
+    function toBase64url(bytes) {
+      return toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function toAlphanumeric(bytes, allowed) {
+      const chars = allowed || 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const result = [];
+      for (let i = 0; i < bytes.length; i++) {
+        result.push(chars[bytes[i] % chars.length]);
+      }
+      return result.join('');
+    }
+
+    function uuidV4() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // build alphabet based on toggles
+    function getAlphabet() {
+      let chars = '';
+      if (useUpper.checked) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      if (useLower.checked) chars += 'abcdefghijklmnopqrstuvwxyz';
+      if (useDigits.checked) chars += '0123456789';
+      if (useSpecial.checked) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+      if (chars === '') chars = 'abcdefghijklmnopqrstuvwxyz'; // fallback
+      return chars;
+    }
+
+    // entropy calculation
+    function calcEntropy(alphabetSize, length) {
+      if (alphabetSize <= 1) return 0;
+      return Math.log2(alphabetSize) * length;
+    }
+
+    function bruteForceTime(entropyBits, guessesPerSec = 10e9) {
+      const combinations = Math.pow(2, entropyBits);
+      const seconds = combinations / guessesPerSec;
+      if (seconds < 1) return '< 1 second';
+      if (seconds < 60) return `${Math.round(seconds)} seconds`;
+      const minutes = seconds / 60;
+      if (minutes < 60) return `${Math.round(minutes)} minutes`;
+      const hours = minutes / 60;
+      if (hours < 24) return `${Math.round(hours)} hours`;
+      const days = hours / 24;
+      if (days < 365) return `${Math.round(days)} days`;
+      const years = days / 365;
+      if (years < 1e6) return `${Math.round(years)} years`;
+      return `~ ${years.toExponential(2)} years`;
+    }
+
+    // generate one key
+    function generateSingleKey(format, length, prefix, alphabet) {
+      let key = '';
+      const bytes = getRandomBytes(length * 2); // extra for safety
+
+      switch (format) {
+        case 'hex': {
+          const hexLen = Math.ceil(length / 2);
+          key = toHex(getRandomBytes(hexLen)).slice(0, length);
+          break;
+        }
+        case 'base64': {
+          const b64Len = Math.ceil(length * 3 / 4);
+          key = toBase64(getRandomBytes(b64Len)).slice(0, length);
+          break;
+        }
+        case 'base64url': {
+          const b64uLen = Math.ceil(length * 3 / 4);
+          key = toBase64url(getRandomBytes(b64uLen)).slice(0, length);
+          break;
+        }
+        case 'alphanumeric': {
+          const alphaLen = length;
+          key = toAlphanumeric(getRandomBytes(alphaLen * 2), alphabet).slice(0, length);
+          break;
+        }
+        case 'uuid': {
+          key = uuidV4(); // length always 36
+          break;
+        }
+        default: key = 'error';
+      }
+      // enforce exact length for non-uuid
+      if (format !== 'uuid' && key.length > length) key = key.slice(0, length);
+      else if (format !== 'uuid' && key.length < length) {
+        // pad if too short (rare)
+        while (key.length < length) {
+          key += toAlphanumeric(getRandomBytes(4), alphabet).slice(0, length - key.length);
+        }
+      }
+      return prefix ? prefix + key : key;
+    }
+
+    // main generation
+    function generateKeys() {
+      const format = formatSelect.value;
+      const length = parseInt(lengthSlider.value, 10);
+      const prefix = prefixInput.value.trim();
+      const count = Math.min(10, Math.max(1, parseInt(keyCountInput.value, 10) || 1));
+      const alphabet = getAlphabet();
+      let alphabetSize = alphabet.length;
+      // for hex/base64/base64url we override alphabet size
+      if (format === 'hex') alphabetSize = 16;
+      else if (format === 'base64' || format === 'base64url') alphabetSize = 64;
+      else if (format === 'uuid') alphabetSize = 16; // hex chars
+
+      let effectiveLength = length;
+      if (format === 'uuid') effectiveLength = 36;
+
+      const entropy = calcEntropy(alphabetSize, effectiveLength);
+      const bruteTime = bruteForceTime(entropy);
+
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        const key = generateSingleKey(format, length, prefix, alphabet);
+        const displayKey = key;
+        html += `
+          <div class="key-item">
+            <div class="key-header">
+              <span class="key-value">${displayKey}</span>
+              <button class="copy-btn" data-copy="${displayKey.replace(/"/g, '&quot;')}">📋 Copy</button>
+            </div>
+            <div class="key-meta">
+              <span>🔒 Entropy: ${entropy.toFixed(1)} bits</span>
+              <span>⏱️ Brute-force: ${bruteTime}</span>
+            </div>
+          </div>
+        `;
+      }
+      outputArea.innerHTML = html;
+
+      // attach copy events
+      document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          const keyToCopy = this.getAttribute('data-copy');
+          navigator.clipboard.writeText(keyToCopy).then(() => {
+            const original = this.textContent;
+            this.textContent = '✅ Copied!';
+            setTimeout(() => { this.textContent = original; }, 1500);
+          }).catch(() => {
+            // fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = keyToCopy;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            this.textContent = '✅ Copied!';
+            setTimeout(() => { this.textContent = '📋 Copy'; }, 1500);
+          });
+        });
+      });
+    }
+
+    generateBtn.addEventListener('click', generateKeys);
+    clearBtn.addEventListener('click', () => {
+      outputArea.innerHTML = '';
+    });
+
+    // initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      generateKeys();
+    });
+
+    // re-calc on toggle changes for demo (optional)
+    // but we keep manual generation
+  })();
+</script>
+</body>
+</html>

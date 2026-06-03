@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>REST API Endpoint Builder — Design & Document Endpoints | kappafy.com</title>
+  <meta name="description" content="Design REST endpoints visually: method, path, query, body, response. Generate OpenAPI 3.0 YAML, curl, fetch/axios, Python requests. Copy to clipboard.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://kappafy.com/tools/rest-endpoint-builder">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I add path parameters?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use colon syntax like /users/:id in the URL path builder. Each :segment becomes a path parameter."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which HTTP methods support request body?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "POST, PUT, and PATCH methods allow you to define a request body schema. GET and DELETE ignore body fields."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What code formats are generated?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "OpenAPI 3.0 YAML, cURL command, Fetch / Axios (JavaScript), and Python requests. Each can be copied individually."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 1rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.25rem;
+    }
+    .subhead {
+      color: #94a3b8;
+      font-size: 1rem;
+    }
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 1.5rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      border: 1px solid #334155;
+    }
+    .card h2 {
+      font-size: 1.3rem;
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+      color: #f1f5f9;
+      border-left: 4px solid #38bdf8;
+      padding-left: 0.75rem;
+    }
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    select, input, textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.75rem;
+      font-size: 0.95rem;
+      transition: border 0.2s;
+    }
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    textarea {
+      font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+      resize: vertical;
+      min-height: 60px;
+    }
+    .row {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .row > * {
+      flex: 1;
+    }
+    .btn {
+      background: #38bdf8;
+      border: none;
+      color: #0f172a;
+      font-weight: 600;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+    }
+    .btn-outline:hover {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+    .btn-sm {
+      padding: 0.3rem 1rem;
+      font-size: 0.75rem;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .param-item {
+      background: #0f172a;
+      border-radius: 0.75rem;
+      padding: 0.8rem;
+      margin-bottom: 0.6rem;
+      border-left: 3px solid #38bdf8;
+    }
+    .param-item .row {
+      gap: 0.4rem;
+    }
+    .param-item input, .param-item select {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.8rem;
+    }
+    .param-item .btn-remove {
+      background: transparent;
+      border: none;
+      color: #f87171;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .code-block {
+      background: #0f172a;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin: 0.8rem 0;
+      border: 1px solid #334155;
+      position: relative;
+    }
+    .code-block pre {
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: #e2e8f0;
+      margin: 0;
+    }
+    .code-block .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: #334155;
+      border: none;
+      color: #e2e8f0;
+      padding: 0.2rem 0.7rem;
+      border-radius: 1rem;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+    .code-block .copy-btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: #475569;
+      font-size: 0.9rem;
+      border-top: 1px solid #1e293b;
+      padding-top: 1.5rem;
+    }
+    .badge {
+      background: #334155;
+      border-radius: 1rem;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+    @media (max-width: 800px) {
+      .grid-2col {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      h1 { font-size: 1.8rem; }
+    }
+    .mt-1 { margin-top: 0.5rem; }
+    .mb-1 { margin-bottom: 0.5rem; }
+    .flex { display: flex; }
+    .gap { gap: 0.5rem; }
+    .items-center { align-items: center; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⚡ REST API Endpoint Builder</h1>
+    <div class="subhead">Design & document endpoints · OpenAPI 3.0 · curl · fetch/axios · Python</div>
+  </header>
+
+  <div class="grid-2col">
+    <!-- LEFT: Builder -->
+    <div class="card">
+      <h2>🔧 Endpoint Designer</h2>
+      <div class="form-group">
+        <label>HTTP method</label>
+        <select id="httpMethod" onchange="toggleBody()">
+          <option value="GET">GET</option>
+          <option value="POST" selected>POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>URL path (use :param for path variables)</label>
+        <input type="text" id="urlPath" value="/api/users/:id" placeholder="/api/users/:id">
+      </div>
+
+      <!-- Query parameters -->
+      <div class="form-group">
+        <div class="flex items-center gap" style="justify-content: space-between;">
+          <label>Query parameters</label>
+          <button class="btn btn-sm btn-outline" onclick="addQueryParam()">+ Add</button>
+        </div>
+        <div id="queryParamsContainer"></div>
+      </div>
+
+      <!-- Request body (POST/PUT/PATCH) -->
+      <div class="form-group" id="requestBodyGroup">
+        <div class="flex items-center gap" style="justify-content: space-between;">
+          <label>Request body fields (JSON schema)</label>
+          <button class="btn btn-sm btn-outline" onclick="addBodyField()">+ Add</button>
+        </div>
+        <div id="bodyFieldsContainer"></div>
+      </div>
+
+      <!-- Response schema -->
+      <div class="form-group">
+        <label>Response status code</label>
+        <input type="text" id="responseStatus" value="200" placeholder="200">
+      </div>
+      <div class="form-group">
+        <div class="flex items-center gap" style="justify-content: space-between;">
+          <label>Response body fields</label>
+          <button class="btn btn-sm btn-outline" onclick="addResponseField()">+ Add</button>
+        </div>
+        <div id="responseFieldsContainer"></div>
+      </div>
+
+      <div class="btn-group" style="margin-top: 1rem;">
+        <button class="btn" onclick="generateAll()">🔄 Generate code</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output -->
+    <div class="card">
+      <h2>📄 Generated Snippets</h2>
+      <div id="outputArea">
+        <p style="color: #64748b; font-style: italic;">Click "Generate code" to preview OpenAPI, curl, JS, Python.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">© 2025 kappafy.com</footer>
+</div>
+
+<script>
+  // ---------- state ----------
+  let queryParams = [];
+  let bodyFields = [];
+  let responseFields = [];
+
+  // ---------- init ----------
+  window.addEventListener('DOMContentLoaded', () => {
+    addQueryParam(); addQueryParam(); // two examples
+    addBodyField();
+    addResponseField();
+    toggleBody();
+    generateAll();
+  });
+
+  function toggleBody() {
+    const method = document.getElementById('httpMethod').value;
+    const group = document.getElementById('requestBodyGroup');
+    group.style.display = (method === 'POST' || method === 'PUT' || method === 'PATCH') ? 'block' : 'none';
+  }
+
+  // ---------- add / remove helpers ----------
+  function addQueryParam() {
+    queryParams.push({ key: '', type: 'string', required: false, description: '' });
+    renderQueryParams();
+  }
+  function removeQueryParam(index) {
+    queryParams.splice(index, 1);
+    renderQueryParams();
+  }
+  function renderQueryParams() {
+    const container = document.getElementById('queryParamsContainer');
+    container.innerHTML = queryParams.map((p, i) => `
+      <div class="param-item">
+        <div class="row">
+          <input type="text" value="${escapeHtml(p.key)}" placeholder="key" onchange="updateQuery(${i},'key',this.value)">
+          <select onchange="updateQuery(${i},'type',this.value)"><option value="string" ${p.type==='string'?'selected':''}>string</option><option value="integer" ${p.type==='integer'?'selected':''}>integer</option><option value="boolean" ${p.type==='boolean'?'selected':''}>boolean</option></select>
+          <label style="display:flex;align-items:center;gap:4px;white-space:nowrap;color:#94a3b8;"><input type="checkbox" ${p.required?'checked':''} onchange="updateQuery(${i},'required',this.checked)"> required</label>
+          <input type="text" value="${escapeHtml(p.description)}" placeholder="desc" onchange="updateQuery(${i},'description',this.value)">
+          <button class="btn-remove" onclick="removeQueryParam(${i})">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  function updateQuery(idx, field, val) {
+    queryParams[idx][field] = val;
+  }
+
+  // body fields
+  function addBodyField() {
+    bodyFields.push({ name: '', type: 'string', description: '' });
+    renderBodyFields();
+  }
+  function removeBodyField(index) {
+    bodyFields.splice(index, 1);
+    renderBodyFields();
+  }
+  function renderBodyFields() {
+    const container = document.getElementById('bodyFieldsContainer');
+    container.innerHTML = bodyFields.map((f, i) => `
+      <div class="param-item">
+        <div class="row">
+          <input type="text" value="${escapeHtml(f.name)}" placeholder="field name" onchange="updateBody(${i},'name',this.value)">
+          <select onchange="updateBody(${i},'type',this.value)"><option value="string" ${f.type==='string'?'selected':''}>string</option><option value="integer" ${f.type==='integer'?'selected':''}>integer</option><option value="boolean" ${f.type==='boolean'?'selected':''}>boolean</option><option value="object" ${f.type==='object'?'selected':''}>object</option><option value="array" ${f.type==='array'?'selected':''}>array</option></select>
+          <input type="text" value="${escapeHtml(f.description)}" placeholder="desc" onchange="updateBody(${i},'description',this.value)">
+          <button class="btn-remove" onclick="removeBodyField(${i})">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  function updateBody(idx, field, val) {
+    bodyFields[idx][field] = val;
+  }
+
+  // response fields
+  function addResponseField() {
+    responseFields.push({ name: '', type: 'string', description: '' });
+    renderResponseFields();
+  }
+  function removeResponseField(index) {
+    responseFields.splice(index, 1);
+    renderResponseFields();
+  }
+  function renderResponseFields() {
+    const container = document.getElementById('responseFieldsContainer');
+    container.innerHTML = responseFields.map((f, i) => `
+      <div class="param-item">
+        <div class="row">
+          <input type="text" value="${escapeHtml(f.name)}" placeholder="field name" onchange="updateResponse(${i},'name',this.value)">
+          <select onchange="updateResponse(${i},'type',this.value)"><option value="string" ${f.type==='string'?'selected':''}>string</option><option value="integer" ${f.type==='integer'?'selected':''}>integer</option><option value="boolean" ${f.type==='boolean'?'selected':''}>boolean</option><option value="object" ${f.type==='object'?'selected':''}>object</option><option value="array" ${f.type==='array'?'selected':''}>array</option></select>
+          <input type="text" value="${escapeHtml(f.description)}" placeholder="desc" onchange="updateResponse(${i},'description',this.value)">
+          <button class="btn-remove" onclick="removeResponseField(${i})">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  function updateResponse(idx, field, val) {
+    responseFields[idx][field] = val;
+  }
+
+  // ---------- generate ----------
+  function generateAll() {
+    const method = document.getElementById('httpMethod').value;
+    const rawPath = document.getElementById('urlPath').value.trim() || '/';
+    const statusCode = document.getElementById('responseStatus').value.trim() || '200';
+
+    // build path parameters from :segments
+    const pathParams = [];
+    const pathWithColons = rawPath.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, p1) => {
+      pathParams.push(p1);
+      return `{${p1}}`;
+    });
+
+    // query
+    const queryList = queryParams.filter(q => q.key.trim() !== '');
+    // body
+    const bodyList = bodyFields.filter(b => b.name.trim() !== '');
+    // response
+    const respList = responseFields.filter(r => r.name.trim() !== '');
+
+    // ----- OpenAPI 3.0 YAML -----
+    let openapiYaml = `openapi: "3.0.3"\ninfo:\n  title: Endpoint Builder\n  version: "1.0"\npaths:\n  ${rawPath}:\n    ${method.toLowerCase()}:\n      summary: Generated endpoint\n      parameters:\n`;
+    // path params
+    pathParams.forEach(p => {
+      openapiYaml += `        - name: ${p}\n          in: path\n          required: true\n          schema:\n            type: string\n          description: Path parameter\n`;
+    });
+    // query params
+    queryList.forEach(q => {
+      openapiYaml += `        - name: ${q.key}\n          in: query\n          required: ${q.required}\n          schema:\n            type: ${q.type}\n          description: "${q.description || ''}"\n`;
+    });
+    if (pathParams.length === 0 && queryList.length === 0) openapiYaml += `        []\n`;
+    // requestBody
+    if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && bodyList.length > 0) {
+      openapiYaml += `      requestBody:\n        content:\n          application/json:\n            schema:\n              type: object\n              properties:\n`;
+      bodyList.forEach(b => {
+        openapiYaml += `                ${b.name}:\n                  type: ${b.type}\n                  description: "${b.description || ''}"\n`;
+      });
+    }
+    // responses
+    openapiYaml += `      responses:\n        '${statusCode}':\n          description: Successful response\n          content:\n            application/json:\n              schema:\n                type: object\n                properties:\n`;
+    if (respList.length === 0) {
+      openapiYaml += `                  message:\n                    type: string\n                    example: "ok"\n`;
+    } else {
+      respList.forEach(r => {
+        openapiYaml += `                  ${r.name}:\n                    type: ${r.type}\n                    description: "${r.description || ''}"\n`;
+      });
+    }
+
+    // ----- curl -----
+    let curlCmd = `curl -X ${method} "https://api.example.com${rawPath}"`;
+    if (queryList.length > 0) {
+      const qs = queryList.map(q => `${q.key}=${q.type==='string'?'value':1}`).join('&');
+      curlCmd += `?${qs}`;
+    }
+    if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && bodyList.length > 0) {
+      const bodyObj = {};
+      bodyList.forEach(b => { bodyObj[b.name] = b.type==='string'?'example':1; });
+      curlCmd += ` \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(bodyObj)}'`;
+    }
+
+    // ----- fetch / axios (JS) -----
+    let jsCode = '';
+    const jsMethod = method;
+    let jsUrl = `https://api.example.com${rawPath}`;
+    if (queryList.length > 0) {
+      const qs = queryList.map(q => `${q.key}: ${q.type==='string'?'"value"':1}`).join(', ');
+      jsUrl += `?${queryList.map(q => `${q.key}=${q.type==='string'?'value':1}`).join('&')}`;
+    }
+    let bodyContent = null;
+    if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && bodyList.length > 0) {
+      const bObj = {};
+      bodyList.forEach(b => { bObj[b.name] = b.type==='string'?'"example"':1; });
+      bodyContent = JSON.stringify(bObj);
+    }
+    // fetch
+    jsCode = `// Fetch\nfetch("${jsUrl}", {\n  method: "${jsMethod}",\n  headers: { "Content-Type": "application/json" }${bodyContent ? ',' : ''}\n${bodyContent ? `  body: ${bodyContent}\n` : ''}}).then(res => res.json()).then(console.log);\n\n// Axios\nimport axios from 'axios';\naxios.${jsMethod.toLowerCase()}("${jsUrl}"${bodyContent ? `, ${bodyContent}` : ''})\n  .then(res => console.log(res.data));`;
+
+    // ----- Python requests -----
+    let pyCode = `import requests\n\nurl = "${jsUrl}"\nheaders = {"Content-Type": "application/json"}\n`;
+    if (bodyContent) {
+      pyCode += `data = ${bodyContent}\nresponse = requests.${jsMethod.toLowerCase()}(url, headers=headers, json=data)\n`;
+    } else {
+      pyCode += `response = requests.${jsMethod.toLowerCase()}(url, headers=headers)\n`;
+    }
+    pyCode += `print(response.json())\n`;
+
+    // render output
+    const output = document.getElementById('outputArea');
+    output.innerHTML = `
+      <div class="code-block"><button class="copy-btn" onclick="copyText(this)">📋 copy</button><pre>${escapeHtml(openapiYaml)}</pre></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyText(this)">📋 copy</button><pre>${escapeHtml(curlCmd)}</pre></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyText(this)">📋 copy</button><pre>${escapeHtml(jsCode)}</pre></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyText(this)">📋 copy</button><pre>${escapeHtml(pyCode)}</pre></div>
+    `;
+  }
+
+  // ---------- utilities ----------
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function copyText(btn) {
+    const pre = btn.parentElement.querySelector('pre');
+    if (!pre) return;
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✅ copied';
+      setTimeout(() => { btn.textContent = '📋 copy'; }, 1500);
+    }).catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      btn.textContent = '✅ copied';
+      setTimeout(() => { btn.textContent = '📋 copy'; }, 1500);
+    });
+  }
+
+  // additional: regenerate on any change? we keep manual, but auto on method change
+  document.getElementById('httpMethod').addEventListener('change', () => { toggleBody(); generateAll(); });
+  document.getElementById('urlPath').addEventListener('input', generateAll);
+  document.getElementById('responseStatus').addEventListener('input', generateAll);
+  // but for param fields we rely on generate button, but we can also call generateAll after changes? we'll keep manual.
+  // but we add listeners to inputs inside param items? they update state but not regenerate. user clicks generate.
+  // we also call generateAll on init.
+</script>
+</body>
+</html>

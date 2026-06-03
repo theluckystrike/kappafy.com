@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>HTTP Status Code Reference — Quick Lookup & Search | kappafy.com</title>
+  <meta name="description" content="Complete HTTP status code reference (100–511) with search, category groups, descriptions, use cases, and quiz mode. Dark theme, mobile-friendly.">
+  <meta name="keywords" content="HTTP status codes, 404, 500, 200, 301, reference, lookup, developer tool, kappafy">
+  <link rel="canonical" href="https://kappafy.com/tools/http-status-codes">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type":"Question","name":"What is HTTP 200?","acceptedAnswer":{"@type":"Answer","text":"200 OK: Standard success response. The request has succeeded."}},
+        {"@type":"Question","name":"What does 404 mean?","acceptedAnswer":{"@type":"Answer","text":"404 Not Found: The server cannot find the requested resource."}},
+        {"@type":"Question","name":"What is a 500 error?","acceptedAnswer":{"@type":"Answer","text":"500 Internal Server Error: The server encountered an unexpected condition."}},
+        {"@type":"Question","name":"What is 301 redirect?","acceptedAnswer":{"@type":"Answer","text":"301 Moved Permanently: The resource has been permanently moved to a new URL."}}
+      ]
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      padding: 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+    header {
+      text-align: center;
+      padding: 1.5rem 0 0.5rem;
+      border-bottom: 1px solid #1e293b;
+    }
+    header h1 {
+      font-size: 1.9rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #f1f5f9;
+    }
+    header h1 span {
+      color: #38bdf8;
+    }
+    .subhead {
+      color: #94a3b8;
+      margin-top: 0.25rem;
+      font-size: 0.95rem;
+    }
+    .search-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin: 1.5rem 0 1rem;
+      align-items: center;
+      justify-content: center;
+    }
+    #searchInput {
+      flex: 2 1 260px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 40px;
+      padding: 0.75rem 1.2rem;
+      color: #e2e8f0;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.2s;
+    }
+    #searchInput:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    #searchInput::placeholder {
+      color: #64748b;
+    }
+    .quiz-toggle {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 40px;
+      padding: 0.6rem 1.4rem;
+      color: #e2e8f0;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+    }
+    .quiz-toggle:hover {
+      background: #334155;
+      border-color: #38bdf8;
+    }
+    .quiz-toggle.active {
+      background: #0f172a;
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+    .quiz-area {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.5rem;
+      margin: 1rem 0 1.5rem;
+      border: 1px solid #334155;
+      display: none;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+    }
+    .quiz-area.visible {
+      display: flex;
+    }
+    .quiz-prompt {
+      flex: 2 1 240px;
+    }
+    .quiz-prompt p {
+      font-size: 1.1rem;
+      margin-bottom: 0.3rem;
+    }
+    .quiz-prompt .desc {
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+    .quiz-input-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    #quizGuess {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 40px;
+      padding: 0.6rem 1rem;
+      color: #e2e8f0;
+      width: 120px;
+      font-size: 1rem;
+    }
+    #quizGuess:focus {
+      border-color: #38bdf8;
+    }
+    .quiz-btn {
+      background: #38bdf8;
+      border: none;
+      border-radius: 40px;
+      padding: 0.6rem 1.2rem;
+      font-weight: 600;
+      color: #0f172a;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .quiz-btn:hover {
+      background: #7dd3fc;
+    }
+    .quiz-feedback {
+      font-weight: 500;
+      min-width: 100px;
+    }
+    .category-group {
+      margin-bottom: 1.8rem;
+    }
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: #1e293b;
+      padding: 0.7rem 1.2rem;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: 0.2s;
+      border: 1px solid #334155;
+      margin-bottom: 0.5rem;
+      user-select: none;
+    }
+    .category-header:hover {
+      background: #263548;
+      border-color: #38bdf8;
+    }
+    .category-header h2 {
+      font-size: 1.2rem;
+      font-weight: 500;
+      flex: 1;
+    }
+    .badge {
+      background: #38bdf8;
+      color: #0f172a;
+      border-radius: 40px;
+      padding: 0.2rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .collapse-icon {
+      font-size: 1.2rem;
+      transition: 0.2s;
+      color: #94a3b8;
+    }
+    .category-header.collapsed .collapse-icon {
+      transform: rotate(-90deg);
+    }
+    .codes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.75rem;
+      padding: 0.25rem 0 0.5rem;
+    }
+    .codes-grid.hidden {
+      display: none;
+    }
+    .code-card {
+      background: #1e293b;
+      border: 1px solid #2d3a4e;
+      border-radius: 20px;
+      padding: 1rem 1.2rem;
+      transition: 0.15s;
+    }
+    .code-card:hover {
+      border-color: #38bdf8;
+      background: #263548;
+    }
+    .code-number {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: -0.02em;
+    }
+    .code-name {
+      font-weight: 600;
+      font-size: 1rem;
+      margin: 0.1rem 0 0.3rem;
+    }
+    .code-desc {
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      margin-bottom: 0.4rem;
+    }
+    .code-use {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      border-left: 2px solid #38bdf8;
+      padding-left: 0.6rem;
+      margin: 0.3rem 0;
+    }
+    .code-example {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 0.4rem 0.7rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      color: #a5b4fc;
+      overflow-x: auto;
+      white-space: nowrap;
+      margin-top: 0.3rem;
+    }
+    .no-result {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+    }
+    footer {
+      text-align: center;
+      padding: 2rem 0 0.5rem;
+      color: #64748b;
+      border-top: 1px solid #1e293b;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+    }
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.5rem; }
+      .codes-grid { grid-template-columns: 1fr; }
+      .quiz-area { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔍 <span>HTTP Status</span> Code Reference</h1>
+    <div class="subhead">Quick lookup · search · quiz · 100–511</div>
+  </header>
+
+  <div class="search-area">
+    <input type="text" id="searchInput" placeholder="Search by code or keyword (e.g. 404, redirect, timeout)">
+    <button class="quiz-toggle" id="quizToggle">🎲 Quiz mode</button>
+  </div>
+
+  <!-- Quiz area -->
+  <div class="quiz-area" id="quizArea">
+    <div class="quiz-prompt">
+      <p>🤔 Guess the status code</p>
+      <div class="desc" id="quizDesc">Click "New question" to start</div>
+    </div>
+    <div class="quiz-input-group">
+      <input type="number" id="quizGuess" placeholder="Code" min="100" max="511">
+      <button class="quiz-btn" id="quizSubmit">Submit</button>
+      <button class="quiz-btn" id="quizNext" style="background:#475569; color:#e2e8f0;">New question</button>
+      <span class="quiz-feedback" id="quizFeedback"></span>
+    </div>
+  </div>
+
+  <!-- Categories will be injected by JS -->
+  <div id="categoriesContainer"></div>
+
+  <footer>© 2025 kappafy.com</footer>
+</div>
+
+<script>
+  (function() {
+    // ----- FULL HTTP STATUS CODES (100-511) -----
+    const statusCodes = [
+      // 1xx
+      {code:100,name:"Continue",desc:"Server has received the request headers, client should proceed.",use:"Large uploads, avoid premature timeout.",example:"HTTP/1.1 100 Continue"},
+      {code:101,name:"Switching Protocols",desc:"Server agrees to switch protocols as requested.",use:"WebSocket upgrade.",example:"HTTP/1.1 101 Switching Protocols"},
+      {code:102,name:"Processing",desc:"Server has received and is processing the request, but no response yet.",use:"WebDAV long operations.",example:"HTTP/1.1 102 Processing"},
+      {code:103,name:"Early Hints",desc:"Preload resources while server prepares final response.",use:"Improve page load performance.",example:"HTTP/1.1 103 Early Hints"},
+      // 2xx
+      {code:200,name:"OK",desc:"Standard success response.",use:"Successful GET, POST, etc.",example:"HTTP/1.1 200 OK"},
+      {code:201,name:"Created",desc:"Resource successfully created.",use:"POST new resource.",example:"HTTP/1.1 201 Created"},
+      {code:202,name:"Accepted",desc:"Request accepted but not yet processed.",use:"Async operations.",example:"HTTP/1.1 202 Accepted"},
+      {code:203,name:"Non-Authoritative Info",desc:"Returned meta-information from a third-party source.",use:"Proxy caching.",example:"HTTP/1.1 203 Non-Authoritative Information"},
+      {code:204,name:"No Content",desc:"Request succeeded but no content to return.",use:"DELETE or form submission.",example:"HTTP/1.1 204 No Content"},
+      {code:205,name:"Reset Content",desc:"Tells user agent to reset document view.",use:"Form reset after submission.",example:"HTTP/1.1 205 Reset Content"},
+      {code:206,name:"Partial Content",desc:"Partial GET request fulfilled.",use:"Range requests, video streaming.",example:"HTTP/1.1 206 Partial Content"},
+      {code:207,name:"Multi-Status",desc:"Multiple status codes for multiple operations.",use:"WebDAV batch.",example:"HTTP/1.1 207 Multi-Status"},
+      {code:208,name:"Already Reported",desc:"Members of a DAV binding already enumerated.",use:"WebDAV.",example:"HTTP/1.1 208 Already Reported"},
+      {code:226,name:"IM Used",desc:"Server fulfilled GET with instance manipulations.",use:"Delta encoding.",example:"HTTP/1.1 226 IM Used"},
+      // 3xx
+      {code:300,name:"Multiple Choices",desc:"Multiple representations for the resource.",use:"Content negotiation.",example:"HTTP/1.1 300 Multiple Choices"},
+      {code:301,name:"Moved Permanently",desc:"Resource permanently moved to new URL.",use:"URL redirection.",example:"HTTP/1.1 301 Moved Permanently"},
+      {code:302,name:"Found",desc:"Temporary redirect (may change).",use:"Legacy redirect.",example:"HTTP/1.1 302 Found"},
+      {code:303,name:"See Other",desc:"Redirect to another URI using GET.",use:"After POST, show result.",example:"HTTP/1.1 303 See Other"},
+      {code:304,name:"Not Modified",desc:"Resource not modified since last request.",use:"Caching (conditional GET).",example:"HTTP/1.1 304 Not Modified"},
+      {code:305,name:"Use Proxy",desc:"Requested resource must be accessed through proxy.",use:"Legacy.",example:"HTTP/1.1 305 Use Proxy"},
+      {code:306,name:"Switch Proxy",desc:"No longer used.",use:"-",example:"HTTP/1.1 306 Switch Proxy"},
+      {code:307,name:"Temporary Redirect",desc:"Temporary redirect, method unchanged.",use:"Temporary relocation.",example:"HTTP/1.1 307 Temporary Redirect"},
+      {code:308,name:"Permanent Redirect",desc:"Permanent redirect, method unchanged.",use:"SEO friendly redirect.",example:"HTTP/1.1 308 Permanent Redirect"},
+      // 4xx
+      {code:400,name:"Bad Request",desc:"Server cannot process due to client error.",use:"Malformed syntax.",example:"HTTP/1.1 400 Bad Request"},
+      {code:401,name:"Unauthorized",desc:"Authentication required.",use:"Login required.",example:"HTTP/1.1 401 Unauthorized"},
+      {code:402,name:"Payment Required",desc:"Reserved for future use (digital payments).",use:"Experimental.",example:"HTTP/1.1 402 Payment Required"},
+      {code:403,name:"Forbidden",desc:"Server refuses to authorize.",use:"Access denied.",example:"HTTP/1.1 403 Forbidden"},
+      {code:404,name:"Not Found",desc:"Resource not found on server.",use:"Broken links.",example:"HTTP/1.1 404 Not Found"},
+      {code:405,name:"Method Not Allowed",desc:"HTTP method not supported for resource.",use:"Wrong method.",example:"HTTP/1.1 405 Method Not Allowed"},
+      {code:406,name:"Not Acceptable",desc:"Server cannot produce response matching Accept headers.",use:"Content negotiation.",example:"HTTP/1.1 406 Not Acceptable"},
+      {code:407,name:"Proxy Authentication Required",desc:"Proxy must authenticate.",use:"Proxy auth.",example:"HTTP/1.1 407 Proxy Authentication Required"},
+      {code:408,name:"Request Timeout",desc:"Server timed out waiting for request.",use:"Idle connection.",example:"HTTP/1.1 408 Request Timeout"},
+      {code:409,name:"Conflict",desc:"Request conflicts with current state.",use:"Edit conflicts.",example:"HTTP/1.1 409 Conflict"},
+      {code:410,name:"Gone",desc:"Resource permanently deleted.",use:"Deleted content.",example:"HTTP/1.1 410 Gone"},
+      {code:411,name:"Length Required",desc:"Content-Length header required.",use:"Fixed-length requests.",example:"HTTP/1.1 411 Length Required"},
+      {code:412,name:"Precondition Failed",desc:"Precondition headers evaluated false.",use:"Conditional requests.",example:"HTTP/1.1 412 Precondition Failed"},
+      {code:413,name:"Payload Too Large",desc:"Request entity larger than server limits.",use:"Upload too big.",example:"HTTP/1.1 413 Payload Too Large"},
+      {code:414,name:"URI Too Long",desc:"URI longer than server can handle.",use:"Long query strings.",example:"HTTP/1.1 414 URI Too Long"},
+      {code:415,name:"Unsupported Media Type",desc:"Media type not supported.",use:"Wrong content type.",example:"HTTP/1.1 415 Unsupported Media Type"},
+      {code:416,name:"Range Not Satisfiable",desc:"Range header cannot be satisfied.",use:"Invalid range.",example:"HTTP/1.1 416 Range Not Satisfiable"},
+      {code:417,name:"Expectation Failed",desc:"Expect header cannot be met.",use:"Server cannot meet expectation.",example:"HTTP/1.1 417 Expectation Failed"},
+      {code:418,name:"I'm a Teapot",desc:"HTCPCP: server is a teapot (April Fools).",use:"Easter egg.",example:"HTTP/1.1 418 I'm a Teapot"},
+      {code:421,name:"Misdirected Request",desc:"Request sent to server that cannot respond.",use:"Connection reuse.",example:"HTTP/1.1 421 Misdirected Request"},
+      {code:422,name:"Unprocessable Entity",desc:"Semantic errors in request.",use:"Validation failure.",example:"HTTP/1.1 422 Unprocessable Entity"},
+      {code:423,name:"Locked",desc:"Resource is locked.",use:"WebDAV.",example:"HTTP/1.1 423 Locked"},
+      {code:424,name:"Failed Dependency",desc:"Previous request caused failure.",use:"WebDAV chain.",example:"HTTP/1.1 424 Failed Dependency"},
+      {code:425,name:"Too Early",desc:"Server unwilling to risk replay attack.",use:"Early data.",example:"HTTP/1.1 425 Too Early"},
+      {code:426,name:"Upgrade Required",desc:"Client should upgrade protocol.",use:"TLS/1.0 upgrade.",example:"HTTP/1.1 426 Upgrade Required"},
+      {code:428,name:"Precondition Required",desc:"Server requires conditional request.",use:"Prevent lost updates.",example:"HTTP/1.1 428 Precondition Required"},
+      {code:429,name:"Too Many Requests",desc:"Rate limit exceeded.",use:"API throttling.",example:"HTTP/1.1 429 Too Many Requests"},
+      {code:431,name:"Request Header Fields Too Large",desc:"Header too long.",use:"Large headers.",example:"HTTP/1.1 431 Request Header Fields Too Large"},
+      {code:451,name:"Unavailable For Legal Reasons",desc:"Blocked due to legal demand.",use:"Censorship.",example:"HTTP/1.1 451 Unavailable For Legal Reasons"},
+      // 5xx
+      {code:500,name:"Internal Server Error",desc:"Generic server error.",use:"Unexpected condition.",example:"HTTP/1.1 500 Internal Server Error"},
+      {code:501,name:"Not Implemented",desc:"Server does not support functionality.",use:"Unsupported method.",example:"HTTP/1.1 501 Not Implemented"},
+      {code:502,name:"Bad Gateway",desc:"Invalid upstream response.",use:"Proxy/gateway error.",example:"HTTP/1.1 502 Bad Gateway"},
+      {code:503,name:"Service Unavailable",desc:"Server temporarily unavailable.",use:"Overload / maintenance.",example:"HTTP/1.1 503 Service Unavailable"},
+      {code:504,name:"Gateway Timeout",desc:"Upstream server timeout.",use:"Proxy timeout.",example:"HTTP/1.1 504 Gateway Timeout"},
+      {code:505,name:"HTTP Version Not Supported",desc:"HTTP version not supported.",use:"Legacy clients.",example:"HTTP/1.1 505 HTTP Version Not Supported"},
+      {code:506,name:"Variant Also Negotiates",desc:"Transparent content negotiation error.",use:"Configuration error.",example:"HTTP/1.1 506 Variant Also Negotiates"},
+      {code:507,name:"Insufficient Storage",desc:"Server cannot store representation.",use:"WebDAV full.",example:"HTTP/1.1 507 Insufficient Storage"},
+      {code:508,name:"Loop Detected",desc:"Infinite loop while processing.",use:"WebDAV.",example:"HTTP/1.1 508 Loop Detected"},
+      {code:510,name:"Not Extended",desc:"Further extensions required.",use:"Policy requirement.",example:"HTTP/1.1 510 Not Extended"},
+      {code:511,name:"Network Authentication Required",desc:"Network access requires authentication.",use:"Captive portal.",example:"HTTP/1.1 511 Network Authentication Required"}
+    ];
+
+    // group by category
+    const categories = [
+      { key: '1xx', label: '1xx Informational', min: 100, max: 199 },
+      { key: '2xx', label: '2xx Success', min: 200, max: 299 },
+      { key: '3xx', label: '3xx Redirection', min: 300, max: 399 },
+      { key: '4xx', label: '4xx Client Error', min: 400, max: 499 },
+      { key: '5xx', label: '5xx Server Error', min: 500, max: 511 }
+    ];
+
+    const container = document.getElementById('categoriesContainer');
+    const searchInput = document.getElementById('searchInput');
+    const quizToggle = document.getElementById('quizToggle');
+    const quizArea = document.getElementById('quizArea');
+    const quizDesc = document.getElementById('quizDesc');
+    const quizGuess = document.getElementById('quizGuess');
+    const quizSubmit = document.getElementById('quizSubmit');
+    const quizNext = document.getElementById('quizNext');
+    const quizFeedback = document.getElementById('quizFeedback');
+
+    let currentQuizCode = null;
+    let quizActive = false;
+
+    // render all categories
+    function renderCategories(filterText = '') {
+      const q = filterText.trim().toLowerCase();
+      let html = '';
+      categories.forEach(cat => {
+        const codes = statusCodes.filter(s => s.code >= cat.min && s.code <= cat.max);
+        const filtered = codes.filter(s => {
+          if (!q) return true;
+          return s.code.toString().includes(q) || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.use.toLowerCase().includes(q);
+        });
+        const count = filtered.length;
+        const total = codes.length;
+        html += `<div class="category-group" data-cat="${cat.key}">`;
+        html += `<div class="category-header" data-target="${cat.key}">`;
+        html += `<span class="collapse-icon">▼</span>`;
+        html += `<h2>${cat.label}</h2>`;
+        html += `<span class="badge">${count}/${total}</span>`;
+        html += `</div>`;
+        html += `<div class="codes-grid" id="grid-${cat.key}">`;
+        if (count === 0) {
+          html += `<div class="no-result">No matching codes</div>`;
+        } else {
+          filtered.forEach(s => {
+            html += `<div class="code-card">
+              <div class="code-number">${s.code}</div>
+              <div class="code-name">${s.name}</div>
+              <div class="code-desc">${s.desc}</div>
+              <div class="code-use">📌 ${s.use}</div>
+              <div class="code-example">${s.example}</div>
+            </div>`;
+          });
+        }
+        html += `</div></div>`;
+      });
+      container.innerHTML = html;
+
+      // attach collapse handlers
+      document.querySelectorAll('.category-header').forEach(header => {
+        header.addEventListener('click', function(e) {
+          const key = this.dataset.target;
+          const grid = document.getElementById(`grid-${key}`);
+          if (grid) {
+            grid.classList.toggle('hidden');
+            this.classList.toggle('collapsed');
+          }
+        });
+      });
+
+      // if quiz active, refresh quiz question (keep same)
+      if (quizActive && currentQuizCode) {
+        // just ensure quizDesc shows current
+        const codeObj = statusCodes.find(s => s.code === currentQuizCode);
+        if (codeObj) quizDesc.textContent = codeObj.desc;
+      }
+    }
+
+    // initial render
+    renderCategories();
+
+    // search
+    searchInput.addEventListener('input', function() {
+      renderCategories(this.value);
+    });
+
+    // ----- QUIZ -----
+    function pickRandomCode() {
+      const filtered = statusCodes.filter(s => s.code >= 100 && s.code <= 511);
+      return filtered[Math.floor(Math.random() * filtered.length)];
+    }
+
+    function newQuizQuestion() {
+      const codeObj = pickRandomCode();
+      currentQuizCode = codeObj.code;
+      quizDesc.textContent = codeObj.desc;
+      quizGuess.value = '';
+      quizFeedback.textContent = '';
+      quizFeedback.style.color = '#e2e8f0';
+    }
+
+    quizToggle.addEventListener('click', function() {
+      quizActive = !quizActive;
+      quizArea.classList.toggle('visible', quizActive);
+      this.classList.toggle('active', quizActive);
+      if (quizActive) {
+        newQuizQuestion();
+      } else {
+        quizDesc.textContent = 'Click "New question" to start';
+        quizFeedback.textContent = '';
+        currentQuizCode = null;
+      }
+    });
+
+    quizNext.addEventListener('click', function() {
+      if (!quizActive) return;
+      newQuizQuestion();
+    });
+
+    quizSubmit.addEventListener('click', function() {
+      if (!quizActive || !currentQuizCode) return;
+      const guess = parseInt(quizGuess.value, 10);
+      if (isNaN(guess) || guess < 100 || guess > 511) {
+        quizFeedback.textContent = '⚠️ Enter a code 100–511';
+        quizFeedback.style.color = '#fbbf24';
+        return;
+      }
+      if (guess === currentQuizCode) {
+        quizFeedback.textContent = '✅ Correct!';
+        quizFeedback.style.color = '#4ade80';
+      } else {
+        quizFeedback.textContent = `❌ Wrong. Answer: ${currentQuizCode}`;
+        quizFeedback.style.color = '#f87171';
+      }
+    });
+
+    // allow enter key in quiz guess
+    quizGuess.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') quizSubmit.click();
+    });
+
+    // footer year
+    document.querySelector('footer').textContent = `© 2025 kappafy.com`;
+
+    // ensure all codes present (we have 100-511)
+    console.log('Total codes loaded:', statusCodes.length);
+  })();
+</script>
+</body>
+</html>

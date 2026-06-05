@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>API Retry Exponential Backoff Calculator · kappafy.com</title>
+  <meta name="description" content="Interactive retry strategy planner: compute exponential backoff with jitter, visualize timelines, compare strategies, get code snippets. Dark theme,...">
+  <meta name="keywords" content="exponential backoff, retry calculator, jitter, API retry, thundering herd, kappafy">
+  <link rel="canonical" href="https://kappafy.com/tools/api-retry-exponential-backoff-calculator">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "API Retry Exponential Backoff Calculator",
+        "url": "https://kappafy.com/tools/api-retry-exponential-backoff-calculator",
+        "applicationCategory": "Developer tool",
+        "operatingSystem": "All",
+        "browserRequirements": "JavaScript enabled"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What jitter strategy prevents thundering herd best?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Full jitter (random between 0 and cap) spreads retries uniformly, reducing collision. Decorrelated jitter also helps but may cause longer tails."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is expected wait calculated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Expected wait = sum over attempts of (delay_n * probability of reaching attempt n). Probability of reaching n = error_rate^(n-1)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the recommended jitter for high contention?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Full jitter is recommended for high contention because it randomizes the retry window, minimizing thundering herd. Equal jitter is a compromise."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://kappafy.com" },
+          { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://kappafy.com/tools" },
+          { "@type": "ListItem", "position": 3, "name": "API Retry Exponential Backoff Calculator", "item": "https://kappafy.com/tools/api-retry-exponential-backoff-calculator" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f0f1a;
+      color: #e0e0f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      padding: 1rem;
+      line-height: 1.5;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1, h2, h3 { color: #c084fc; letter-spacing: -0.01em; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    h1 small { font-size: 1rem; font-weight: 400; color: #a78bfa; opacity: 0.8; }
+    .subhead { color: #a5b4fc; margin-bottom: 1.5rem; border-left: 4px solid #a855f7; padding-left: 1rem; }
+    .card {
+      background: #1a1a2e;
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      border: 1px solid #2d2d4a;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 500; color: #b8c0ff; margin-bottom: 0.3rem; }
+    input, select {
+      background: #0f0f1a;
+      border: 1px solid #3b3b5c;
+      color: #f0f0ff;
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.75rem;
+      width: 100%;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+    input:focus, select:focus { outline: 2px solid #a855f7; border-color: transparent; }
+    .param-group { margin-bottom: 0.8rem; }
+    .stat-badge {
+      background: #2a1f3f;
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      display: inline-block;
+      font-weight: 600;
+      color: #d8b4fe;
+      border: 1px solid #6b21a8;
+    }
+    .table-wrap { overflow-x: auto; margin: 1rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { background: #2a1f3f; color: #c084fc; padding: 0.6rem 0.4rem; text-align: center; border-bottom: 2px solid #a855f7; }
+    td { padding: 0.5rem 0.4rem; text-align: center; border-bottom: 1px solid #2d2d4a; }
+    tr:hover td { background: #1f1f3a; }
+    .bar-container { display: flex; align-items: center; gap: 2px; height: 60px; width: 100%; overflow-x: auto; padding: 0.2rem 0; }
+    .bar-segment { min-width: 6px; height: 100%; border-radius: 4px; position: relative; transition: 0.1s; }
+    .bar-segment:hover { opacity: 0.7; transform: scaleY(1.1); }
+    .scatter-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin: 0 1px; }
+    .flex-chart { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px; min-height: 70px; }
+    .code-block {
+      background: #0b0b1a;
+      padding: 1rem;
+      border-radius: 1rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid #3b3b5c;
+      color: #d4d4f0;
+      margin-top: 0.5rem;
+    }
+    .recommend { background: #1e1a30; border-left: 6px solid #a855f7; padding: 1rem; border-radius: 1rem; }
+    .footer { text-align: center; margin-top: 3rem; padding: 1.5rem 0 0.5rem; color: #7c7caa; border-top: 1px solid #2a2a4a; }
+    .btn-copy { background: #2a1f3f; border: none; color: #d8b4fe; padding: 0.2rem 0.8rem; border-radius: 2rem; cursor: pointer; float: right; }
+    .btn-copy:hover { background: #a855f7; color: #0f0f1a; }
+    @media (max-width: 800px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      h1 { font-size: 1.8rem; }
+    }
+    .purple-accent { color: #a855f7; }
+    .jitter-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin: 0.5rem 0; }
+    .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; }
+    .inline-svg { display: inline-block; width: 12px; height: 12px; border-radius: 2px; }
+  </style>
+
+<meta property="og:title" content="API Retry Exponential Backoff Calculator · kappafy.com">
+<meta property="og:description" content="Interactive retry strategy planner: compute exponential backoff with jitter, visualize timelines, compare strategies, get code snippets. Dark theme,...">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kappafy.com/tools/api-retry-exponential-backoff-calculator">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⚡ API Retry Exponential Backoff <small>kappafy.com</small></h1>
+    <div class="subhead">Interactive planner · jitter strategies · timeline · code snippets</div>
+  </header>
+
+  <!-- inputs -->
+  <section class="card">
+    <div class="grid-4">
+      <div class="param-group"><label>Base delay (ms) 50–5000</label><input type="number" id="baseDelay" min="50" max="5000" value="200" step="10"></div>
+      <div class="param-group"><label>Multiplier 1.5–4.0</label><input type="number" id="multiplier" min="1.5" max="4.0" value="2.0" step="0.1"></div>
+      <div class="param-group"><label>Max delay (ms) 1000–60000</label><input type="number" id="maxDelay" min="1000" max="60000" value="8000" step="100"></div>
+      <div class="param-group"><label>Max retries 1–20</label><input type="number" id="maxRetries" min="1" max="20" value="5" step="1"></div>
+    </div>
+    <div class="grid-3">
+      <div class="param-group"><label>Jitter type</label><select id="jitterType"><option value="none">None</option><option value="full" selected>Full jitter</option><option value="equal">Equal jitter</option><option value="decorrelated">Decorrelated</option></select></div>
+      <div class="param-group"><label>Error rate % (0–100)</label><input type="number" id="errorRate" min="0" max="100" value="40" step="1"></div>
+      <div class="param-group" style="display: flex; align-items: flex-end;"><button id="recalcBtn" style="background:#a855f7; border:none; padding:0.7rem 2rem; border-radius:3rem; font-weight:700; color:#0f0f1a; width:100%; cursor:pointer; font-size:1rem;">⟳ Calculate</button></div>
+    </div>
+  </section>
+
+  <!-- stats row -->
+  <section class="grid-2" style="margin-bottom: 1.5rem;">
+    <div class="card"><span class="stat-badge">📊 Total max wait</span> <span id="totalMaxWait" style="font-size:1.8rem; font-weight:700; color:#c084fc;">0</span> ms</div>
+    <div class="card"><span class="stat-badge">🎯 Expected attempts</span> <span id="expectedAttempts" style="font-size:1.8rem; font-weight:700; color:#c084fc;">0</span> <span style="color:#a5b4fc;">| Expected wait</span> <span id="expectedWait" style="font-size:1.4rem; font-weight:600;">0</span> ms</div>
+  </section>
+
+  <!-- timeline + scatter -->
+  <section class="card">
+    <h2>📈 Retry timeline & jitter scatter</h2>
+    <div class="grid-2">
+      <div><label>Delay intervals (horizontal bars, width ∝ delay)</label><div id="timelineBars" class="bar-container" style="background:#12121f; border-radius:12px; padding:8px 4px;"></div></div>
+      <div><label>Jitter distribution (colored dots)</label><div id="scatterContainer" class="flex-chart" style="background:#12121f; border-radius:12px; padding:8px; min-height:70px;"></div></div>
+    </div>
+    <div class="jitter-legend"><span class="legend-item"><span class="inline-svg" style="background:#a855f7;"></span> None</span><span class="legend-item"><span class="inline-svg" style="background:#f97316;"></span> Full</span><span class="legend-item"><span class="inline-svg" style="background:#22d3ee;"></span> Equal</span><span class="legend-item"><span class="inline-svg" style="background:#a3e635;"></span> Decorrelated</span></div>
+  </section>
+
+  <!-- table + comparison -->
+  <section class="grid-2">
+    <div class="card">
+      <h3>📋 Retry table</h3>
+      <div class="table-wrap" id="retryTableWrap"></div>
+    </div>
+    <div class="card">
+      <h3>⚖️ Jitter comparison (thundering herd)</h3>
+      <div id="comparisonChart" style="background:#12121f; border-radius:12px; padding:0.8rem; min-height:120px;"></div>
+      <p style="font-size:0.8rem; margin-top:0.5rem; color:#b8c0ff;">Overlap of delay ranges: wider spread = less herd collision.</p>
+    </div>
+  </section>
+
+  <!-- recommendation + code -->
+  <section class="grid-2">
+    <div class="card recommend">
+      <h3>💡 Recommendation</h3>
+      <div id="recommendationText"><p>Full jitter recommended for high contention; Equal jitter for mixed workloads; Decorrelated for long tails.</p></div>
+    </div>
+    <div class="card">
+      <h3>📎 Code snippets</h3>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;"><button class="btn-copy" data-target="pythonSnippet">📋 Python</button><button class="btn-copy" data-target="nodeSnippet">📋 Node.js</button></div>
+      <div id="pythonSnippet" class="code-block"></div>
+      <div id="nodeSnippet" class="code-block"></div>
+    </div>
+  </section>
+
+  <footer class="footer">© 2025 kappafy.com</footer>
+</div>
+
+<script>
+  (function() {
+    // DOM refs
+    const baseDelayInp = document.getElementById('baseDelay');
+    const multiplierInp = document.getElementById('multiplier');
+    const maxDelayInp = document.getElementById('maxDelay');
+    const maxRetriesInp = document.getElementById('maxRetries');
+    const jitterSelect = document.getElementById('jitterType');
+    const errorRateInp = document.getElementById('errorRate');
+    const recalcBtn = document.getElementById('recalcBtn');
+
+    const totalMaxWaitSpan = document.getElementById('totalMaxWait');
+    const expectedAttemptsSpan = document.getElementById('expectedAttempts');
+    const expectedWaitSpan = document.getElementById('expectedWait');
+    const timelineBars = document.getElementById('timelineBars');
+    const scatterContainer = document.getElementById('scatterContainer');
+    const retryTableWrap = document.getElementById('retryTableWrap');
+    const comparisonChart = document.getElementById('comparisonChart');
+    const recommendationText = document.getElementById('recommendationText');
+    const pythonSnippetDiv = document.getElementById('pythonSnippet');
+    const nodeSnippetDiv = document.getElementById('nodeSnippet');
+
+    // helpers
+    function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+    function computeAttempts(base, mult, maxDelay, maxRetries, jitterType, errorRate) {
+      const attempts = [];
+      let cumTime = 0;
+      for (let n = 0; n <= maxRetries; n++) {
+        const cap = Math.min(maxDelay, base * Math.pow(mult, n));
+        let delay = cap;
+        let jitterMin = delay, jitterMax = delay;
+        // jitter
+        if (jitterType === 'full') {
+          const r = Math.random() * cap;
+          delay = r;
+          jitterMin = 0; jitterMax = cap;
+        } else if (jitterType === 'equal') {
+          const half = cap / 2;
+          const r = Math.random() * half;
+          delay = half + r;
+          jitterMin = half; jitterMax = cap;
+        } else if (jitterType === 'decorrelated') {
+          if (n === 0) delay = base;
+          else {
+            const prev = attempts[n-1].delay;
+            const low = base, high = prev * 3;
+            const r = low + Math.random() * (high - low);
+            delay = Math.min(maxDelay, Math.max(base, r));
+          }
+          jitterMin = base; jitterMax = Math.min(maxDelay, (n===0?base:attempts[n-1].delay*3));
+        } else { // none
+          delay = cap;
+          jitterMin = cap; jitterMax = cap;
+        }
+        delay = Math.round(delay);
+        cumTime += delay;
+        const pSuccess = 1 - Math.pow(errorRate/100, n+1);
+        attempts.push({ attempt: n+1, cap: Math.round(cap), delay, jitterMin: Math.round(jitterMin), jitterMax: Math.round(jitterMax), cumTime, pSuccess: Math.min(1, Math.max(0, pSuccess)) });
+      }
+      return attempts;
+    }
+
+    function computeExpected(attempts, errorRate) {
+      const e = errorRate / 100;
+      let expectedAttempts = 0;
+      for (let n = 1; n <= attempts.length; n++) {
+        expectedAttempts += n * (1-e) * Math.pow(e, n-1);
+      }
+      let expectedWait = 0;
+      for (let i = 0; i < attempts.length; i++) {
+        const probReach = Math.pow(e, i); // probability of reaching attempt i+1
+        expectedWait += attempts[i].delay * probReach;
+      }
+      return { expectedAttempts: Math.round(expectedAttempts * 1000)/1000, expectedWait: Math.round(expectedWait) };
+    }
+
+    function renderAll() {
+      const base = clamp(parseFloat(baseDelayInp.value) || 200, 50, 5000);
+      const mult = clamp(parseFloat(multiplierInp.value) || 2.0, 1.5, 4.0);
+      const maxD = clamp(parseInt(maxDelayInp.value) || 8000, 1000, 60000);
+      const maxR = clamp(parseInt(maxRetriesInp.value) || 5, 1, 20);
+      const jitter = jitterSelect.value;
+      const err = clamp(parseFloat(errorRateInp.value) || 40, 0, 100);
+
+      const attempts = computeAttempts(base, mult, maxD, maxR, jitter, err);
+      const totalMax = attempts.reduce((s, a) => s + a.delay, 0);
+      const exp = computeExpected(attempts, err);
+
+      totalMaxWaitSpan.textContent = totalMax;
+      expectedAttemptsSpan.textContent = exp.expectedAttempts;
+      expectedWaitSpan.textContent = exp.expectedWait;
+
+      // timeline bars
+      const maxDelayVal = Math.max(...attempts.map(a => a.delay), 1);
+      timelineBars.innerHTML = attempts.map((a, i) => {
+        const pct = (a.delay / maxDelayVal) * 100;
+        const color = a.delay > 0 ? '#a855f7' : '#555';
+        return `<div class="bar-segment" style="width:${Math.max(4, pct)}px; background:${color};" title="Attempt ${a.attempt}: ${a.delay}ms"></div>`;
+      }).join('');
+
+      // scatter (jitter range)
+      scatterContainer.innerHTML = attempts.map((a, i) => {
+        const color = jitter === 'none' ? '#a855f7' : jitter === 'full' ? '#f97316' : jitter === 'equal' ? '#22d3ee' : '#a3e635';
+        const r = a.jitterMax - a.jitterMin;
+        const dots = Math.min(5, Math.max(1, Math.round(r / 50)));
+        let dotsHtml = '';
+        for (let d=0; d<dots; d++) {
+          const randDelay = a.jitterMin + Math.random() * (a.jitterMax - a.jitterMin);
+          dotsHtml += `<span class="scatter-dot" style="background:${color}; opacity:0.8;" title="~${Math.round(randDelay)}ms"></span>`;
+        }
+        return dotsHtml;
+      }).join('');
+
+      // table
+      let tableHtml = `<table><thead><tr><th>#</th><th>Delay (ms)</th><th>Jitter range</th><th>Cumulative</th><th>P(success)</th></tr></thead><tbody>`;
+      attempts.forEach(a => {
+        tableHtml += `<tr><td>${a.attempt}</td><td>${a.delay}</td><td>${a.jitterMin}–${a.jitterMax}</td><td>${a.cumTime}</td><td>${(a.pSuccess*100).toFixed(1)}%</td></tr>`;
+      });
+      tableHtml += '</tbody></table>';
+      retryTableWrap.innerHTML = tableHtml;
+
+      // comparison chart: compute all 4 jitter strategies for same params
+      const jitters = ['none','full','equal','decorrelated'];
+      const colors = ['#a855f7','#f97316','#22d3ee','#a3e635'];
+      const allData = jitters.map(j => {
+        return computeAttempts(base, mult, maxD, maxR, j, err).map(a => a.delay);
+      });
+      let compHtml = '<div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end;">';
+      const maxAll = Math.max(...allData.flat(), 1);
+      allData.forEach((delays, idx) => {
+        const col = colors[idx];
+        const label = jitters[idx];
+        compHtml += `<div style="flex:1; min-width:60px;"><div style="text-align:center; font-size:0.7rem; color:#b8c0ff;">${label}</div>`;
+        delays.forEach((d, i) => {
+          const h = (d / maxAll) * 60;
+          compHtml += `<div style="background:${col}; width:100%; height:${Math.max(4, h)}px; border-radius:3px; margin-bottom:2px; opacity:0.8;" title="attempt ${i+1}: ${d}ms"></div>`;
+        });
+        compHtml += '</div>';
+      });
+      compHtml += '</div>';
+      comparisonChart.innerHTML = compHtml;
+
+      // recommendation
+      let rec = '';
+      if (err > 50) rec = '🔴 High error rate: use <strong>Full jitter</strong> to reduce thundering herd.';
+      else if (err > 20) rec = '🟡 Moderate contention: <strong>Equal jitter</strong> balances spread and delay.';
+      else rec = '🟢 Low error: <strong>Decorrelated jitter</strong> or Full jitter for safety.';
+      if (jitter === 'full') rec += ' (current: Full jitter ✓)';
+      else if (jitter === 'equal') rec += ' (current: Equal jitter)';
+      else if (jitter === 'decorrelated') rec += ' (current: Decorrelated)';
+      else rec += ' (current: None – not recommended for production)';
+      recommendationText.innerHTML = `<p>${rec}</p>`;
+
+      // code snippets
+      const pyCode = `import time, random
+
+def retry_with_backoff(base=${base}, mult=${mult}, max_delay=${maxD}, max_retries=${maxR}, jitter="${jitter}"):
+    for n in range(max_retries+1):
+        cap = min(max_delay, base * mult**n)
+        if jitter == "full":
+            delay = random.random() * cap
+        elif jitter == "equal":
+            delay = cap/2 + random.random() * cap/2
+        elif jitter == "decorrelated":
+            if n == 0: delay = base
+            else: delay = random.uniform(base, min(max_delay, prev*3))
+        else:
+            delay = cap
+        prev = delay
+        time.sleep(delay/1000)
+        # make request...
+`;
+      const nodeCode = `const axiosRetry = require('axios-retry');
+axiosRetry(axios, {
+  retries: ${maxR},
+  retryDelay: (retryCount) => {
+    const base = ${base}, mult = ${mult}, maxDelay = ${maxD};
+    let cap = Math.min(maxDelay, base * Math.pow(mult, retryCount));
+    let delay = cap;
+    if ("${jitter}" === "full") delay = Math.random() * cap;
+    else if ("${jitter}" === "equal") delay = cap/2 + Math.random() * cap/2;
+    else if ("${jitter}" === "decorrelated") delay = base + Math.random() * (cap - base);
+    return Math.round(delay);
+  }
+});`;
+      pythonSnippetDiv.textContent = pyCode;
+      nodeSnippetDiv.textContent = nodeCode;
+    }
+
+    // copy buttons
+    document.querySelectorAll('.btn-copy').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        const targetId = this.dataset.target;
+        const el = document.getElementById(targetId);
+        if (el) {
+          navigator.clipboard.writeText(el.textContent).then(() => {
+            const orig = this.textContent;
+            this.textContent = '✓ Copied';
+            setTimeout(() => this.textContent = orig, 1500);
+          }).catch(() => {});
+        }
+      });
+    });
+
+    recalcBtn.addEventListener('click', renderAll);
+    // also recalc on any input change (debounced)
+    let timer;
+    document.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(renderAll, 200);
+      });
+    });
+
+    // initial render
+    renderAll();
+  })();
+</script>
+</body>
+</html>

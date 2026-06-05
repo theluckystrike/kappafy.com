@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>API Pagination Performance Calculator | kappafy.com</title>
+  <meta name="description" content="Compare Offset, Cursor, Keyset, Seek pagination strategies. Compute time, cost, and get recommendations for deep pagination.">
+  <link rel="canonical" href="https://kappafy.com/tools/api-pagination-performance-calculator">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="API Pagination Performance Calculator">
+  <meta property="og:description" content="Interactive comparison of pagination strategies with cost and time analysis.">
+  <meta property="og:url" content="https://kappafy.com/tools/api-pagination-performance-calculator">
+  <meta name="theme-color" content="#0f0f1a">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #0f0f1a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding: 1.5rem 1rem;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 {
+      color: #c084fc;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .subhead {
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      border-left: 4px solid #a855f7;
+      padding-left: 1rem;
+      font-size: 1.1rem;
+    }
+    .card {
+      background: #1e1b2b;
+      border-radius: 24px;
+      padding: 1.8rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+      border: 1px solid #2d2a3e;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    .input-group {
+      margin-bottom: 1.2rem;
+    }
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      color: #d8b4fe;
+      font-size: 0.9rem;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #a855f7;
+      background: #2d2a3e;
+      height: 6px;
+      border-radius: 10px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #a855f7;
+      cursor: pointer;
+      box-shadow: 0 0 0 4px #1e1b2b;
+    }
+    .range-value {
+      background: #2d2a3e;
+      padding: 0.2rem 0.8rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #d8b4fe;
+      display: inline-block;
+      margin-top: 0.2rem;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    .stat-item {
+      background: #151225;
+      border-radius: 20px;
+      padding: 1rem 1rem;
+      border: 1px solid #3b3550;
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #a78bfa;
+    }
+    .stat-number {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: #e9d5ff;
+      line-height: 1.2;
+    }
+    .stat-sub {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .badge {
+      background: #2e1f4a;
+      color: #c084fc;
+      padding: 0.2rem 0.8rem;
+      border-radius: 30px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    th {
+      text-align: left;
+      color: #c084fc;
+      font-weight: 500;
+      padding: 0.6rem 0.2rem;
+      border-bottom: 1px solid #3b3550;
+    }
+    td {
+      padding: 0.5rem 0.2rem;
+      border-bottom: 1px solid #2a2740;
+    }
+    .highlight {
+      color: #f0e6ff;
+      font-weight: 500;
+    }
+    .accent {
+      color: #a855f7;
+    }
+    .code-block {
+      background: #12101e;
+      padding: 1rem 1.2rem;
+      border-radius: 18px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid #3b3550;
+      color: #d4d0ed;
+      margin: 1rem 0;
+    }
+    .matrix {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+    }
+    .matrix-item {
+      background: #151225;
+      border-radius: 16px;
+      padding: 1rem;
+      border-left: 4px solid #a855f7;
+    }
+    .matrix-item h4 {
+      color: #d8b4fe;
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    .matrix-item p {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: #64748b;
+      border-top: 1px solid #2d2a3e;
+      padding-top: 2rem;
+      font-size: 0.9rem;
+    }
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 300px;
+      background: #12101e;
+      border-radius: 20px;
+      padding: 0.5rem;
+      margin: 1rem 0;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 700px) {
+      .grid-2, .grid-3, .matrix {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 1.8rem;
+      }
+      .card {
+        padding: 1.2rem 1rem;
+      }
+    }
+    .inline-code {
+      background: #2a2740;
+      padding: 0.1rem 0.4rem;
+      border-radius: 8px;
+      font-family: monospace;
+      color: #e9d5ff;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- breadcrumb (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "kappafy.com", "item": "https://kappafy.com" },
+      { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://kappafy.com/tools" },
+      { "@type": "ListItem", "position": 3, "name": "API Pagination Performance Calculator", "item": "https://kappafy.com/tools/api-pagination-performance-calculator" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "API Pagination Performance Calculator",
+    "url": "https://kappafy.com/tools/api-pagination-performance-calculator",
+    "description": "Compare Offset, Cursor, Keyset, Seek pagination strategies with time, cost, and deep pagination analysis.",
+    "applicationCategory": "Developer tool",
+    "operatingSystem": "All",
+    "browserRequirements": "JavaScript"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "Why does offset pagination slow down on deep pages?", "acceptedAnswer": { "@type": "Answer", "text": "Offset pagination requires the database to scan and skip O(N*page_size) rows, causing linear degradation." } },
+      { "@type": "Question", "name": "What is the main advantage of cursor-based pagination?", "acceptedAnswer": { "@type": "Answer", "text": "Cursor pagination uses a WHERE clause on an indexed column, achieving O(1) per page regardless of depth." } },
+      { "@type": "Question", "name": "When should I use keyset pagination over offset?", "acceptedAnswer": { "@type": "Answer", "text": "Keyset (seek) is ideal for large datasets with sequential access or real-time feeds where offset becomes expensive." } }
+    ]
+  }
+  </script>
+
+  <h1>⚡ API Pagination Performance</h1>
+  <div class="subhead">Interactive deep-dive: Offset vs Cursor vs Keyset vs Seek</div>
+
+  <!-- inputs -->
+  <div class="card">
+    <div class="grid-2">
+      <div>
+        <div class="input-group">
+          <label>📦 Total records <span id="totalRecLabel" class="badge">100K</span></label>
+          <input type="range" id="totalRecords" min="1000" max="1000000000" value="100000" step="1000">
+          <div class="range-value" id="totalRecValue">100,000</div>
+        </div>
+        <div class="input-group">
+          <label>📄 Page size <span id="pageSizeLabel" class="badge">50</span></label>
+          <input type="range" id="pageSize" min="10" max="1000" value="50" step="1">
+          <div class="range-value" id="pageSizeValue">50</div>
+        </div>
+        <div class="input-group">
+          <label>⏱ API response time (ms) <span id="apiMsLabel" class="badge">30</span></label>
+          <input type="range" id="apiMs" min="1" max="500" value="30" step="1">
+          <div class="range-value" id="apiMsValue">30 ms</div>
+        </div>
+      </div>
+      <div>
+        <div class="input-group">
+          <label>🧠 Client processing per page (ms) <span id="clientMsLabel" class="badge">10</span></label>
+          <input type="range" id="clientMs" min="0" max="200" value="10" step="1">
+          <div class="range-value" id="clientMsValue">10 ms</div>
+        </div>
+        <div class="input-group">
+          <label>🎯 Target page N (deep pagination) <span id="targetPageLabel" class="badge">50</span></label>
+          <input type="range" id="targetPage" min="1" max="10000" value="50" step="1">
+          <div class="range-value" id="targetPageValue">50</div>
+        </div>
+        <div style="margin-top: 1rem; background: #151225; border-radius: 20px; padding: 0.8rem 1rem;">
+          <span class="stat-label">⚙️ DB read cost: $0.10 / million reads</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- results: time + cost -->
+  <div class="card">
+    <h2>📊 Performance & cost comparison</h2>
+    <div class="stat-grid" id="statsGrid">
+      <div class="stat-item"><div class="stat-label">🔁 Offset total time</div><div class="stat-number" id="offsetTotalTime">-</div><div class="stat-sub">all pages</div></div>
+      <div class="stat-item"><div class="stat-label">⏩ Cursor total time</div><div class="stat-number" id="cursorTotalTime">-</div><div class="stat-sub">all pages</div></div>
+      <div class="stat-item"><div class="stat-label">⏩ Keyset total time</div><div class="stat-number" id="keysetTotalTime">-</div><div class="stat-sub">all pages</div></div>
+      <div class="stat-item"><div class="stat-label">⏩ Seek total time</div><div class="stat-number" id="seekTotalTime">-</div><div class="stat-sub">all pages</div></div>
+    </div>
+    <div class="grid-2" style="margin-top: 0.5rem;">
+      <div>
+        <table>
+          <tr><th>Strategy</th><th>Time to page N</th><th>DB reads cost</th></tr>
+          <tr><td>Offset</td><td id="offsetDeepTime">-</td><td id="offsetCost">-</td></tr>
+          <tr><td>Cursor</td><td id="cursorDeepTime">-</td><td id="cursorCost">-</td></tr>
+          <tr><td>Keyset</td><td id="keysetDeepTime">-</td><td id="keysetCost">-</td></tr>
+          <tr><td>Seek</td><td id="seekDeepTime">-</td><td id="seekCost">-</td></tr>
+        </table>
+      </div>
+      <div>
+        <canvas id="perfChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- recommendation matrix + code -->
+  <div class="card">
+    <h2>🧠 Recommendation matrix</h2>
+    <div class="matrix">
+      <div class="matrix-item"><h4>📌 Small dataset + few pages</h4><p>✅ <strong>Offset</strong> is fine. Simplicity wins. Cursor adds complexity without benefit.</p></div>
+      <div class="matrix-item"><h4>📌 Large dataset + random access</h4><p>✅ <strong>Cursor / Keyset</strong>. Avoid offset deep pagination. Use indexed cursor.</p></div>
+      <div class="matrix-item"><h4>📌 Large dataset + sequential</h4><p>✅ <strong>Seek / Keyset</strong> optimal. Constant time per page, ideal for infinite scroll.</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📘 Implementation guide: Cursor pagination (SQL + REST)</h2>
+    <div class="grid-2">
+      <div>
+        <h3 style="font-size:1rem;">SQL (cursor-based)</h3>
+        <div class="code-block">
+-- Cursor: WHERE id > ? ORDER BY id LIMIT ?
+SELECT * FROM items 
+WHERE id > :last_seen_id 
+ORDER BY id ASC 
+LIMIT :page_size;
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:1rem;">REST API response format</h3>
+        <div class="code-block">
+{
+  "data": [ ... ],
+  "pagination": {
+    "cursor": "eyJpZCI6IDF9",
+    "has_more": true,
+    "next_cursor": "eyJpZCI6IDUwfQ=="
+  }
+}
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:1rem; background:#151225; border-radius:20px; padding:1rem;">
+      <p style="color:#cbd5e1;"><span class="accent">💡 Keyset/Seek</span> use same principle: <span class="inline-code">WHERE indexed_col &gt; value</span>. Offset degrades because of <span class="inline-code">OFFSET + LIMIT</span> scanning.</p>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 kappafy.com</div>
+</div>
+
+<script>
+  (function() {
+    const totalRecInput = document.getElementById('totalRecords');
+    const pageSizeInput = document.getElementById('pageSize');
+    const apiMsInput = document.getElementById('apiMs');
+    const clientMsInput = document.getElementById('clientMs');
+    const targetPageInput = document.getElementById('targetPage');
+
+    const totalRecValue = document.getElementById('totalRecValue');
+    const pageSizeValue = document.getElementById('pageSizeValue');
+    const apiMsValue = document.getElementById('apiMsValue');
+    const clientMsValue = document.getElementById('clientMsValue');
+    const targetPageValue = document.getElementById('targetPageValue');
+
+    const offsetTotalTime = document.getElementById('offsetTotalTime');
+    const cursorTotalTime = document.getElementById('cursorTotalTime');
+    const keysetTotalTime = document.getElementById('keysetTotalTime');
+    const seekTotalTime = document.getElementById('seekTotalTime');
+
+    const offsetDeepTime = document.getElementById('offsetDeepTime');
+    const cursorDeepTime = document.getElementById('cursorDeepTime');
+    const keysetDeepTime = document.getElementById('keysetDeepTime');
+    const seekDeepTime = document.getElementById('seekDeepTime');
+
+    const offsetCost = document.getElementById('offsetCost');
+    const cursorCost = document.getElementById('cursorCost');
+    const keysetCost = document.getElementById('keysetCost');
+    const seekCost = document.getElementById('seekCost');
+
+    const canvas = document.getElementById('perfChart');
+    const ctx = canvas.getContext('2d');
+
+    function formatNumber(num) {
+      if (num >= 1e9) return (num/1e9).toFixed(2)+'B';
+      if (num >= 1e6) return (num/1e6).toFixed(2)+'M';
+      if (num >= 1e3) return (num/1e3).toFixed(1)+'K';
+      return num.toFixed(0);
+    }
+
+    function formatMs(ms) {
+      if (ms >= 1000) return (ms/1000).toFixed(2)+'s';
+      return ms.toFixed(0)+'ms';
+    }
+
+    function formatCost(cost) {
+      return '$'+cost.toFixed(4);
+    }
+
+    function update() {
+      const total = parseInt(totalRecInput.value, 10);
+      const pageSize = parseInt(pageSizeInput.value, 10);
+      const apiMs = parseInt(apiMsInput.value, 10);
+      const clientMs = parseInt(clientMsInput.value, 10);
+      const targetN = parseInt(targetPageInput.value, 10);
+
+      totalRecValue.textContent = formatNumber(total);
+      pageSizeValue.textContent = pageSize;
+      apiMsValue.textContent = apiMs + ' ms';
+      clientMsValue.textContent = clientMs + ' ms';
+      targetPageValue.textContent = targetN;
+
+      const totalPages = Math.ceil(total / pageSize);
+      const clampedTarget = Math.min(targetN, totalPages);
+      const perRequestMs = apiMs + clientMs;
+
+      // total time all pages
+      const offsetTotal = totalPages * perRequestMs;
+      const cursorTotal = totalPages * perRequestMs;  // same time but db cost differs
+      const keysetTotal = totalPages * perRequestMs;
+      const seekTotal = totalPages * perRequestMs;
+
+      offsetTotalTime.textContent = formatMs(offsetTotal);
+      cursorTotalTime.textContent = formatMs(cursorTotal);
+      keysetTotalTime.textContent = formatMs(keysetTotal);
+      seekTotalTime.textContent = formatMs(seekTotal);
+
+      // deep page N time
+      // offset: N * perRequestMs (linear)
+      const offsetDeep = clampedTarget * perRequestMs;
+      // cursor/keyset/seek: constant per page (no extra db cost) = perRequestMs * 1? Actually each page still one request, but we show time to reach page N = N * perRequestMs? Wait: cursor still makes N requests, but db cost per request is O(1). The time per request is same api+client. So time to page N is also N * perRequestMs. But the difference is DB cost and scalability. The user expects "time to reach page N" same for all? Actually offset may have higher latency per request due to db scanning, but we model constant response time. The key is DB cost and degradation in real world. We'll show time as N * perRequestMs for all, but highlight offset degrades in db cost. We'll add note: "time per request assumed constant; real offset degrades due to DB load". But we can show theoretical time. For offset we keep same time. However we want to illustrate that offset degrades linearly in DB cost, not necessarily response time. We'll adjust: For offset, time per request may increase with N? We'll keep constant for simplicity but show DB reads cost. The chart will show constant lines? Let's differentiate: offset DB cost grows O(N*pageSize). We'll keep time equal but cost differs. For chart we can plot "estimated time including DB slowdown"? We'll keep it simple: time per request same, but we add a "degradation factor" for offset: we can model offset time per request as (apiMs + clientMs) * (1 + 0.1 * (N/totalPages))? That might be confusing. Instead we keep time equal and emphasize cost. However the prompt says "show how offset degrades linearly while cursor stays constant (canvas chart: time vs page_number)". So we need to simulate degradation. Let's model offset time per page = (apiMs + clientMs) * (1 + 0.05 * (pageIndex / 10))? Better: offset db cost grows, so we can assume response time grows linearly with page depth due to DB scanning. We'll set offset time per page = perRequestMs * (1 + (pageIndex * pageSize) / total * 2) but keep within reason. Let's implement: offset cumulative time = sum_{i=1}^{N} perRequestMs * (1 + (i-1)*pageSize / total * 1.5). Cursor constant = perRequestMs. That shows degradation.
+
+      // Let's compute cumulative times for chart and deep times
+      const perReq = perRequestMs;
+      let offsetCum = 0;
+      let cursorCum = 0;
+      let keysetCum = 0;
+      let seekCum = 0;
+      const maxPoints = Math.min(totalPages, 200);
+      const step = Math.max(1, Math.floor(totalPages / 200));
+      const points = [];
+      for (let i = 1; i <= totalPages; i += step) {
+        const pageIndex = i;
+        // offset degradation factor: grows with offset depth
+        const offsetFactor = 1 + ( (pageIndex-1) * pageSize ) / total * 2.0; // max ~3x
+        const offsetReqTime = perReq * Math.min(offsetFactor, 5); // cap
+        offsetCum += offsetReqTime;
+        cursorCum += perReq;
+        keysetCum += perReq;
+        seekCum += perReq;
+        if (i === clampedTarget || points.length === 0 || i === totalPages || (i >= clampedTarget && i - step < clampedTarget)) {
+          // store
+        }
+        points.push({page: i, offset: offsetCum, cursor: cursorCum, keyset: keysetCum, seek: seekCum});
+      }
+      // ensure target page point
+      // compute exact for target
+      let offsetDeepCum = 0, cursorDeepCum = 0, keysetDeepCum = 0, seekDeepCum = 0;
+      for (let i = 1; i <= clampedTarget; i++) {
+        const offsetFactor = 1 + ( (i-1) * pageSize ) / total * 2.0;
+        offsetDeepCum += perReq * Math.min(offsetFactor, 5);
+        cursorDeepCum += perReq;
+        keysetDeepCum += perReq;
+        seekDeepCum += perReq;
+      }
+      offsetDeepTime.textContent = formatMs(offsetDeepCum);
+      cursorDeepTime.textContent = formatMs(cursorDeepCum);
+      keysetDeepTime.textContent = formatMs(keysetDeepCum);
+      seekDeepTime.textContent = formatMs(seekDeepCum);
+
+      // DB reads cost: offset reads = totalPages * pageSize (cumulative) * cost per read
+      const costPerRead = 0.10 / 1_000_000;
+      const offsetReads = totalPages * pageSize; // total rows scanned for all pages (approx)
+      const cursorReads = totalPages * pageSize; // but cursor reads only pageSize per page, but we count actual rows returned: totalPages * pageSize
+      // Actually cursor reads exactly pageSize per page, same as offset? Offset scans more but we count actual rows fetched. For cost we count DB read operations: offset scans O(N*pageSize) rows, but we model as each page read costs pageSize reads. However offset also skips rows which cause extra reads. Let's approximate offset total rows scanned = (totalPages * (totalPages+1)/2) * pageSize? That's huge. Simpler: offset cumulative rows scanned = sum_{i=1}^{totalPages} (i*pageSize) = pageSize * totalPages*(totalPages+1)/2. That's the cost. Cursor/keyset: each page reads pageSize rows, total = totalPages * pageSize.
+      const offsetTotalRowsScanned = pageSize * totalPages * (totalPages + 1) / 2;
+      const cursorTotalRows = totalPages * pageSize;
+      const offsetCostVal = offsetTotalRowsScanned * costPerRead;
+      const cursorCostVal = cursorTotalRows * costPerRead;
+      const keysetCostVal = cursorCostVal; // same as cursor
+      const seekCostVal = cursorCostVal;
+
+      offsetCost.textContent = formatCost(offsetCostVal);
+      cursorCost.textContent = formatCost(cursorCostVal);
+      keysetCost.textContent = formatCost(keysetCostVal);
+      seekCost.textContent = formatCost(seekCostVal);
+
+      // draw chart
+      drawChart(points, clampedTarget, perReq, totalPages);
+    }
+
+    function drawChart(points, targetPage, perReq, totalPages) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!points.length) return;
+      const w = canvas.width, h = canvas.height;
+      const pad = {top: 20, bottom: 30, left: 45, right: 20};
+      const chartW = w - pad.left - pad.right;
+      const chartH = h - pad.top - pad.bottom;
+
+      // find max time
+      let maxTime = 0;
+      points.forEach(p => { maxTime = Math.max(maxTime, p.offset, p.cursor, p.keyset, p.seek); });
+      maxTime = Math.max(maxTime, 100);
+
+      const xScale = chartW / (points.length-1 || 1);
+      const yScale = chartH / (maxTime * 1.1);
+
+      // axes
+      ctx.strokeStyle = '#3b3550';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top + chartH);
+      ctx.lineTo(pad.left + chartW, pad.top + chartH);
+      ctx.stroke();
+
+      // grid lines
+      ctx.strokeStyle = '#2a2740';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + chartH * (i/5);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + chartW, y);
+        ctx.stroke();
+      }
+
+      // draw lines
+      const colors = { offset: '#f87171', cursor: '#a855f7', keyset: '#38bdf8', seek: '#4ade80' };
+      const drawLine = (key, color) => {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        points.forEach((p, idx) => {
+          const x = pad.left + idx * xScale;
+          const y = pad.top + chartH - (p[key] * yScale);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      };
+      drawLine('offset', colors.offset);
+      drawLine('cursor', colors.cursor);
+      drawLine('keyset', colors.keyset);
+      drawLine('seek', colors.seek);
+
+      // labels
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px system-ui';
+      ctx.fillText('Page', pad.left + chartW/2 - 15, h - 5);
+      ctx.fillText('Time (ms)', 5, pad.top + 10);
+      // legend
+      ctx.font = '9px system-ui';
+      const legend = [
+        {label:'Offset', color: colors.offset},
+        {label:'Cursor', color: colors.cursor},
+        {label:'Keyset', color: colors.keyset},
+        {label:'Seek', color: colors.seek}
+      ];
+      let lx = pad.left + 10, ly = pad.top + 12;
+      legend.forEach(l => {
+        ctx.fillStyle = l.color;
+        ctx.fillRect(lx, ly-6, 12, 3);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(l.label, lx+16, ly-3);
+        lx += 60;
+      });
+    }
+
+    // attach events
+    [totalRecInput, pageSizeInput, apiMsInput, clientMsInput, targetPageInput].forEach(el => {
+      el.addEventListener('input', update);
+    });
+    update();
+  })();
+</script>
+</body>
+</html>

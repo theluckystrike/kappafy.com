@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>OAuth Token Expiry Calculator · kappafy.com</title>
+  <meta name="description" content="Plan OAuth 2.0 token lifecycles: compute effective lifetime, refresh overhead, rotation chain depth, and security tradeoffs. Interactive SVG timeline &...">
+  <meta name="keywords" content="OAuth, token expiry, refresh token, access token TTL, token rotation, security, calculator">
+  <link rel="canonical" href="https://kappafy.com/tools/oauth-token-expiry-calculator">
+  <meta name="robots" content="index, follow">
+  <!-- JSON-LD Schema: WebApplication + FAQPage + BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "OAuth Token Expiry Calculator",
+        "url": "https://kappafy.com/tools/oauth-token-expiry-calculator",
+        "description": "Interactive tool for OAuth 2.0 token lifecycle planning. Compute effective lifetime, refresh overhead, rotation chain, and security tradeoffs.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "JavaScript enabled"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the optimal access token TTL for high RPS?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For high requests per second, longer TTL (e.g., 3600s) reduces refresh overhead, but increases exposure window. The calculator recommends a balanced TTL based on your RPS and buffer."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does token rotation affect refresh chain depth?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "With rotation enabled, each refresh invalidates the previous token. The maximum chain depth equals refresh_TTL / access_TTL, creating a rolling window of valid tokens."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is refresh buffer important?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Buffer prevents expiry during network latency. Effective lifetime = TTL - buffer. A buffer of 60s is typical, but adjust based on your network conditions."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "kappafy.com", "item": "https://kappafy.com" },
+          { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://kappafy.com/tools" },
+          { "@type": "ListItem", "position": 3, "name": "OAuth Token Expiry Calculator", "item": "https://kappafy.com/tools/oauth-token-expiry-calculator" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #0f0f1a;
+      color: #e0e0f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding: 1.5rem 1rem;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 {
+      color: #c084fc;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .subhead {
+      color: #a1a1c0;
+      margin-bottom: 2rem;
+      border-left: 4px solid #a855f7;
+      padding-left: 1rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    .card {
+      background: #1a1a2e;
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      border: 1px solid #2a2a44;
+      transition: border 0.2s;
+    }
+    .card:hover {
+      border-color: #a855f7;
+    }
+    .card-full {
+      grid-column: 1 / -1;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #b0b0d0;
+      margin-top: 0.75rem;
+      margin-bottom: 0.2rem;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #a855f7;
+      background: #2a2a44;
+      height: 6px;
+      border-radius: 4px;
+    }
+    .range-value {
+      font-weight: 600;
+      color: #c084fc;
+      background: #2a2a44;
+      padding: 0.1rem 0.8rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      display: inline-block;
+      margin-left: 0.5rem;
+    }
+    .param-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .param-row input {
+      flex: 2;
+      min-width: 140px;
+    }
+    .param-row .range-value {
+      flex: 0 0 auto;
+    }
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 0.75rem 0 0.2rem;
+    }
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: #3a3a5a;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.active {
+      background: #a855f7;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle.active::after {
+      transform: translateX(22px);
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .stat-item {
+      background: #12121f;
+      padding: 0.75rem 0.5rem;
+      border-radius: 1rem;
+      text-align: center;
+    }
+    .stat-item .num {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #c084fc;
+    }
+    .stat-item .desc {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #8888aa;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #2a2a44;
+      color: #c084fc;
+      font-weight: 500;
+      padding: 0.5rem;
+    }
+    td, th {
+      border: 1px solid #2f2f4a;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    .accent {
+      color: #a855f7;
+      font-weight: 500;
+    }
+    .code-block {
+      background: #0c0c18;
+      border-radius: 1rem;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid #2a2a44;
+      color: #d0d0f0;
+    }
+    .timeline-svg {
+      width: 100%;
+      height: auto;
+      background: #0c0c18;
+      border-radius: 1rem;
+      margin: 0.5rem 0;
+    }
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 200px;
+      background: #0c0c18;
+      border-radius: 1rem;
+      display: block;
+      margin: 0.5rem 0;
+    }
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: #6a6a8a;
+      font-size: 0.85rem;
+      border-top: 1px solid #2a2a44;
+      padding-top: 1.5rem;
+    }
+    .rec-box {
+      background: #1e1e34;
+      border-radius: 1rem;
+      padding: 1rem 1.2rem;
+      border-left: 6px solid #a855f7;
+    }
+    @media (max-width: 700px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      h1 { font-size: 1.6rem; }
+    }
+  </style>
+
+<meta property="og:title" content="OAuth Token Expiry Calculator · kappafy.com">
+<meta property="og:description" content="Plan OAuth 2.0 token lifecycles: compute effective lifetime, refresh overhead, rotation chain depth, and security tradeoffs. Interactive SVG timeline &...">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kappafy.com/tools/oauth-token-expiry-calculator">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔐 OAuth Token Expiry Calculator</h1>
+    <div class="subhead">Plan token lifecycles · refresh overhead · rotation depth · security tradeoff</div>
+  </header>
+
+  <!-- main input card -->
+  <div class="card card-full">
+    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+      <div style="flex: 2; min-width: 240px;">
+        <div class="param-row">
+          <label>Access token TTL (s) <span id="ttlVal" class="range-value">3600</span></label>
+          <input type="range" id="ttl" min="300" max="86400" value="3600" step="1">
+        </div>
+        <div class="param-row">
+          <label>Refresh token TTL (days) <span id="rttlVal" class="range-value">30</span></label>
+          <input type="range" id="rttl" min="1" max="365" value="30" step="1">
+        </div>
+        <div class="param-row">
+          <label>Requests per second (RPS) <span id="rpsVal" class="range-value">50</span></label>
+          <input type="range" id="rps" min="1" max="10000" value="50" step="1">
+        </div>
+        <div class="param-row">
+          <label>Refresh buffer (s) <span id="bufVal" class="range-value">60</span></label>
+          <input type="range" id="buffer" min="0" max="600" value="60" step="1">
+        </div>
+        <div class="param-row">
+          <label>Network latency (ms) <span id="latVal" class="range-value">120</span></label>
+          <input type="range" id="latency" min="0" max="2000" value="120" step="1">
+        </div>
+        <div class="toggle-wrap">
+          <span style="font-weight:500;">Token rotation</span>
+          <div id="rotationToggle" class="toggle active"></div>
+          <span id="rotStatus" style="color:#a855f7;">ON</span>
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 160px; background: #12121f; border-radius: 1rem; padding: 0.8rem;">
+        <div class="stat-item"><span class="num" id="effLifetime">3540</span><div class="desc">effective lifetime (s)</div></div>
+        <div class="stat-item"><span class="num" id="refreshFreq">0.000282</span><div class="desc">refresh freq (Hz)</div></div>
+        <div class="stat-item"><span class="num" id="refreshPerDay">24.4</span><div class="desc">refreshes / day</div></div>
+        <div class="stat-item"><span class="num" id="apiPerRefresh">177k</span><div class="desc">API req / refresh</div></div>
+        <div class="stat-item"><span class="num" id="overheadPct">0.00057%</span><div class="desc">refresh overhead %</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline + Table -->
+  <div class="grid-2">
+    <div class="card">
+      <h3>⏱ Token lifecycle timeline</h3>
+      <svg id="timelineSvg" class="timeline-svg" viewBox="0 0 600 80" preserveAspectRatio="xMidYMid meet"></svg>
+      <div style="font-size:0.7rem; color:#8888aa;">▬ access token window &nbsp; ▾ refresh event</div>
+    </div>
+    <div class="card">
+      <h3>📊 TTL vs overhead & ratio</h3>
+      <div style="overflow-x:auto;">
+        <table id="overheadTable">
+          <thead><tr><th>TTL (s)</th><th>Overhead %</th><th>API:refresh ratio</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendation + Security canvas + Code -->
+  <div class="grid-2">
+    <div class="card">
+      <h3>✅ Recommendation</h3>
+      <div id="recommendationBox" class="rec-box">Adjust parameters to see optimal TTL.</div>
+      <div style="margin-top:1rem;">
+        <h3>🔄 Token rotation chain</h3>
+        <div id="rotationInfo">Rotation enabled · max chain depth: 720</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>⚖️ Security tradeoff</h3>
+      <canvas id="securityCanvas" width="400" height="150"></canvas>
+      <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#8888aa;">
+        <span>shorter TTL (secure)</span>
+        <span>longer TTL (efficient)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Python code -->
+  <div class="card card-full">
+    <h3>🐍 Python token refresh (threading.Timer)</h3>
+    <div class="code-block" id="pythonCode"># code generated dynamically</div>
+  </div>
+
+  <footer class="footer">
+    © 2025 kappafy.com · OAuth Token Expiry Calculator
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // DOM refs
+    const ttlSlider = document.getElementById('ttl');
+    const rttlSlider = document.getElementById('rttl');
+    const rpsSlider = document.getElementById('rps');
+    const bufferSlider = document.getElementById('buffer');
+    const latencySlider = document.getElementById('latency');
+    const rotToggle = document.getElementById('rotationToggle');
+    const rotStatus = document.getElementById('rotStatus');
+
+    const ttlVal = document.getElementById('ttlVal');
+    const rttlVal = document.getElementById('rttlVal');
+    const rpsVal = document.getElementById('rpsVal');
+    const bufVal = document.getElementById('bufVal');
+    const latVal = document.getElementById('latVal');
+
+    const effLifetime = document.getElementById('effLifetime');
+    const refreshFreq = document.getElementById('refreshFreq');
+    const refreshPerDay = document.getElementById('refreshPerDay');
+    const apiPerRefresh = document.getElementById('apiPerRefresh');
+    const overheadPct = document.getElementById('overheadPct');
+    const tableBody = document.getElementById('tableBody');
+    const timelineSvg = document.getElementById('timelineSvg');
+    const canvas = document.getElementById('securityCanvas');
+    const ctx = canvas.getContext('2d');
+    const recommendationBox = document.getElementById('recommendationBox');
+    const rotationInfo = document.getElementById('rotationInfo');
+    const pythonCode = document.getElementById('pythonCode');
+
+    let rotationEnabled = true;
+
+    rotToggle.addEventListener('click', function() {
+      rotationEnabled = !rotationEnabled;
+      this.classList.toggle('active');
+      rotStatus.textContent = rotationEnabled ? 'ON' : 'OFF';
+      computeAll();
+    });
+
+    function updateSliders() {
+      ttlVal.textContent = ttlSlider.value;
+      rttlVal.textContent = rttlSlider.value;
+      rpsVal.textContent = rpsSlider.value;
+      bufVal.textContent = bufferSlider.value;
+      latVal.textContent = latencySlider.value;
+    }
+
+    // attach events
+    [ttlSlider, rttlSlider, rpsSlider, bufferSlider, latencySlider].forEach(s => {
+      s.addEventListener('input', function() {
+        updateSliders();
+        computeAll();
+      });
+    });
+
+    function computeAll() {
+      const T = parseInt(ttlSlider.value, 10);
+      const Rdays = parseInt(rttlSlider.value, 10);
+      const RPS = parseInt(rpsSlider.value, 10);
+      const buf = parseInt(bufferSlider.value, 10);
+      const latMs = parseInt(latencySlider.value, 10);
+      const rot = rotationEnabled;
+
+      // effective lifetime
+      const eff = Math.max(1, T - buf);
+      const refreshHz = 1 / eff;
+      const refreshDay = 86400 / eff;
+      const apiPerRef = eff * RPS;
+      const totalReqsDay = RPS * 86400;
+      const overhead = totalReqsDay > 0 ? (refreshDay / totalReqsDay) * 100 : 0;
+
+      // display
+      effLifetime.textContent = eff.toLocaleString();
+      refreshFreq.textContent = refreshHz.toFixed(6);
+      refreshPerDay.textContent = refreshDay.toFixed(2);
+      apiPerRefresh.textContent = apiPerRef > 1000 ? (apiPerRef/1000).toFixed(1) + 'k' : apiPerRef.toFixed(0);
+      overheadPct.textContent = overhead.toFixed(5) + '%';
+
+      // table: TTL vs overhead vs ratio
+      const testTTLs = [300, 900, 1800, 3600, 7200, 14400, 43200, 86400];
+      let tableHtml = '';
+      testTTLs.forEach(tt => {
+        const e = Math.max(1, tt - buf);
+        const rd = 86400 / e;
+        const ov = totalReqsDay > 0 ? (rd / totalReqsDay) * 100 : 0;
+        const ratio = (e * RPS) / 1;
+        tableHtml += `<tr><td>${tt}</td><td>${ov.toFixed(4)}%</td><td>${ratio > 1000 ? (ratio/1000).toFixed(1)+'k' : ratio.toFixed(0)}</td></tr>`;
+      });
+      tableBody.innerHTML = tableHtml;
+
+      // timeline SVG
+      drawTimeline(T, eff, buf, latMs);
+
+      // security canvas
+      drawSecurityCanvas(T, eff, RPS, overhead);
+
+      // recommendation
+      let recText = '';
+      if (RPS > 1000) {
+        recText = `High RPS (${RPS}). Consider TTL ≥ 7200s to reduce refresh overhead (currently ${overhead.toFixed(3)}%). Exposure window ~${eff}s.`;
+      } else if (RPS > 100) {
+        recText = `Medium RPS. TTL around 3600s balances security and efficiency. Overhead ${overhead.toFixed(4)}%.`;
+      } else {
+        recText = `Low RPS (${RPS}). Shorter TTL (e.g., 900s) improves security with negligible overhead (${overhead.toFixed(4)}%).`;
+      }
+      // optimal: minimize refreshes while limiting exposure: suggest TTL where overhead < 0.001% and eff < 14400
+      let optTTL = T;
+      if (overhead > 0.01 && T < 14400) optTTL = 14400;
+      else if (overhead < 0.0001 && T > 3600) optTTL = 3600;
+      else optTTL = T;
+      recommendationBox.innerHTML = `🔹 ${recText}<br>🔸 Suggested TTL: <strong>${optTTL}s</strong> (exposure ${Math.max(1,optTTL-buf)}s)`;
+
+      // rotation chain
+      const accessTTL = T;
+      const refreshTTLsec = Rdays * 86400;
+      const chainDepth = rot ? Math.floor(refreshTTLsec / accessTTL) : 0;
+      rotationInfo.textContent = rot ? `Rotation enabled · max chain depth: ${chainDepth} (rolling window ${Rdays}d)` : 'Rotation disabled · no chain';
+
+      // Python code
+      pythonCode.textContent = generatePython(T, buf, latMs, RPS, rot);
+    }
+
+    function drawTimeline(T, eff, buf, latMs) {
+      const svg = timelineSvg;
+      const w = 600, h = 70;
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      const totalBars = 3;
+      let html = '';
+      const barY = 30, barH = 14;
+      const segW = (w - 40) / totalBars;
+      for (let i = 0; i < totalBars; i++) {
+        const x = 20 + i * segW;
+        // access token bar
+        html += `<rect x="${x}" y="${barY}" width="${segW-4}" height="${barH}" fill="#2a2a44" rx="4" stroke="#a855f7" stroke-width="1"/>`;
+        // effective part (greenish)
+        const effW = Math.max(4, (eff / T) * (segW-4));
+        html += `<rect x="${x}" y="${barY}" width="${effW}" height="${barH}" fill="#a855f7" opacity="0.7" rx="4"/>`;
+        // refresh marker
+        const markerX = x + effW + 2;
+        if (markerX < x + segW - 6) {
+          html += `<polygon points="${markerX},${barY-6} ${markerX-4},${barY-2} ${markerX+4},${barY-2}" fill="#fbbf24"/>`;
+        }
+        // label
+        html += `<text x="${x+4}" y="${barY+22}" font-size="8" fill="#b0b0d0">token ${i+1}</text>`;
+      }
+      // latency arrow
+      html += `<line x1="20" y1="58" x2="60" y2="58" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow)"/>`;
+      html += `<text x="22" y="68" font-size="7" fill="#fbbf24">latency ${latMs}ms</text>`;
+      svg.innerHTML = html + `<defs><marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#fbbf24"/></marker></defs>`;
+    }
+
+    function drawSecurityCanvas(T, eff, RPS, overhead) {
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      // gradient: shorter TTL = more secure (green) -> longer = less secure (red)
+      const grad = ctx.createLinearGradient(0,0,w,0);
+      grad.addColorStop(0, '#22c55e');
+      grad.addColorStop(0.5, '#a855f7');
+      grad.addColorStop(1, '#ef4444');
+      ctx.fillStyle = grad;
+      const norm = Math.min(1, Math.max(0, (T - 300) / (86400 - 300)));
+      const x = norm * (w-40) + 20;
+      ctx.beginPath();
+      ctx.arc(x, h/2, 12, 0, 2*Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = '#f0f0ff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(`TTL ${T}s`, x, h/2-18);
+      ctx.fillStyle = '#aaa';
+      ctx.fillText(`overhead ${overhead.toFixed(3)}%`, x, h/2+24);
+    }
+
+    function generatePython(T, buf, latMs, RPS, rot) {
+      return `import threading, time, logging
+
+# OAuth token refresh with threading.Timer
+# Generated by kappafy.com
+
+ACCESS_TTL = ${T}          # seconds
+BUFFER = ${buf}            # refresh before expiry
+LATENCY_MS = ${latMs}      # network latency
+RPS = ${RPS}
+ROTATION = ${rot ? 'True' : 'False'}
+
+effective_lifetime = ACCESS_TTL - BUFFER
+refresh_interval = effective_lifetime
+
+class TokenManager:
+    def __init__(self):
+        self.token = "initial_token"
+        self._timer = None
+        self._schedule_refresh()
+    
+    def _refresh_token(self):
+        # simulate refresh
+        old = self.token
+        if ROTATION:
+            self.token = f"rotated_{int(time.time())}"
+        else:
+            self.token = f"refreshed_{int(time.time())}"
+        logging.info(f"Token refreshed: {old[:8]} -> {self.token[:8]}")
+        # schedule next
+        self._schedule_refresh()
+    
+    def _schedule_refresh(self):
+        # account for latency
+        interval = max(0.1, refresh_interval - LATENCY_MS/1000)
+        self._timer = threading.Timer(interval, self._refresh_token)
+        self._timer.daemon = True
+        self._timer.start()
+    
+    def get_token(self):
+        return self.token
+
+# Usage
+mgr = TokenManager()
+# keep main thread alive
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    mgr._timer.cancel()
+`;
+    }
+
+    // initial
+    updateSliders();
+    computeAll();
+  })();
+</script>
+</body>
+</html>

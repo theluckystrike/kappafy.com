@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>API Deprecation Timeline Planner · kappafy.com</title>
+  <meta name="description" content="Interactive API versioning strategy planner: sunset dates, S‑curve migration, stranded client risk, deprecation policy & communication schedule. Dark...">
+  <meta name="keywords" content="API deprecation, versioning, sunset, migration curve, stranded clients, API lifecycle, kappafy">
+  <link rel="canonical" href="https://kappafy.com/tools/api-versioning-deprecation-timeline-planner">
+  <meta property="og:title" content="API Deprecation Timeline Planner">
+  <meta property="og:description" content="Plan API version deprecation with sigmoid migration, Gantt timeline, stranded risk & policy table.">
+  <meta property="og:url" content="https://kappafy.com/tools/api-versioning-deprecation-timeline-planner">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+    [{
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "API Deprecation Timeline Planner",
+      "url": "https://kappafy.com/tools/api-versioning-deprecation-timeline-planner",
+      "applicationCategory": "Developer Tool",
+      "operatingSystem": "All",
+      "browserRequirements": "JavaScript enabled",
+      "description": "Interactive planner for API versioning strategy: compute sunset dates, S‑curve migration, stranded clients, and deprecation policy."
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type":"Question","name":"How is the sunset date calculated?","acceptedAnswer":{"@type":"Answer","text":"Sunset date = deprecation notice date + support window after notice. The deprecation date is set relative to today based on notice period."}},
+        {"@type":"Question","name":"What is the sigmoid migration model?","acceptedAnswer":{"@type":"Answer","text":"p(t) = 100 / (1 + exp(-k*(t - t_midpoint))). Fast adopters (40% in month 1) shape the curve; k and midpoint are derived from client adoption speed input."}},
+        {"@type":"Question","name":"How are stranded clients estimated?","acceptedAnswer":{"@type":"Answer","text":"Stranded % = 100 - migration % at sunset date. The tool shows risk for each version and aggregates across active versions."}}
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type":"ListItem","position":1,"name":"kappafy.com","item":"https://kappafy.com"},
+        {"@type":"ListItem","position":2,"name":"Tools","item":"https://kappafy.com/tools"},
+        {"@type":"ListItem","position":3,"name":"API Deprecation Timeline Planner","item":"https://kappafy.com/tools/api-versioning-deprecation-timeline-planner"}
+      ]
+    }]
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0f0f1a; color: #e4e4f0; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; }
+    .container { max-width: 1300px; width: 100%; }
+    header { margin-bottom: 2rem; text-align: center; }
+    h1 { font-size: 2.2rem; font-weight: 600; background: linear-gradient(145deg, #c084fc, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
+    .subhead { color: #9ca3af; margin-top: 0.3rem; font-size: 1rem; border-bottom: 1px solid #2a2a3e; padding-bottom: 1rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.8rem; margin: 2rem 0; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; gap: 2rem; } }
+    .card { background: #1a1a2e; border-radius: 24px; padding: 1.6rem 1.8rem; box-shadow: 0 12px 30px rgba(0,0,0,0.7); border: 1px solid #2d2d44; }
+    .card h2 { font-size: 1.3rem; font-weight: 500; margin-bottom: 1.4rem; color: #d8b4fe; display: flex; align-items: center; gap: 0.5rem; }
+    .input-group { margin-bottom: 1.2rem; }
+    .input-group label { display: block; font-size: 0.85rem; font-weight: 500; color: #b9b9d6; margin-bottom: 0.3rem; }
+    .input-group input, .input-group select { width: 100%; padding: 0.6rem 0.8rem; background: #12121f; border: 1px solid #33335a; border-radius: 14px; color: #f0f0ff; font-size: 0.95rem; transition: 0.2s; }
+    .input-group input:focus, .input-group select:focus { outline: none; border-color: #a855f7; box-shadow: 0 0 0 3px rgba(168,85,247,0.25); }
+    .input-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .input-row .input-group { flex: 1; min-width: 100px; }
+    .badge { background: #2d2d44; padding: 0.2rem 0.8rem; border-radius: 30px; font-size: 0.7rem; color: #c4b5fd; margin-left: 0.6rem; }
+    .canvas-wrapper { background: #12121f; border-radius: 18px; padding: 0.8rem; margin: 1rem 0; border: 1px solid #2a2a40; }
+    canvas { width: 100%; height: auto; display: block; background: #12121f; border-radius: 12px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 0.8rem; margin: 1.2rem 0; }
+    .stat-card { background: #1f1f35; border-radius: 16px; padding: 0.8rem; text-align: center; border: 1px solid #2f2f4a; }
+    .stat-card .value { font-size: 1.6rem; font-weight: 600; color: #c084fc; }
+    .stat-card .label { font-size: 0.7rem; color: #9f9fc7; text-transform: uppercase; letter-spacing: 0.03em; }
+    .policy-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+    .policy-table th { background: #2a2a44; color: #d8b4fe; padding: 0.5rem; text-align: left; }
+    .policy-table td { padding: 0.5rem; border-bottom: 1px solid #2a2a40; }
+    .policy-table tr:last-child td { border-bottom: none; }
+    .reminder-list { list-style: none; margin: 0.5rem 0; }
+    .reminder-list li { padding: 0.3rem 0; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px dashed #2a2a40; font-size: 0.9rem; }
+    .reminder-list li::before { content: "🔔"; color: #a855f7; }
+    .footer { margin-top: 3rem; text-align: center; color: #6b6b8a; font-size: 0.85rem; border-top: 1px solid #23233a; padding-top: 1.8rem; }
+    .accent { color: #a855f7; }
+    .btn { background: #a855f7; border: none; color: white; padding: 0.5rem 1.4rem; border-radius: 40px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+    .btn:hover { background: #9333ea; transform: scale(0.97); }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .mt-1 { margin-top: 1rem; }
+    .text-sm { font-size: 0.8rem; color: #a5a5c0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⏳ API Deprecation Timeline Planner</h1>
+    <div class="subhead">Plan version sunset · sigmoid migration · stranded risk · policy & reminders</div>
+  </header>
+
+  <div class="grid-2">
+    <!-- Inputs card -->
+    <div class="card">
+      <h2><span>⚙️</span> Parameters</h2>
+      <div class="input-group">
+        <label>📅 Current date (auto‑filled)</label>
+        <input type="date" id="currentDate">
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>🔢 Active API versions (1‑5)</label>
+          <input type="number" id="numVersions" min="1" max="5" value="2">
+        </div>
+        <div class="input-group">
+          <label>📆 Notice period (months)</label>
+          <input type="number" id="noticePeriod" min="3" max="24" value="6">
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>🛟 Support window (months)</label>
+          <input type="number" id="supportWindow" min="3" max="18" value="6">
+        </div>
+        <div class="input-group">
+          <label>🚀 Client adoption speed (%)</label>
+          <input type="number" id="adoptionSpeed" min="1" max="100" value="40" step="1">
+          <span class="text-sm">% fast adopters in month 1</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>📦 Major version cadence (months)</label>
+        <input type="number" id="cadence" min="3" max="48" value="12">
+      </div>
+      <div class="flex-between mt-1">
+        <span class="text-sm">Sigmoid: fast adopters ~40% month 1</span>
+        <button class="btn" id="recalcBtn">⟳ Recalculate</button>
+      </div>
+    </div>
+
+    <!-- Timeline + S curve card -->
+    <div class="card">
+      <h2><span>📊</span> Lifecycle & Migration</h2>
+      <div class="canvas-wrapper">
+        <canvas id="ganttCanvas" height="140"></canvas>
+      </div>
+      <div class="canvas-wrapper">
+        <canvas id="sCurveCanvas" height="120"></canvas>
+      </div>
+      <div class="stat-grid" id="riskStats">
+        <div class="stat-card"><div class="value" id="strandedVal">0%</div><div class="label">stranded at sunset</div></div>
+        <div class="stat-card"><div class="value" id="migratedVal">0%</div><div class="label">migrated (avg)</div></div>
+        <div class="stat-card"><div class="value" id="versionsCount">0</div><div class="label">active versions</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: policy + reminders -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem; margin: 1.5rem 0;">
+    <div class="card">
+      <h2><span>📋</span> Recommended deprecation policy</h2>
+      <table class="policy-table" id="policyTable">
+        <thead><tr><th>Client type</th><th>Grace period</th><th>Expected stranded %</th></tr></thead>
+        <tbody id="policyBody"></tbody>
+      </table>
+      <div class="text-sm" style="margin-top:0.5rem;">* based on sigmoid adoption & sunset window</div>
+    </div>
+    <div class="card">
+      <h2><span>🔔</span> Communication schedule</h2>
+      <ul class="reminder-list" id="reminderList">
+        <li>6 months before sunset</li>
+        <li>3 months before sunset</li>
+        <li>1 month before sunset</li>
+        <li>2 weeks before sunset</li>
+        <li>1 week before sunset</li>
+      </ul>
+      <div class="text-sm" id="sunsetDatesRef"></div>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 kappafy.com · API Deprecation Timeline Planner</div>
+</div>
+
+<script>
+  (function() {
+    // DOM refs
+    const currentDateInput = document.getElementById('currentDate');
+    const numVersionsInput = document.getElementById('numVersions');
+    const noticePeriodInput = document.getElementById('noticePeriod');
+    const supportWindowInput = document.getElementById('supportWindow');
+    const adoptionSpeedInput = document.getElementById('adoptionSpeed');
+    const cadenceInput = document.getElementById('cadence');
+    const recalcBtn = document.getElementById('recalcBtn');
+
+    const ganttCanvas = document.getElementById('ganttCanvas');
+    const sCurveCanvas = document.getElementById('sCurveCanvas');
+    const strandedVal = document.getElementById('strandedVal');
+    const migratedVal = document.getElementById('migratedVal');
+    const versionsCount = document.getElementById('versionsCount');
+    const policyBody = document.getElementById('policyBody');
+    const reminderList = document.getElementById('reminderList');
+    const sunsetDatesRef = document.getElementById('sunsetDatesRef');
+
+    // set today
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth()+1).padStart(2,'0');
+    const dd = String(today.getDate()).padStart(2,'0');
+    currentDateInput.value = `${yyyy}-${mm}-${dd}`;
+
+    function parseDate(str) {
+      const [y,m,d] = str.split('-').map(Number);
+      return new Date(y,m-1,d);
+    }
+
+    function addMonths(date, n) {
+      const d = new Date(date);
+      d.setMonth(d.getMonth() + n);
+      return d;
+    }
+
+    function monthDiff(d1, d2) {
+      return (d2.getFullYear() - d1.getFullYear())*12 + (d2.getMonth() - d1.getMonth());
+    }
+
+    // sigmoid p(t) = 100 / (1 + exp(-k*(t - t_midpoint)))
+    function sigmoidP(t, k, midpoint) {
+      return 100 / (1 + Math.exp(-k * (t - midpoint)));
+    }
+
+    function computeAll() {
+      const currentDate = parseDate(currentDateInput.value);
+      const numVersions = Math.min(5, Math.max(1, parseInt(numVersionsInput.value) || 2));
+      const noticeMonths = Math.min(24, Math.max(3, parseInt(noticePeriodInput.value) || 6));
+      const supportMonths = Math.min(18, Math.max(3, parseInt(supportWindowInput.value) || 6));
+      const adoptionSpeed = Math.min(100, Math.max(1, parseInt(adoptionSpeedInput.value) || 40));
+      const cadence = Math.min(48, Math.max(3, parseInt(cadenceInput.value) || 12));
+
+      // Build version array
+      const versions = [];
+      for (let i = 0; i < numVersions; i++) {
+        const releaseDate = addMonths(currentDate, -i * cadence); // older versions released earlier
+        const deprecationNoticeDate = addMonths(currentDate, (i === 0 ? 0 : i * 2)); // stagger notice
+        // ensure notice not before release
+        const noticeDate = new Date(Math.max(deprecationNoticeDate.getTime(), releaseDate.getTime()));
+        const sunsetDate = addMonths(noticeDate, supportMonths);
+        versions.push({
+          id: `v${numVersions - i}`,
+          releaseDate,
+          noticeDate,
+          sunsetDate,
+          supportMonths,
+          noticeMonths
+        });
+      }
+
+      // compute sigmoid parameters based on adoptionSpeed (fast adopters % in month 1)
+      // we define t in months from notice date. We want p(1) ≈ adoptionSpeed (fast adopters)
+      // set midpoint t_midpoint and k to match p(1)=adoptionSpeed and p(12) ~ 95%
+      let k, midpoint;
+      if (adoptionSpeed >= 95) {
+        k = 1.2; midpoint = 0.5;
+      } else {
+        // solve: p(1)=adoptionSpeed, p(12)=95 => two equations
+        const targetP1 = adoptionSpeed;
+        const targetP12 = 95;
+        // approximate using iterative method
+        let guessMid = 3.5;
+        let guessK = 0.6;
+        for (let iter=0; iter<50; iter++) {
+          const p1 = 100/(1+Math.exp(-guessK*(1-guessMid)));
+          const p12 = 100/(1+Math.exp(-guessK*(12-guessMid)));
+          const err1 = p1 - targetP1;
+          const err12 = p12 - targetP12;
+          // adjust
+          guessMid -= 0.02*err1;
+          guessK -= 0.001*err12;
+          if (guessK<0.1) guessK=0.1;
+          if (guessMid<0.1) guessMid=0.1;
+        }
+        k = Math.min(2, Math.max(0.2, guessK));
+        midpoint = Math.min(10, Math.max(0.5, guessMid));
+      }
+
+      // compute migration curve for each version (months from notice to sunset)
+      // we'll compute for each version the migration % at sunset
+      let totalStranded = 0;
+      let totalMigrated = 0;
+      const versionResults = [];
+      versions.forEach((v, idx) => {
+        const monthsUntilSunset = monthDiff(v.noticeDate, v.sunsetDate);
+        const tSunset = monthsUntilSunset;
+        const migrationAtSunset = sigmoidP(tSunset, k, midpoint);
+        const stranded = Math.max(0, 100 - migrationAtSunset);
+        totalStranded += stranded;
+        totalMigrated += migrationAtSunset;
+        versionResults.push({ ...v, monthsUntilSunset, migrationAtSunset, stranded });
+      });
+      const avgMigrated = numVersions>0 ? totalMigrated/numVersions : 0;
+      const avgStranded = numVersions>0 ? totalStranded/numVersions : 0;
+
+      strandedVal.textContent = avgStranded.toFixed(1) + '%';
+      migratedVal.textContent = avgMigrated.toFixed(1) + '%';
+      versionsCount.textContent = numVersions;
+
+      // Draw Gantt (simplified lifecycle bars)
+      drawGantt(versions, currentDate);
+
+      // Draw S-curve (aggregate migration curve)
+      drawSCurve(k, midpoint, versionResults);
+
+      // Policy table
+      buildPolicyTable(avgStranded, supportMonths, adoptionSpeed);
+
+      // Reminder schedule (based on first version sunset)
+      if (versionResults.length>0) {
+        const firstSunset = versionResults[0].sunsetDate;
+        const reminders = [
+          { label: '6 months before sunset', offset: -6 },
+          { label: '3 months before sunset', offset: -3 },
+          { label: '1 month before sunset', offset: -1 },
+          { label: '2 weeks before sunset', offset: -0.5 },
+          { label: '1 week before sunset', offset: -0.25 }
+        ];
+        let html = '';
+        reminders.forEach(r => {
+          const d = addMonths(firstSunset, r.offset);
+          const dateStr = d.toISOString().slice(0,10);
+          html += `<li>${r.label} <span style="color:#a5a5c0;">(${dateStr})</span></li>`;
+        });
+        reminderList.innerHTML = html;
+        sunsetDatesRef.textContent = `First sunset: ${firstSunset.toISOString().slice(0,10)}`;
+      }
+    }
+
+    function drawGantt(versions, currentDate) {
+      const canvas = ganttCanvas;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = 140 * dpr;
+      ctx.scale(dpr, dpr);
+      const w = rect.width;
+      const h = 140;
+      ctx.clearRect(0,0,w,h);
+
+      if (versions.length===0) return;
+      const minDate = versions.reduce((a,b) => a.releaseDate<b.releaseDate ? a : b).releaseDate;
+      const maxDate = versions.reduce((a,b) => a.sunsetDate>b.sunsetDate ? a : b).sunsetDate;
+      const totalMs = maxDate.getTime() - minDate.getTime();
+      if (totalMs<=0) return;
+
+      const pad = 20;
+      const chartW = w - pad*2;
+      const barH = 16;
+      const startY = 25;
+
+      versions.forEach((v, i) => {
+        const xRel = (v.releaseDate.getTime() - minDate.getTime())/totalMs;
+        const xNotice = (v.noticeDate.getTime() - minDate.getTime())/totalMs;
+        const xSunset = (v.sunsetDate.getTime() - minDate.getTime())/totalMs;
+        const y = startY + i*(barH+12);
+
+        // active phase (release -> notice) greenish
+        ctx.fillStyle = '#2e7d5e';
+        ctx.fillRect(pad + xRel*chartW, y, (xNotice-xRel)*chartW, barH);
+        // deprecated phase (notice -> sunset) orange
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(pad + xNotice*chartW, y, (xSunset-xNotice)*chartW, barH);
+        // sunset marker
+        ctx.fillStyle = '#a855f7';
+        ctx.fillRect(pad + xSunset*chartW -2, y-4, 4, barH+8);
+        // label
+        ctx.fillStyle = '#e4e4f0';
+        ctx.font = '10px system-ui';
+        ctx.fillText(v.id, pad + xRel*chartW, y-4);
+      });
+      // current date marker
+      const xCur = (currentDate.getTime() - minDate.getTime())/totalMs;
+      if (xCur>0 && xCur<1) {
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(pad + xCur*chartW, 5);
+        ctx.lineTo(pad + xCur*chartW, h-5);
+        ctx.stroke();
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '8px sans-serif';
+        ctx.fillText('today', pad + xCur*chartW-10, 12);
+      }
+    }
+
+    function drawSCurve(k, midpoint, versions) {
+      const canvas = sCurveCanvas;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = 120 * dpr;
+      ctx.scale(dpr, dpr);
+      const w = rect.width;
+      const h = 120;
+      ctx.clearRect(0,0,w,h);
+
+      const pad = {top:10, bottom:20, left:30, right:10};
+      const chartW = w - pad.left - pad.right;
+      const chartH = h - pad.top - pad.bottom;
+
+      // compute curve up to 18 months
+      const maxT = 18;
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let t=0; t<=maxT; t+=0.2) {
+        const p = sigmoidP(t, k, midpoint);
+        const x = pad.left + (t/maxT)*chartW;
+        const y = pad.top + chartH - (p/100)*chartH;
+        if (t===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+
+      // axes
+      ctx.strokeStyle = '#4a4a6a';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top+chartH);
+      ctx.lineTo(pad.left+chartW, pad.top+chartH);
+      ctx.stroke();
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '8px sans-serif';
+      ctx.fillText('0', pad.left-8, pad.top+chartH+12);
+      ctx.fillText('months', pad.left+chartW-20, pad.top+chartH+12);
+    }
+
+    function buildPolicyTable(avgStranded, supportMonths, adoptionSpeed) {
+      const types = [
+        { name: 'Mobile apps', grace: '3 months', adjust: 0.8 },
+        { name: 'Server apps', grace: '6 months', adjust: 1.0 },
+        { name: 'Enterprise', grace: '9 months', adjust: 1.3 }
+      ];
+      let html = '';
+      types.forEach(t => {
+        let stranded = Math.min(100, Math.max(0, avgStranded * t.adjust * (supportMonths/6) * (adoptionSpeed/40)));
+        stranded = Math.round(stranded * 10)/10;
+        html += `<tr><td>${t.name}</td><td>${t.grace}</td><td>${stranded}%</td></tr>`;
+      });
+      policyBody.innerHTML = html;
+    }
+
+    // initial compute
+    computeAll();
+
+    recalcBtn.addEventListener('click', computeAll);
+    // also recompute on change
+    [numVersionsInput, noticePeriodInput, supportWindowInput, adoptionSpeedInput, cadenceInput].forEach(el => {
+      el.addEventListener('input', computeAll);
+    });
+    currentDateInput.addEventListener('change', computeAll);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>GraphQL vs REST Payload Calculator | kappafy.com</title>
+  <meta name="description" content="Interactive comparison tool: define schema, select fields, compute over-fetching, bandwidth cost, N+1 penalty, and TCO. Dark theme with purple accent.">
+  <meta name="keywords" content "GraphQL, REST, payload, over-fetching, bandwidth, N+1, cost calculator, API">
+  <link rel="canonical" href="https://kappafy.com/tools/graphql-vs-rest-payload-size-calculator">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "GraphQL vs REST Payload Calculator",
+      "url": "https://kappafy.com/tools/graphql-vs-rest-payload-size-calculator",
+      "description": "Compare payload sizes, bandwidth costs, and N+1 overhead between GraphQL and REST.",
+      "applicationCategory": "Developer tool",
+      "operatingSystem": "All",
+      "browserRequirements": "JavaScript enabled"
+    }
+  </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is over-fetching in REST?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "REST endpoints often return all fields of an entity, even when only a few are needed. This wastes bandwidth and slows down clients."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does GraphQL reduce payload?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GraphQL lets you specify exactly the fields you need, eliminating unused data. This reduces payload size and speeds up responses."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the N+1 problem?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "In REST, fetching a list of entities plus related data often requires one request per item (N+1). GraphQL can batch related data in a single request."
+          }
+        }
+      ]
+    }
+  </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "kappafy.com", "item": "https://kappafy.com" },
+        { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://kappafy.com/tools" },
+        { "@type": "ListItem", "position": 3, "name": "GraphQL vs REST Payload Calculator", "item": "https://kappafy.com/tools/graphql-vs-rest-payload-size-calculator" }
+      ]
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: #0f0f1a;
+      color: #e0e0f0;
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 1300px;
+      width: 100%;
+    }
+    h1, h2, h3 {
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.25rem;
+      color: #c084fc;
+      border-left: 6px solid #a855f7;
+      padding-left: 1rem;
+    }
+    .subhead {
+      color: #a0a0c0;
+      margin-bottom: 2rem;
+      font-size: 1rem;
+      padding-left: 1.6rem;
+    }
+    .card {
+      background: #1a1a2e;
+      border-radius: 24px;
+      padding: 1.8rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+      border: 1px solid #2a2a4a;
+      transition: 0.2s;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .card-header h2 {
+      color: #c084fc;
+      font-size: 1.5rem;
+    }
+    .badge {
+      background: #2a1f3a;
+      color: #a855f7;
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      border: 1px solid #a855f7;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.8rem;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+    }
+    .entity-box {
+      background: #12121f;
+      border-radius: 20px;
+      padding: 1.2rem;
+      margin-bottom: 1.2rem;
+      border: 1px solid #2f2f5a;
+    }
+    .entity-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+    .entity-title input {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid #3a3a6a;
+      color: #e0e0f0;
+      font-size: 1.2rem;
+      font-weight: 500;
+      width: 60%;
+      padding: 0.2rem 0.4rem;
+    }
+    .entity-title input:focus {
+      outline: none;
+      border-color: #a855f7;
+    }
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .field-row input[type="text"] {
+      flex: 2;
+      min-width: 80px;
+      background: #1a1a30;
+      border: 1px solid #3a3a6a;
+      border-radius: 30px;
+      padding: 0.3rem 0.8rem;
+      color: #f0f0ff;
+    }
+    .field-row input[type="number"] {
+      width: 80px;
+      background: #1a1a30;
+      border: 1px solid #3a3a6a;
+      border-radius: 30px;
+      padding: 0.3rem 0.6rem;
+      color: #f0f0ff;
+    }
+    .field-row input[type="checkbox"] {
+      accent-color: #a855f7;
+      width: 1.1rem;
+      height: 1.1rem;
+      margin: 0 0.2rem;
+    }
+    .field-row label {
+      font-size: 0.8rem;
+      color: #b0b0d0;
+    }
+    .btn {
+      background: #2a1f3a;
+      border: 1px solid #a855f7;
+      color: #c084fc;
+      padding: 0.5rem 1.2rem;
+      border-radius: 40px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 0.9rem;
+    }
+    .btn:hover {
+      background: #3a2a5a;
+      border-color: #b97aff;
+      color: #e0c0ff;
+    }
+    .btn-primary {
+      background: #7c3aed;
+      border: 1px solid #a855f7;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #6d28d9;
+    }
+    .btn-sm {
+      padding: 0.2rem 0.9rem;
+      font-size: 0.75rem;
+    }
+    .stat-block {
+      background: #12121f;
+      border-radius: 20px;
+      padding: 1.2rem;
+      margin: 0.5rem 0;
+    }
+    .bar-container {
+      background: #2a2a4a;
+      border-radius: 30px;
+      height: 28px;
+      margin: 0.8rem 0;
+      overflow: hidden;
+      display: flex;
+    }
+    .bar-rest {
+      background: #b91c1c;
+      height: 100%;
+      transition: width 0.3s;
+    }
+    .bar-gql {
+      background: #7c3aed;
+      height: 100%;
+      transition: width 0.3s;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .value-highlight {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #c084fc;
+    }
+    .accent {
+      color: #a855f7;
+    }
+    .recommend {
+      background: #1e1e38;
+      border-radius: 24px;
+      padding: 1.5rem;
+      border-left: 8px solid #a855f7;
+    }
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: #6a6a8a;
+      font-size: 0.9rem;
+      border-top: 1px solid #2a2a4a;
+      padding-top: 2rem;
+    }
+    @media (max-width: 800px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+      h1 { font-size: 1.8rem; }
+    }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
+    .inline-label { font-size: 0.85rem; color: #b0b0d0; margin-right: 0.5rem; }
+  </style>
+
+<meta property="og:title" content="GraphQL vs REST Payload Calculator | kappafy.com">
+<meta property="og:description" content="Interactive comparison tool: define schema, select fields, compute over-fetching, bandwidth cost, N+1 penalty, and TCO. Dark theme with purple accent.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kappafy.com/tools/graphql-vs-rest-payload-size-calculator">
+</head>
+<body>
+<div class="container">
+  <h1>⚡ GraphQL vs REST Payload Calculator</h1>
+  <div class="subhead">Define schema, select fields, compute over‑fetching, bandwidth & N+1 cost</div>
+
+  <!-- Schema builder -->
+  <div class="card">
+    <div class="card-header">
+      <h2>📦 Schema builder</h2>
+      <span class="badge">up to 5 entities · 15 fields each</span>
+    </div>
+    <div id="entitiesContainer"></div>
+    <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="addEntityBtn">+ Add Entity</button>
+      <button class="btn" id="resetDefaultBtn">↺ Reset defaults</button>
+    </div>
+  </div>
+
+  <!-- Settings row -->
+  <div class="grid-2" style="margin-bottom: 1.5rem;">
+    <div class="card" style="margin-bottom:0;">
+      <h3 style="margin-bottom: 0.8rem;">⚙️ Request & cost settings</h3>
+      <div style="display: flex; flex-wrap: wrap; gap: 1.2rem;">
+        <label class="inline-label">Requests/day <input type="number" id="requestsPerDay" value="10000" min="1" style="width:90px; background:#1a1a30; border:1px solid #3a3a6a; border-radius:30px; padding:0.3rem 0.8rem; color:white;"></label>
+        <label class="inline-label">Network cost ($/GB) <input type="number" id="costPerGB" value="0.09" step="0.01" min="0" style="width:90px; background:#1a1a30; border:1px solid #3a3a6a; border-radius:30px; padding:0.3rem 0.8rem; color:white;"></label>
+        <label class="inline-label">Related entities (N+1) <input type="number" id="numRelated" value="5" min="0" style="width:70px; background:#1a1a30; border:1px solid #3a3a6a; border-radius:30px; padding:0.3rem 0.8rem; color:white;"></label>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0; display: flex; align-items: center; justify-content: flex-end;">
+      <button class="btn btn-primary" id="computeBtn" style="padding: 0.8rem 2.5rem; font-size: 1.2rem;">⟳ Compute comparison</button>
+    </div>
+  </div>
+
+  <!-- Results: payload bars -->
+  <div class="card">
+    <h2>📊 Payload comparison (bytes)</h2>
+    <div class="grid-2" style="margin-top: 0.5rem;">
+      <div class="stat-block">
+        <div class="flex-between"><span>🔴 REST (all fields)</span> <span id="restPayloadBytes" class="value-highlight">0</span></div>
+        <div class="bar-container"><div class="bar-rest" id="restBar" style="width:0%"></div></div>
+      </div>
+      <div class="stat-block">
+        <div class="flex-between"><span>🟣 GraphQL (selected)</span> <span id="graphqlPayloadBytes" class="value-highlight">0</span></div>
+        <div class="bar-container"><div class="bar-gql" id="gqlBar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div style="margin-top: 0.8rem; font-size: 1.1rem;">Over‑fetching ratio (REST/GraphQL): <strong id="overfetchRatio" class="accent">1.0</strong> ⚡</div>
+  </div>
+
+  <!-- Monthly bandwidth & cost -->
+  <div class="card">
+    <h2>📡 Monthly bandwidth & cost</h2>
+    <div class="grid-3">
+      <div class="stat-block"><span>REST bandwidth</span> <div><span id="restBandwidthGB" class="value-highlight">0</span> <small>GB</small></div><div>💵 $<span id="restCost">0.00</span></div></div>
+      <div class="stat-block"><span>GraphQL bandwidth</span> <div><span id="gqlBandwidthGB" class="value-highlight">0</span> <small>GB</small></div><div>💵 $<span id="gqlCost">0.00</span></div></div>
+      <div class="stat-block"><span>💰 Bandwidth savings</span> <div><span id="savingsPercent" class="value-highlight">0</span> <small>%</small></div><div style="color:#6f6;font-weight:500;">less data</div></div>
+    </div>
+  </div>
+
+  <!-- N+1 penalty + TCO -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>🔁 N+1 penalty</h2>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+        <div><span style="color:#f87171;">REST requests</span><br><span id="restTotalRequests" class="value-highlight">0</span></div>
+        <div><span style="color:#a78bfa;">GraphQL requests</span><br><span id="gqlTotalRequests" class="value-highlight">0</span></div>
+        <div><span>⚡ Extra REST calls</span><br><span id="extraRequests" class="value-highlight" style="color:#fbbf24;">0</span></div>
+      </div>
+      <div style="margin-top:1rem; background:#1a1a30; padding:0.8rem; border-radius:20px;">
+        <span>💡 GraphQL batches related data → 1 request vs <span id="restNplusOneExample">6</span> REST calls (N+1)</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📉 Total Cost of Ownership (TCO)</h2>
+      <div><span>Bandwidth cost + latency × requests</span></div>
+      <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+        <div><span>REST TCO</span><br><span id="restTCO" class="value-highlight">$0.00</span></div>
+        <div><span>GraphQL TCO</span><br><span id="gqlTCO" class="value-highlight">$0.00</span></div>
+      </div>
+      <div style="margin-top:0.8rem; font-size:0.95rem;">* latency cost assumed $0.00001/request</div>
+    </div>
+  </div>
+
+  <!-- Recommendation matrix -->
+  <div class="card recommend">
+    <h2>🧠 Recommendation matrix</h2>
+    <div class="grid-2" style="margin-top:0.5rem;">
+      <div style="background:#1a1a30; border-radius:20px; padding:1rem;">
+        <h3 style="color:#a78bfa;">✅ GraphQL wins</h3>
+        <ul style="list-style:square; padding-left:1.2rem; color:#c0c0e0;">
+          <li>Complex nested data (multiple relations)</li>
+          <li>Mobile clients / low bandwidth</li>
+          <li>Frequent field changes</li>
+          <li>High over‑fetching ratio</li>
+        </ul>
+      </div>
+      <div style="background:#1a1a30; border-radius:20px; padding:1rem;">
+        <h3 style="color:#f87171;">✅ REST wins</h3>
+        <ul style="list-style:square; padding-left:1.2rem; color:#c0c0e0;">
+          <li>Simple CRUD, fixed fields</li>
+          <li>Heavy caching (CDN, HTTP cache)</li>
+          <li>Low N+1 impact</li>
+          <li>Mature tooling / team expertise</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ (JSON-LD already included) -->
+  <div class="card" style="margin-top:1rem;">
+    <h2>❓ FAQ</h2>
+    <div><strong>What is over-fetching in REST?</strong> <p style="color:#b0b0d0;">REST endpoints often return all fields of an entity, even when only a few are needed. This wastes bandwidth and slows down clients.</p></div>
+    <div style="margin-top:1rem;"><strong>How does GraphQL reduce payload?</strong> <p style="color:#b0b0d0;">GraphQL lets you specify exactly the fields you need, eliminating unused data. This reduces payload size and speeds up responses.</p></div>
+    <div style="margin-top:1rem;"><strong>What is the N+1 problem?</strong> <p style="color:#b0b0d0;">In REST, fetching a list of entities plus related data often requires one request per item (N+1). GraphQL can batch related data in a single request.</p></div>
+  </div>
+
+  <footer class="footer">© 2025 kappafy.com</footer>
+</div>
+
+<script>
+  (function() {
+    // ---------- state ----------
+    let entities = [];
+
+    const defaultEntities = [
+      { name: 'User', fields: [
+        { name: 'id', bytes: 8, selected: true },
+        { name: 'name', bytes: 30, selected: true },
+        { name: 'email', bytes: 40, selected: false },
+        { name: 'avatar', bytes: 200, selected: false },
+        { name: 'bio', bytes: 160, selected: true },
+        { name: 'followers_count', bytes: 8, selected: false },
+        { name: 'settings', bytes: 120, selected: false }
+      ]},
+      { name: 'Post', fields: [
+        { name: 'id', bytes: 8, selected: true },
+        { name: 'title', bytes: 80, selected: true },
+        { name: 'content', bytes: 500, selected: false },
+        { name: 'created_at', bytes: 30, selected: false }
+      ]},
+      { name: 'Comment', fields: [
+        { name: 'id', bytes: 8, selected: true },
+        { name: 'text', bytes: 200, selected: true },
+        { name: 'likes', bytes: 8, selected: false }
+      ]}
+    ];
+
+    function initEntities() {
+      entities = JSON.parse(JSON.stringify(defaultEntities));
+    }
+    initEntities();
+
+    // DOM refs
+    const container = document.getElementById('entitiesContainer');
+    const addBtn = document.getElementById('addEntityBtn');
+    const resetBtn = document.getElementById('resetDefaultBtn');
+    const computeBtn = document.getElementById('computeBtn');
+
+    // settings
+    const requestsPerDayInput = document.getElementById('requestsPerDay');
+    const costPerGBInput = document.getElementById('costPerGB');
+    const numRelatedInput = document.getElementById('numRelated');
+
+    // result spans
+    const restPayloadSpan = document.getElementById('restPayloadBytes');
+    const gqlPayloadSpan = document.getElementById('graphqlPayloadBytes');
+    const restBar = document.getElementById('restBar');
+    const gqlBar = document.getElementById('gqlBar');
+    const overfetchRatioSpan = document.getElementById('overfetchRatio');
+    const restBandwidthGBSpan = document.getElementById('restBandwidthGB');
+    const gqlBandwidthGBSpan = document.getElementById('gqlBandwidthGB');
+    const restCostSpan = document.getElementById('restCost');
+    const gqlCostSpan = document.getElementById('gqlCost');
+    const savingsPercentSpan = document.getElementById('savingsPercent');
+    const restTotalRequestsSpan = document.getElementById('restTotalRequests');
+    const gqlTotalRequestsSpan = document.getElementById('gqlTotalRequests');
+    const extraRequestsSpan = document.getElementById('extraRequests');
+    const restNplusOneExampleSpan = document.getElementById('restNplusOneExample');
+    const restTCOSpan = document.getElementById('restTCO');
+    const gqlTCOSpan = document.getElementById('gqlTCO');
+
+    // ---------- render entities ----------
+    function renderEntities() {
+      let html = '';
+      entities.forEach((entity, eIdx) => {
+        html += `<div class="entity-box" data-index="${eIdx}">
+          <div class="entity-title">
+            <input type="text" value="${entity.name}" placeholder="Entity name" data-entity-name="${eIdx}" class="entity-name-input">
+            <span style="color:#6a6a8a; font-size:0.8rem;">${entity.fields.length} fields</span>
+          </div>`;
+        entity.fields.forEach((field, fIdx) => {
+          html += `<div class="field-row" data-field-index="${fIdx}">
+            <input type="text" value="${field.name}" placeholder="field" data-field-name="${eIdx}-${fIdx}" style="flex:2;">
+            <input type="number" value="${field.bytes}" min="1" step="1" data-field-bytes="${eIdx}-${fIdx}" style="width:70px;">
+            <label style="display:flex;align-items:center;gap:4px;">
+              <input type="checkbox" ${field.selected ? 'checked' : ''} data-field-selected="${eIdx}-${fIdx}"> select
+            </label>
+            ${fIdx > 0 ? `<button class="btn btn-sm" data-remove-field="${eIdx}-${fIdx}" style="margin-left:4px;">✕</button>` : ''}
+          </div>`;
+        });
+        html += `<div style="margin-top: 0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button class="btn btn-sm" data-add-field="${eIdx}">+ Add field</button>
+          ${entities.length > 1 ? `<button class="btn btn-sm" data-remove-entity="${eIdx}" style="color:#f87171;">Remove entity</button>` : ''}
+        </div></div>`;
+      });
+      container.innerHTML = html;
+
+      // Attach events
+      document.querySelectorAll('.entity-name-input').forEach(inp => {
+        inp.addEventListener('change', function() {
+          const idx = parseInt(this.dataset.entityName);
+          entities[idx].name = this.value;
+        });
+      });
+      document.querySelectorAll('[data-field-name]').forEach(inp => {
+        inp.addEventListener('change', function() {
+          const [eIdx, fIdx] = this.dataset.fieldName.split('-').map(Number);
+          entities[eIdx].fields[fIdx].name = this.value;
+        });
+      });
+      document.querySelectorAll('[data-field-bytes]').forEach(inp => {
+        inp.addEventListener('change', function() {
+          const [eIdx, fIdx] = this.dataset.fieldBytes.split('-').map(Number);
+          entities[eIdx].fields[fIdx].bytes = Math.max(1, Number(this.value) || 1);
+        });
+      });
+      document.querySelectorAll('[data-field-selected]').forEach(cb => {
+        cb.addEventListener('change', function() {
+          const [eIdx, fIdx] = this.dataset.fieldSelected.split('-').map(Number);
+          entities[eIdx].fields[fIdx].selected = this.checked;
+        });
+      });
+      document.querySelectorAll('[data-add-field]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const eIdx = parseInt(this.dataset.addField);
+          if (entities[eIdx].fields.length >= 15) return alert('Max 15 fields per entity');
+          entities[eIdx].fields.push({ name: 'new_field', bytes: 10, selected: false });
+          renderEntities();
+        });
+      });
+      document.querySelectorAll('[data-remove-field]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const [eIdx, fIdx] = this.dataset.removeField.split('-').map(Number);
+          if (entities[eIdx].fields.length <= 1) return;
+          entities[eIdx].fields.splice(fIdx, 1);
+          renderEntities();
+        });
+      });
+      document.querySelectorAll('[data-remove-entity]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const eIdx = parseInt(this.dataset.removeEntity);
+          if (entities.length <= 1) return;
+          entities.splice(eIdx, 1);
+          renderEntities();
+        });
+      });
+    }
+
+    addBtn.addEventListener('click', function() {
+      if (entities.length >= 5) return alert('Max 5 entities');
+      entities.push({ name: 'NewEntity', fields: [{ name: 'id', bytes: 8, selected: true }] });
+      renderEntities();
+    });
+
+    resetBtn.addEventListener('click', function() {
+      initEntities();
+      renderEntities();
+    });
+
+    // ---------- compute ----------
+    function compute() {
+      // gather settings
+      const requestsPerDay = Math.max(1, parseInt(requestsPerDayInput.value) || 10000);
+      const costPerGB = Math.max(0, parseFloat(costPerGBInput.value) || 0.09);
+      const numRelated = Math.max(0, parseInt(numRelatedInput.value) || 5);
+
+      // compute payloads per entity (sum of all fields vs selected)
+      let restTotalBytes = 0;
+      let gqlTotalBytes = 0;
+      entities.forEach(entity => {
+        entity.fields.forEach(f => {
+          const b = Math.max(1, Number(f.bytes) || 1);
+          restTotalBytes += b;
+          if (f.selected) gqlTotalBytes += b;
+        });
+      });
+
+      if (restTotalBytes === 0) restTotalBytes = 1; // avoid division by zero
+      if (gqlTotalBytes === 0) gqlTotalBytes = 1;
+
+      const overfetch = (restTotalBytes / gqlTotalBytes).toFixed(2);
+
+      // bandwidth monthly (GB)
+      const monthlyRestGB = (restTotalBytes * requestsPerDay * 30) / (1024 ** 3);
+      const monthlyGqlGB = (gqlTotalBytes * requestsPerDay * 30) / (1024 ** 3);
+      const restCost = monthlyRestGB * costPerGB;
+      const gqlCost = monthlyGqlGB * costPerGB;
+      const savings = restTotalBytes > 0 ? ((restTotalBytes - gqlTotalBytes) / restTotalBytes * 100) : 0;
+
+      // N+1: REST: each request + extra related calls (numRelated * requestsPerDay)
+      const restRequests = requestsPerDay + (numRelated * requestsPerDay);
+      const gqlRequests = requestsPerDay; // batched
+      const extra = restRequests - gqlRequests;
+
+      // TCO: bandwidth cost + latency * requests (latency $0.00001 per request)
+      const latencyCostPerReq = 0.00001;
+      const restTCO = restCost + (restRequests * latencyCostPerReq);
+      const gqlTCO = gqlCost + (gqlRequests * latencyCostPerReq);
+
+      // update UI
+      restPayloadSpan.textContent = restTotalBytes;
+      gqlPayloadSpan.textContent = gqlTotalBytes;
+      const maxBar = Math.max(restTotalBytes, gqlTotalBytes, 1);
+      restBar.style.width = (restTotalBytes / maxBar * 100) + '%';
+      gqlBar.style.width = (gqlTotalBytes / maxBar * 100) + '%';
+      overfetchRatioSpan.textContent = overfetch;
+
+      restBandwidthGBSpan.textContent = monthlyRestGB.toFixed(4);
+      gqlBandwidthGBSpan.textContent = monthlyGqlGB.toFixed(4);
+      restCostSpan.textContent = restCost.toFixed(4);
+      gqlCostSpan.textContent = gqlCost.toFixed(4);
+      savingsPercentSpan.textContent = savings.toFixed(1);
+
+      restTotalRequestsSpan.textContent = restRequests;
+      gqlTotalRequestsSpan.textContent = gqlRequests;
+      extraRequestsSpan.textContent = extra;
+      restNplusOneExampleSpan.textContent = 1 + numRelated; // 1 + related
+
+      restTCOSpan.textContent = `$${restTCO.toFixed(4)}`;
+      gqlTCOSpan.textContent = `$${gqlTCO.toFixed(4)}`;
+    }
+
+    computeBtn.addEventListener('click', compute);
+
+    // initial render + compute
+    renderEntities();
+    compute();
+
+    // recompute on any change? we keep manual compute, but also recompute on settings change? we can bind but keep manual for clarity.
+    // but we auto compute on reset/add? we call compute after render.
+    // override render to auto compute? we call compute after renderEntities.
+    const origRender = renderEntities;
+    renderEntities = function() {
+      origRender();
+      compute();
+    };
+    // re-bind
+    container.innerHTML = '';
+    renderEntities();
+
+    // also recompute when settings change (optional)
+    [requestsPerDayInput, costPerGBInput, numRelatedInput].forEach(inp => inp.addEventListener('input', compute));
+  })();
+</script>
+</body>
+</html>

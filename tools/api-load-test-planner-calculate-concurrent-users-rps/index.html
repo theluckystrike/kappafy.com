@@ -1,0 +1,495 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Load Test Planner — Calculate Concurrent Users & RPS</title>
+  <meta name="description" content="Interactive calculator for API load testing: RPS, concurrent connections, bandwidth, server specs, cloud cost estimates & latency percentiles.">
+  <link rel="canonical" href="https://kappafy.com/tools/api-load-test-planner">
+  <!-- JSON-LD: WebApplication + BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": " ",
+    "name": "API Load Test Planner",
+    "url": "https://kappafy.com/tools/api-load-test-planner",
+    "description": "Interactive calculator for API load testing: RPS, concurrent connections, bandwidth, server specs, cloud cost estimates & latency percentiles.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "All",
+    "browserRequirements": "JavaScript enabled",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Kappafy", "item": "https://kappafy.com" },
+      { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://kappafy.com/tools" },
+      { "@type": "ListItem", "position": 3, "name": "API Load Test Planner", "item": "https://kappafy.com/tools/api-load-test-planner" }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #0d0d1a;
+      color: #e0e0f0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 1280px;
+      width: 100%;
+    }
+    h1, h2, h3 {
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    h1 {
+      font-size: 2.2rem;
+      color: #c084fc;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h1 small {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #a1a1d0;
+      margin-left: 0.5rem;
+    }
+    .subhead {
+      color: #a1a1d0;
+      margin-bottom: 2rem;
+      border-left: 4px solid #a855f7;
+      padding-left: 1rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.8rem;
+    }
+    @media (max-width: 800px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: #1a1a2f;
+      border-radius: 24px;
+      padding: 1.6rem 1.8rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.7);
+      border: 1px solid #2a2a45;
+      transition: border 0.2s;
+    }
+    .card:hover {
+      border-color: #a855f7;
+    }
+    .input-group {
+      margin-bottom: 1.2rem;
+    }
+    .input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #b0b0d5;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .input-group input {
+      width: 100%;
+      background: #12121f;
+      border: 1px solid #2f2f50;
+      color: #f0f0ff;
+      padding: 0.7rem 1rem;
+      border-radius: 40px;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.2s;
+    }
+    .input-group input:focus {
+      border-color: #a855f7;
+      box-shadow: 0 0 0 3px rgba(168,85,247,0.3);
+    }
+    .input-group .hint {
+      font-size: 0.75rem;
+      color: #7a7a9e;
+      margin-top: 0.2rem;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #2a2a45;
+      padding: 0.7rem 0;
+    }
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+    .stat-label {
+      color: #b8b8d5;
+    }
+    .stat-value {
+      font-weight: 600;
+      color: #d8b4fe;
+      font-variant-numeric: tabular-nums;
+    }
+    .badge {
+      background: #2f1f4f;
+      color: #c084fc;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.8rem;
+      border-radius: 40px;
+      font-weight: 500;
+      display: inline-block;
+    }
+    .tier-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+    .tier-item {
+      background: #12121f;
+      border: 1px solid #2a2a45;
+      padding: 0.4rem 1rem;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      color: #c0c0e0;
+    }
+    .tier-item.active {
+      border-color: #a855f7;
+      background: #1e1a3a;
+      color: #e0c0ff;
+    }
+    .cost-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .cost-table th {
+      text-align: left;
+      color: #a1a1d0;
+      font-weight: 500;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #2a2a45;
+    }
+    .cost-table td {
+      padding: 0.6rem 0.2rem;
+      border-bottom: 1px solid #1e1e35;
+    }
+    .cost-table tr:last-child td {
+      border-bottom: none;
+    }
+    .percentile-box {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.8rem;
+      margin-top: 0.5rem;
+    }
+    .percentile-item {
+      background: #12121f;
+      border-radius: 20px;
+      padding: 0.6rem 0.8rem;
+      flex: 1;
+      text-align: center;
+      border: 1px solid #2a2a45;
+    }
+    .percentile-item .p-title {
+      font-size: 0.7rem;
+      color: #8888b0;
+    }
+    .percentile-item .p-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #d8b4fe;
+    }
+    .btn {
+      background: #a855f7;
+      border: none;
+      padding: 0.6rem 1.5rem;
+      border-radius: 40px;
+      font-weight: 600;
+      color: #0d0d1a;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 0.5rem;
+    }
+    .btn:hover {
+      background: #b96aff;
+      transform: scale(0.98);
+    }
+    .footnote {
+      font-size: 0.7rem;
+      color: #5a5a7a;
+      margin-top: 1.2rem;
+      text-align: center;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .accent {
+      color: #a855f7;
+    }
+  </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2241192243363112" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+  <!-- breadcrumb (visual) -->
+  <div style="font-size:0.75rem; color:#6a6a8a; margin-bottom:1rem;">
+    <span>🔹 kappafy.com</span> <span style="margin:0 6px;">›</span> <span>Tools</span> <span style="margin:0 6px;">›</span> <span style="color:#b0b0d0;">API Load Test Planner</span>
+  </div>
+
+  <header>
+    <h1>⚡ API Load Test Planner <small>kappafy</small></h1>
+    <div class="subhead">Concurrent users · RPS · bandwidth · server tiers · cost · latency percentiles</div>
+  </header>
+
+  <div class="grid-2">
+    <!-- LEFT: Interactive calculator -->
+    <div class="card">
+      <h2 style="font-size:1.3rem; margin-bottom:1.2rem;">📊 Input parameters</h2>
+      <div class="input-group">
+        <label>Daily active users (DAU)</label>
+        <input type="number" id="dau" value="50000" min="100" step="1000">
+        <div class="hint">Total unique users per day</div>
+      </div>
+      <div class="input-group">
+        <label>Peak hour multiplier (2x – 5x)</label>
+        <input type="number" id="peakMult" value="3.5" min="2" max="5" step="0.1">
+        <div class="hint">Average load during busiest hour</div>
+      </div>
+      <div class="input-group">
+        <label>Avg requests per session</label>
+        <input type="number" id="reqPerSession" value="12" min="1" step="1">
+      </div>
+      <div class="input-group">
+        <label>Avg session duration (minutes)</label>
+        <input type="number" id="sessionMin" value="8" min="1" step="0.5">
+      </div>
+      <button class="btn" id="recalcBtn">⟳ Recalculate</button>
+
+      <!-- quick preset -->
+      <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <span class="badge">preset:</span>
+        <span class="badge" data-preset='{"dau":10000,"peak":3,"req":8,"dur":5}'>light</span>
+        <span class="badge" data-preset='{"dau":80000,"peak":4,"req":15,"dur":10}'>medium</span>
+        <span class="badge" data-preset='{"dau":500000,"peak":5,"req":25,"dur":12}'>heavy</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: computed results -->
+    <div class="card">
+      <h2 style="font-size:1.3rem; margin-bottom:0.8rem;">🚀 Real-time estimates</h2>
+      <div id="resultsContainer">
+        <div class="stat-row"><span class="stat-label">Requests / second (RPS)</span><span class="stat-value" id="rpsVal">—</span></div>
+        <div class="stat-row"><span class="stat-label">Concurrent connections</span><span class="stat-value" id="concurrentVal">—</span></div>
+        <div class="stat-row"><span class="stat-label">Bandwidth (Mbps)</span><span class="stat-value" id="bandwidthVal">—</span></div>
+        <div class="stat-row"><span class="stat-label">Recommended server</span><span class="stat-value" id="serverSpecVal">—</span></div>
+      </div>
+
+      <!-- scaling tiers -->
+      <div style="margin-top:1.2rem;">
+        <div style="color:#b0b0d0; font-size:0.8rem; margin-bottom:0.4rem;">📦 Scaling tier</div>
+        <div class="tier-grid" id="tierContainer">
+          <span class="tier-item" data-tier="shared">Shared hosting</span>
+          <span class="tier-item" data-tier="vps">Single VPS</span>
+          <span class="tier-item" data-tier="cluster">Load-balanced cluster</span>
+          <span class="tier-item" data-tier="serverless">Serverless</span>
+        </div>
+      </div>
+
+      <!-- percentile latency targets -->
+      <div style="margin-top:1.2rem;">
+        <div style="color:#b0b0d0; font-size:0.8rem; margin-bottom:0.3rem;">🎯 Latency targets (ms)</div>
+        <div class="percentile-box">
+          <div class="percentile-item"><span class="p-title">p50</span><span class="p-value" id="p50val">—</span></div>
+          <div class="percentile-item"><span class="p-title">p95</span><span class="p-value" id="p95val">—</span></div>
+          <div class="percentile-item"><span class="p-title">p99</span><span class="p-value" id="p99val">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- second row: cost estimation + detailed specs -->
+  <div class="grid-2" style="margin-top:1.8rem;">
+    <div class="card">
+      <h2 style="font-size:1.2rem;">💰 Cloud cost estimation (monthly)</h2>
+      <table class="cost-table">
+        <thead><tr><th>Provider</th><th>Est. cost</th><th>Plan</th></tr></thead>
+        <tbody>
+          <tr><td>AWS</td><td id="awsCost">$—</td><td>EC2 + ALB</td></tr>
+          <tr><td>GCP</td><td id="gcpCost">$—</td><td>GKE / CE</td></tr>
+          <tr><td>Vercel</td><td id="vercelCost">$—</td><td>Pro + Edge</td></tr>
+        </tbody>
+      </table>
+      <div class="footnote">Based on avg RPS & data transfer. Burst pricing may vary.</div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:1.2rem;">🧮 Detailed metrics</h2>
+      <div class="stat-row"><span class="stat-label">Peak hourly users</span><span class="stat-value" id="peakHourlyUsers">—</span></div>
+      <div class="stat-row"><span class="stat-label">Total daily requests</span><span class="stat-value" id="dailyRequests">—</span></div>
+      <div class="stat-row"><span class="stat-label">Avg session concurrency</span><span class="stat-value" id="sessionConcurrency">—</span></div>
+      <div class="stat-row"><span class="stat-label">Data transfer (GB/day)</span><span class="stat-value" id="dataTransfer">—</span></div>
+    </div>
+  </div>
+
+  <div class="footnote" style="margin-top:2rem;">
+    ⚡ kappafy.com — API load test planner. Adjust inputs for live recalculation.
+  </div>
+</div>
+
+<script>
+  (function() {
+    const DOM = {
+      dau: document.getElementById('dau'),
+      peakMult: document.getElementById('peakMult'),
+      reqPerSession: document.getElementById('reqPerSession'),
+      sessionMin: document.getElementById('sessionMin'),
+      recalcBtn: document.getElementById('recalcBtn'),
+      // results
+      rpsVal: document.getElementById('rpsVal'),
+      concurrentVal: document.getElementById('concurrentVal'),
+      bandwidthVal: document.getElementById('bandwidthVal'),
+      serverSpecVal: document.getElementById('serverSpecVal'),
+      peakHourlyUsers: document.getElementById('peakHourlyUsers'),
+      dailyRequests: document.getElementById('dailyRequests'),
+      sessionConcurrency: document.getElementById('sessionConcurrency'),
+      dataTransfer: document.getElementById('dataTransfer'),
+      // cost
+      awsCost: document.getElementById('awsCost'),
+      gcpCost: document.getElementById('gcpCost'),
+      vercelCost: document.getElementById('vercelCost'),
+      // percentiles
+      p50val: document.getElementById('p50val'),
+      p95val: document.getElementById('p95val'),
+      p99val: document.getElementById('p99val'),
+      // tier
+      tierContainer: document.getElementById('tierContainer'),
+    };
+
+    function compute() {
+      // read inputs
+      let dau = parseFloat(DOM.dau.value) || 50000;
+      let peakMult = parseFloat(DOM.peakMult.value) || 3.5;
+      if (peakMult < 2) peakMult = 2;
+      if (peakMult > 5) peakMult = 5;
+      let reqPerSession = parseFloat(DOM.reqPerSession.value) || 12;
+      let sessionMin = parseFloat(DOM.sessionMin.value) || 8;
+      if (sessionMin < 0.5) sessionMin = 0.5;
+
+      // calculations
+      const peakHourlyUsers = dau * peakMult / 24;  // simplified
+      const totalDailyRequests = dau * reqPerSession;
+      // RPS = (peakHourlyUsers * reqPerSession) / 3600
+      const rps = (peakHourlyUsers * reqPerSession) / 3600;
+      // concurrent connections = (peakHourlyUsers * sessionMin) / 60
+      const concurrent = (peakHourlyUsers * sessionMin) / 60;
+      // bandwidth: assume avg request 50KB (0.4Mb) , rps * 0.4 Mbps
+      const bandwidthMbps = rps * 0.4;  // rough
+      // data transfer GB/day: totalDailyRequests * 50KB / 1e6
+      const dataTransferGB = (totalDailyRequests * 50) / 1e6; // 50KB per req
+
+      // server spec recommendation (simple)
+      let serverSpec = '1 vCPU, 1GB RAM (shared)';
+      if (rps > 2000) serverSpec = '16+ vCPU, 32GB RAM, cluster (8+ nodes)';
+      else if (rps > 800) serverSpec = '8 vCPU, 16GB RAM (load-balanced, 2-4 nodes)';
+      else if (rps > 200) serverSpec = '4 vCPU, 8GB RAM (single VPS)';
+      else if (rps > 50) serverSpec = '2 vCPU, 4GB RAM (VPS)';
+
+      // update DOM
+      DOM.rpsVal.textContent = rps.toFixed(1);
+      DOM.concurrentVal.textContent = concurrent.toFixed(0);
+      DOM.bandwidthVal.textContent = bandwidthMbps.toFixed(1);
+      DOM.serverSpecVal.textContent = serverSpec;
+      DOM.peakHourlyUsers.textContent = peakHourlyUsers.toFixed(0);
+      DOM.dailyRequests.textContent = totalDailyRequests.toLocaleString();
+      DOM.sessionConcurrency.textContent = concurrent.toFixed(0);
+      DOM.dataTransfer.textContent = dataTransferGB.toFixed(1);
+
+      // latency percentiles (relative to concurrency & rps)
+      const baseLatency = 30 + (concurrent * 0.2) + (rps * 0.02);
+      const p50 = Math.max(15, baseLatency * 0.8);
+      const p95 = p50 * 2.5;
+      const p99 = p50 * 4.2;
+      DOM.p50val.textContent = p50.toFixed(0);
+      DOM.p95val.textContent = p95.toFixed(0);
+      DOM.p99val.textContent = p99.toFixed(0);
+
+      // cost estimation (rough)
+      const monthlyRps = rps * 86400 * 30;
+      const aws = (monthlyRps * 0.0000035 + 150).toFixed(0);
+      const gcp = (monthlyRps * 0.0000032 + 130).toFixed(0);
+      const vercel = (monthlyRps * 0.000004 + 200).toFixed(0);
+      DOM.awsCost.textContent = `$${aws}`;
+      DOM.gcpCost.textContent = `$${gcp}`;
+      DOM.vercelCost.textContent = `$${vercel}`;
+
+      // scaling tier highlight
+      const tierItems = document.querySelectorAll('.tier-item');
+      tierItems.forEach(el => el.classList.remove('active'));
+      let activeTier = 'shared';
+      if (rps > 1500) activeTier = 'serverless';
+      else if (rps > 500) activeTier = 'cluster';
+      else if (rps > 80) activeTier = 'vps';
+      else activeTier = 'shared';
+      tierItems.forEach(el => {
+        if (el.dataset.tier === activeTier) el.classList.add('active');
+      });
+    }
+
+    // attach event listeners
+    function recalc() { compute(); }
+    DOM.recalcBtn.addEventListener('click', recalc);
+    // live on input change
+    ['dau','peakMult','reqPerSession','sessionMin'].forEach(id => {
+      document.getElementById(id).addEventListener('input', recalc);
+    });
+
+    // presets
+    document.querySelectorAll('[data-preset]').forEach(el => {
+      el.addEventListener('click', function() {
+        const p = JSON.parse(this.dataset.preset);
+        DOM.dau.value = p.dau;
+        DOM.peakMult.value = p.peak;
+        DOM.reqPerSession.value = p.req;
+        DOM.sessionMin.value = p.dur;
+        compute();
+      });
+    });
+
+    // initial compute
+    compute();
+
+    // also tier click info (just visual feedback)
+    document.querySelectorAll('.tier-item').forEach(el => {
+      el.addEventListener('click', function() {
+        // optional: just show info, but we keep active from compute
+        recalc();
+      });
+    });
+  })();
+</script>
+<div style="margin:20px auto;max-width:728px;text-align:center">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2241192243363112" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+</body>
+</html>

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Payload Inspector</title>
+    <meta name="description" content="Inspect, validate, and analyze webhook payloads from Stripe, GitHub, Slack, and more.">
+    <meta name="theme-color" content="#06b6d4">
+    <meta property="og:title" content="Webhook Payload Inspector">
+    <meta property="og:description" content="Inspect, validate, and analyze webhook payloads from Stripe, GitHub, Slack, and more.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://kappafy.com/tools/webhook-payload-inspector">
+    <meta name="canonical" href="https://kappafy.com/tools/webhook-payload-inspector">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2241192243363112" crossorigin="anonymous"></script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Webhook Payload Inspector",
+        "description": "Inspect, validate, and analyze webhook payloads from Stripe, GitHub, Slack, and more.",
+        "url": "https://kappafy.com/tools/webhook-payload-inspector",
+        "applicationCategory": "UtilityApplication"
+    }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #06b6d4;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .card h2 {
+            color: #06b6d4;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-family: 'Monaco', monospace;
+            font-size: 12px;
+            min-height: 180px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+        button {
+            background: #06b6d4;
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #06a3c0;
+        }
+        .stat-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .stat-label {
+            color: #94a3b8;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            color: #06b6d4;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Monaco', monospace;
+        }
+        .field-list {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .field-item {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .field-name {
+            color: #06b6d4;
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-family: 'Monaco', monospace;
+        }
+        .field-type {
+            color: #94a3b8;
+            font-size: 11px;
+        }
+        .alert {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 13px;
+            border-left: 4px solid;
+        }
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border-left-color: #22c55e;
+            color: #86efac;
+        }
+        .alert-warning {
+            background: rgba(244, 63, 94, 0.1);
+            border-left-color: #f43f5e;
+            color: #fca5a5;
+        }
+        .alert-info {
+            background: rgba(6, 182, 212, 0.1);
+            border-left-color: #06b6d4;
+            color: #a5f3fc;
+        }
+        .format-detected {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .results-section {
+            display: none;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+            font-size: 12px;
+            border-top: 1px solid #334155;
+            margin-top: 40px;
+        }
+    </style>
+<link rel="canonical" href="https://kappafy.com/tools/webhook-payload-inspector">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Webhook Payload Inspector</h1>
+            <p class="subtitle">Analyze and validate webhook payloads from popular services</p>
+        </header>
+
+        <div class="grid full-width">
+            <div class="card">
+                <h2>Webhook Payload Input</h2>
+                <label>Paste JSON webhook payload</label>
+                <textarea id="payloadInput" placeholder='{
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_1234567890",
+      "status": "succeeded",
+      "amount": 2000,
+      "currency": "usd"
+    }
+  },
+  "created": 1672531200
+}'></textarea>
+                <button onclick="inspectPayload()">Inspect</button>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="card full-width">
+                <h2>Format Detection</h2>
+                <div id="formatDetected"></div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h2>Payload Metrics</h2>
+                    <div class="stat-box">
+                        <div class="stat-label">Total Size</div>
+                        <div class="stat-value" id="payloadSize">0 B</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Field Count</div>
+                        <div class="stat-value" id="fieldCount">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Nesting Depth</div>
+                        <div class="stat-value" id="nestingDepth">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Content Type</div>
+                        <div class="stat-value" id="contentType">application/json</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Field Analysis</h2>
+                    <div class="field-list" id="fieldList"></div>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <h2>Validation Checks</h2>
+                <div id="validationChecks"></div>
+            </div>
+
+            <div class="card full-width">
+                <h2>Formatted JSON</h2>
+                <div style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 15px; font-family: 'Monaco', monospace; font-size: 11px; color: #06b6d4; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
+                    <div id="formattedJson"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer>© 2026 kappafy.com — API Development Tools</footer>
+    </div>
+
+    <script>
+        function inspectPayload() {
+            const input = document.getElementById('payloadInput').value.trim();
+            if (!input) {
+                alert('Please paste a webhook payload.');
+                return;
+            }
+
+            let payload;
+            try {
+                payload = JSON.parse(input);
+            } catch (e) {
+                alert('Invalid JSON. Please check the format.');
+                return;
+            }
+
+            // Detect format
+            const format = detectFormat(payload);
+
+            // Calculate metrics
+            const payloadSize = new Blob([JSON.stringify(payload)]).size;
+            const fieldCount = countFields(payload);
+            const nestingDepth = calculateDepth(payload);
+
+            // Update UI
+            document.getElementById('payloadSize').textContent = formatBytes(payloadSize);
+            document.getElementById('fieldCount').textContent = fieldCount;
+            document.getElementById('nestingDepth').textContent = nestingDepth;
+
+            // Format detection
+            let formatHTML = '<div class="format-detected">';
+            formatHTML += '<strong>Detected Format:</strong> ' + (format.name || 'Generic JSON Webhook');
+            if (format.confidence > 0.8) {
+                formatHTML += ' <span style="color: #22c55e;">✓ High Confidence</span>';
+            }
+            formatHTML += '</div>';
+            if (format.description) {
+                formatHTML += '<div class="alert alert-info">' + format.description + '</div>';
+            }
+            document.getElementById('formatDetected').innerHTML = formatHTML;
+
+            // Field analysis
+            const fields = extractFields(payload);
+            let fieldHTML = '';
+            fields.slice(0, 15).forEach(field => {
+                fieldHTML += `<div class="field-item">
+                    <div class="field-name">${field.name}</div>
+                    <div class="field-type">${field.type}</div>
+                </div>`;
+            });
+            if (fields.length > 15) {
+                fieldHTML += '<div class="field-item" style="text-align: center; color: #94a3b8;">... and ' + (fields.length - 15) + ' more</div>';
+            }
+            document.getElementById('fieldList').innerHTML = fieldHTML;
+
+            // Validation checks
+            let checksHTML = '';
+            checksHTML += '<div class="alert alert-success">✓ Valid JSON syntax</div>';
+            if (payload.timestamp || payload.created || payload.id) {
+                checksHTML += '<div class="alert alert-success">✓ Contains identifier/timestamp fields</div>';
+            }
+            if (nested(payload)) {
+                checksHTML += '<div class="alert alert-success">✓ Properly nested structure</div>';
+            }
+            if (payloadSize > 100000) {
+                checksHTML += '<div class="alert alert-warning">⚠ Large payload (' + formatBytes(payloadSize) + ') - may impact processing</div>';
+            }
+            if (nestingDepth > 10) {
+                checksHTML += '<div class="alert alert-warning">⚠ Deep nesting level - may complicate parsing</div>';
+            }
+            document.getElementById('validationChecks').innerHTML = checksHTML;
+
+            // Formatted JSON
+            document.getElementById('formattedJson').textContent = JSON.stringify(payload, null, 2);
+
+            document.getElementById('resultsSection').style.display = 'block';
+        }
+
+        function detectFormat(payload) {
+            if (payload.type && payload.data && (payload.created || payload.id)) {
+                if (payload.type.includes('payment') || payload.data.object?.type === 'charge') {
+                    return {
+                        name: 'Stripe Webhook',
+                        confidence: 0.95,
+                        description: 'This appears to be a Stripe webhook payload with event type and data object structure.'
+                    };
+                }
+            }
+            if (payload.action && (payload.repository || payload.pull_request || payload.issue)) {
+                return {
+                    name: 'GitHub Webhook',
+                    confidence: 0.95,
+                    description: 'This appears to be a GitHub webhook with action and event context.'
+                };
+            }
+            if (payload.token && payload.team_id && payload.event) {
+                return {
+                    name: 'Slack Webhook',
+                    confidence: 0.9,
+                    description: 'This appears to be a Slack event webhook with event information.'
+                };
+            }
+            return { name: '', confidence: 0, description: '' };
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function countFields(obj) {
+            if (typeof obj !== 'object' || obj === null) return 0;
+            let count = 0;
+            for (let key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    count++;
+                    if (typeof obj[key] === 'object' && obj[key] !== null) {
+                        count += countFields(obj[key]);
+                    }
+                }
+            }
+            return count;
+        }
+
+        function calculateDepth(obj) {
+            if (typeof obj !== 'object' || obj === null) return 0;
+            let maxDepth = 0;
+            for (let key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    const depth = 1 + calculateDepth(obj[key]);
+                    maxDepth = Math.max(maxDepth, depth);
+                }
+            }
+            return maxDepth;
+        }
+
+        function extractFields(obj, prefix = '') {
+            const fields = [];
+            if (typeof obj !== 'object' || obj === null) return fields;
+
+            for (let key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    const fullName = prefix ? prefix + '.' + key : key;
+                    const value = obj[key];
+                    const type = Array.isArray(value) ? 'array' : typeof value;
+                    fields.push({ name: fullName, type: type });
+
+                    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                        fields.push(...extractFields(value, fullName));
+                    }
+                }
+            }
+            return fields;
+        }
+
+        function nested(obj) {
+            if (typeof obj !== 'object') return false;
+            for (let key in obj) {
+                if (typeof obj[key] === 'object' && obj[key] !== null) return true;
+            }
+            return false;
+        }
+    </script>
+</body>
+</html>

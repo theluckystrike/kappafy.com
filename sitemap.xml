@@ -87,4 +87,7 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+<url><loc>https://kappafy.com/tools/cache-control-header-analyzer</loc><lastmod>2026-07-09</lastmod></url>
+<url><loc>https://kappafy.com/tools/jsonpath-query-tester</loc><lastmod>2026-07-09</lastmod></url>
+<url><loc>https://kappafy.com/tools/jwt-decoder-inspector</loc><lastmod>2026-07-09</lastmod></url>
 </urlset>

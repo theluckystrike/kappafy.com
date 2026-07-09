@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cache-Control Header Analyzer</title>
+<meta name="description" content="Paste an HTTP Cache-Control header to decode every directive, compute freshness TTL, and see whether a response is cacheable by browsers and shared/CDN">
+<link rel="canonical" href="https://kappafy.com/tools/cache-control-header-analyzer">
+<meta property="og:title" content="Cache-Control Header Analyzer">
+<meta property="og:description" content="Paste an HTTP Cache-Control header to decode every directive, compute freshness TTL, and see whether a response is cacheable by browsers and shared/CDN">
+<meta property="og:url" content="https://kappafy.com/tools/cache-control-header-analyzer">
+<meta property="og:type" content="website">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Cache-Control Header Analyzer",
+      "url": "https://kappafy.com/tools/cache-control-header-analyzer",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "description": "Paste an HTTP Cache-Control header to decode every directive, compute freshness TTL, and see whether a response is cacheable by browsers and shared/CDN caches.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://kappafy.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://kappafy.com/tools/" },
+        { "@type": "ListItem", "position": 3, "name": "Cache-Control Header Analyzer", "item": "https://kappafy.com/tools/cache-control-header-analyzer" }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2a3441;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#58a6ff; --accent2:#7ee787;
+    --warn:#e3b341; --bad:#f85149; --good:#3fb950;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6; font-size:16px;
+  }
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  nav{
+    display:flex; gap:20px; padding:14px 20px; border-bottom:1px solid var(--border);
+    background:var(--panel); font-size:14px; font-weight:600;
+  }
+  .wrap{max-width:900px; margin:0 auto; padding:24px 20px 60px}
+  h1{font-size:1.9rem; line-height:1.25; margin:22px 0 8px}
+  h2{font-size:1.3rem; margin:34px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px}
+  .intro{color:var(--muted); font-size:1.02rem; max-width:70ch}
+  label{display:block; font-weight:600; font-size:.9rem; margin:0 0 6px; color:var(--text)}
+  .hint{color:var(--muted); font-weight:400; font-size:.82rem}
+  textarea,input,select{
+    width:100%; background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:8px; padding:11px 13px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.95rem;
+  }
+  textarea{resize:vertical; min-height:70px}
+  .row{display:flex; gap:16px; flex-wrap:wrap; margin-top:16px}
+  .row>div{flex:1; min-width:200px}
+  .field{margin-top:18px}
+  section#tool{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:22px; margin-top:14px;
+  }
+  .verdict{
+    border-radius:10px; padding:16px 18px; margin:8px 0 4px; font-size:1.05rem;
+    border:1px solid var(--border); background:var(--panel2); font-weight:600;
+  }
+  .verdict small{display:block; font-weight:400; color:var(--muted); margin-top:6px; font-size:.85rem}
+  .v-good{border-color:#2ea043; box-shadow:inset 3px 0 0 var(--good)}
+  .v-warn{border-color:#9e7b1f; box-shadow:inset 3px 0 0 var(--warn)}
+  .v-bad{border-color:#8e2820; box-shadow:inset 3px 0 0 var(--bad)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:16px}
+  .card{background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:14px}
+  .card .k{color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em}
+  .card .val{font-size:1.35rem; font-weight:700; margin-top:4px; font-family:ui-monospace,monospace}
+  .card .sub{color:var(--muted); font-size:.8rem; margin-top:2px}
+  table{width:100%; border-collapse:collapse; margin-top:14px; font-size:.9rem}
+  th,td{text-align:left; padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:top}
+  th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em}
+  td.dir{font-family:ui-monospace,monospace; color:var(--accent2); white-space:nowrap}
+  .tag{display:inline-block; font-size:.7rem; padding:2px 7px; border-radius:20px; font-weight:600; margin-left:4px}
+  .tag.err{background:#3d1c1a; color:#ff9d95}
+  .tag.wrn{background:#3a3115; color:#f2d073}
+  .tag.ok{background:#122c1c; color:#7ee787}
+  ul.msgs{margin:14px 0 0; padding:0; list-style:none}
+  ul.msgs li{padding:8px 12px; border-radius:8px; margin-bottom:7px; font-size:.9rem; border:1px solid var(--border)}
+  ul.msgs li.err{background:#2a1513; border-color:#8e2820}
+  ul.msgs li.wrn{background:#241f0e; border-color:#7a611a}
+  ul.msgs li.ok{background:#0f2318; border-color:#1f6f3a}
+  ul.msgs li b{color:var(--text)}
+  .prose{color:#c8d3de; font-size:.97rem}
+  .prose code{background:var(--panel2); padding:2px 6px; border-radius:5px; font-size:.86em; font-family:ui-monospace,monospace}
+  .examples{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .examples button{
+    background:var(--panel2); color:var(--accent); border:1px solid var(--border);
+    border-radius:20px; padding:6px 13px; font-size:.82rem; cursor:pointer; font-family:inherit;
+  }
+  .examples button:hover{border-color:var(--accent); background:#1a2430}
+  footer{border-top:1px solid var(--border); margin-top:50px; padding:24px 20px; color:var(--muted); font-size:.88rem}
+  footer a{margin-right:18px}
+  .related a{display:inline-block; margin:0 14px 8px 0}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/">Home</a>
+  <a href="/tools/">Tools</a>
+</nav>
+<div class="wrap">
+  <h1>Decode &amp; Debug Any Cache-Control Header</h1>
+  <p class="intro">Paste the raw <code>Cache-Control</code> value from an HTTP response and this analyzer breaks it into directives, computes the freshness lifetime for browsers and shared (CDN/proxy) caches, and gives you a plain-English verdict on whether the response is actually cacheable — plus warnings for conflicting or redundant directives.</p>
+
+  <section id="tool">
+    <div class="field">
+      <label for="cc">Cache-Control header value
+        <span class="hint">— paste everything after <code>Cache-Control:</code></span>
+      </label>
+      <textarea id="cc" spellcheck="false">public, max-age=3600, s-maxage=86400, stale-while-revalidate=60</textarea>
+    </div>
+
+    <div class="examples" id="examples">
+      <button data-cc="public, max-age=31536000, immutable">static asset</button>
+      <button data-cc="private, no-cache, max-age=0, must-revalidate">private/no-cache</button>
+      <button data-cc="no-store">no-store</button>
+      <button data-cc="public, max-age=60, s-maxage=600, stale-while-revalidate=30, stale-if-error=86400">CDN + SWR</button>
+      <button data-cc="max-age=300, no-cache, no-store">conflicting</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="ctx">Cache context <span class="hint">for the verdict</span></label>
+        <select id="ctx">
+          <option value="both" selected>Browser &amp; shared (CDN/proxy)</option>
+          <option value="browser">Browser (private) cache only</option>
+          <option value="shared">Shared cache (CDN / proxy) only</option>
+        </select>
+      </div>
+    </div>
+
+    <h2 style="margin-top:26px">Verdict</h2>
+    <div id="verdict" class="verdict">–</div>
+
+    <div class="grid" id="ttlgrid"></div>
+
+    <h2>Directives found</h2>
+    <div style="overflow-x:auto">
+      <table id="dirtable">
+        <thead><tr><th>Directive</th><th>Value</th><th>Meaning</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h2>Analysis &amp; warnings</h2>
+    <ul class="msgs" id="msgs"></ul>
+  </section>
+
+  <h2>How the analyzer works</h2>
+  <div class="prose">
+    <p>The tool tokenizes the header on commas, then splits each token on the first <code>=</code> into a directive name and an optional argument. Names are lower-cased (they are case-insensitive per RFC 9111), and arguments that should be integers — <code>max-age</code>, <code>s-maxage</code>, <code>stale-while-revalidate</code>, <code>stale-if-error</code>, <code>min-fresh</code>, <code>max-stale</code> — are parsed as delta-seconds. Values are then rendered as human-readable durations (for example <code>86400</code> becomes <code>1 day</code>).</p>
+    <p>Freshness lifetime is computed with the RFC 9111 precedence rules. A <b>shared cache</b> uses <code>s-maxage</code> if present, otherwise <code>max-age</code>, otherwise there is no explicit lifetime. A <b>private (browser) cache</b> ignores <code>s-maxage</code> entirely and uses <code>max-age</code>. Any freshness lifetime is overridden to zero when <code>no-cache</code> (revalidate every use), <code>max-age=0</code>, or <code>must-revalidate</code> with an expired copy applies, and cacheability is denied outright by <code>no-store</code>. The formula is: <code>fresh_for = has(s-maxage) &amp;&amp; shared ? s-maxage : (has(max-age) ? max-age : none)</code>, then <code>fresh_for = no-cache ? 0 : fresh_for</code>.</p>
+    <p>The verdict combines these: <code>no-store</code> means not stored at all; <code>private</code> blocks shared caches; <code>public</code> or a positive <code>max-age</code> makes a response storable even when it would not otherwise be. Warnings flag mutually exclusive combinations (<code>no-store</code> beside a positive <code>max-age</code>), redundant pairs (<code>no-cache</code> with <code>max-age=0</code>), a <code>private</code> response carrying <code>s-maxage</code> that shared caches will discard, missing units, and unrecognized directive names so you can catch typos like <code>max_age</code> before they ship.</p>
+  </div>
+
+  <h2>Related Tools</h2>
+  <div class="related">
+    <a href="/tools/http-header-checker">HTTP Header Checker</a>
+    <a href="/tools/cache-control-generator">Cache-Control Generator</a>
+    <a href="/tools/etag-generator">ETag Generator</a>
+  </div>
+</div>
+
+<footer>
+  <div class="related">
+    <a href="/">Home</a>
+    <a href="/tools/">All Tools</a>
+    <a href="/tools/http-header-checker">HTTP Header Checker</a>
+    <a href="https://zovo.one">About</a>
+  </div>
+  <div>© 2026 kappafy.com — client-side tool, nothing leaves your browser.</div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var KNOWN = {
+    "max-age":        {arg:"int",  resp:true,  m:"Max seconds a response is fresh in any cache."},
+    "s-maxage":       {arg:"int",  resp:true,  m:"Overrides max-age for shared caches (CDN/proxy) only."},
+    "no-cache":       {arg:"none", resp:true,  m:"May store, but must revalidate with origin before reuse."},
+    "no-store":       {arg:"none", resp:true,  m:"Do not store this response anywhere."},
+    "private":        {arg:"opt",  resp:true,  m:"Only a single-user (browser) cache may store it."},
+    "public":         {arg:"none", resp:true,  m:"Any cache may store it, even with auth present."},
+    "must-revalidate":{arg:"none", resp:true,  m:"Once stale, must revalidate; no serving stale on error."},
+    "proxy-revalidate":{arg:"none",resp:true,  m:"Like must-revalidate, but for shared caches only."},
+    "must-understand":{arg:"none", resp:true,  m:"Cache only if it understands the status code semantics."},
+    "immutable":      {arg:"none", resp:true,  m:"Response body will not change; skip revalidation while fresh."},
+    "stale-while-revalidate":{arg:"int", resp:true, m:"Serve stale for N seconds while revalidating in background."},
+    "stale-if-error": {arg:"int",  resp:true,  m:"Serve stale for N seconds if revalidation errors."},
+    "no-transform":   {arg:"none", resp:true,  m:"Intermediaries must not transform the payload."},
+    "min-fresh":      {arg:"int",  resp:false, m:"Request: response must stay fresh at least N more seconds."},
+    "max-stale":      {arg:"int",  resp:false, m:"Request: client accepts stale up to N seconds."},
+    "only-if-cached": {arg:"none", resp:false, m:"Request: return cached copy or 504, do not hit origin."}
+  };
+
+  var cc = document.getElementById("cc");
+  var ctx = document.getElementById("ctx");
+  var verdict = document.getElementById("verdict");
+  var ttlgrid = document.getElementById("ttlgrid");
+  var dirbody = document.querySelector("#dirtable tbody");
+  var msgs = document.getElementById("msgs");
+
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  function humanDur(sec){
+    if(sec===0) return "0 seconds (must revalidate)";
+    if(sec<0) return "invalid";
+    var u=[["year",31536000],["day",86400],["hour",3600],["minute",60],["second",1]];
+    var parts=[], rem=sec;
+    for(var i=0;i<u.length;i++){
+      var q=Math.floor(rem/u[i][1]);
+      if(q>0){ parts.push(q+" "+u[i][0]+(q>1?"s":"")); rem-=q*u[i][1]; }
+      if(parts.length===2) break;
+    }
+    return parts.join(", ");
+  }
+
+  function parse(raw){
+    var dirs=[], seen={}, warns=[];
+    var tokens = raw.split(",");
+    for(var i=0;i<tokens.length;i++){
+      var t=tokens[i].trim();
+      if(t==="") continue;
+      var eq=t.indexOf("=");
+      var name, val=null;
+      if(eq===-1){ name=t.toLowerCase(); }
+      else { name=t.slice(0,eq).trim().toLowerCase(); val=t.slice(eq+1).trim(); }
+      // strip surrounding quotes on value
+      if(val!==null && val.length>=2 && val.charAt(0)==='"' && val.charAt(val.length-1)==='"'){
+        val=val.slice(1,-1);
+      }
+      var spec=KNOWN[name];
+      var entry={name:name, val:val, spec:spec, num:null, status:"ok", note:null};
+      if(!spec){
+        entry.status="err"; entry.note="Unknown directive — check for a typo.";
+      } else {
+        if(spec.arg==="int"){
+          if(val===null){ entry.status="err"; entry.note="Requires a value in seconds (e.g. "+name+"=3600)."; }
+          else if(!/^\d+$/.test(val)){ entry.status="err"; entry.note="Value must be a non-negative integer of seconds."; }
+          else { entry.num=parseInt(val,10); }
+        } else if(spec.arg==="none"){
+          if(val!==null){ entry.status="wrn"; entry.note="This directive takes no value; the argument is ignored."; }
+        } else if(spec.arg==="opt"){
+          // private / max-stale may carry optional value; fine either way
+        }
+      }
+      if(seen[name]){ entry.status = entry.status==="err"?"err":"wrn"; entry.note=(entry.note?entry.note+" ":"")+"Duplicate directive."; }
+      seen[name]=entry;
+      dirs.push(entry);
+    }
+    return {dirs:dirs, seen:seen};
+  }
+
+  function analyze(){
+    var raw=cc.value.trim();
+    var scope=ctx.value; // both | browser | shared
+    var res=parse(raw);
+    var seen=res.seen, dirs=res.dirs;
+
+    // directive table
+    dirbody.innerHTML="";
+    if(dirs.length===0){
+      var tr=document.createElement("tr");
+      tr.innerHTML='<td colspan="3" style="color:var(--muted)">No directives parsed. Paste a Cache-Control value above.</td>';
+      dirbody.appendChild(tr);
+    }
+    for(var i=0;i<dirs.length;i++){
+      var d=dirs[i];
+      var tag = d.status==="err"?'<span class="tag err">error</span>':(d.status==="wrn"?'<span class="tag wrn">note</span>':"");
+      var meaning = d.spec ? d.spec.m : "Not a standard Cache-Control directive.";
+      var vshow = d.val===null ? "—" : esc(d.val);
+      if(d.num!==null) vshow += ' <span style="color:var(--muted)">('+humanDur(d.num)+')</span>';
+      var row=document.createElement("tr");
+      row.innerHTML='<td class="dir">'+esc(d.name)+tag+'</td><td>'+vshow+'</td><td style="color:var(--muted)">'+meaning+(d.note?' <b style="color:var(--text)">'+esc(d.note)+'</b>':'')+'</td>';
+      dirbody.appendChild(row);
+    }
+
+    // helpers
+    function has(n){return !!seen[n];}
+    function num(n){return seen[n] && seen[n].num!==null ? seen[n].num : null;}
+
+    var noStore=has("no-store"), noCache=has("no-cache"), isPrivate=has("private"),
+        isPublic=has("public"), immutable=has("immutable"), mustRev=has("must-revalidate"),
+        proxyRev=has("proxy-revalidate");
+    var maxAge=num("max-age"), sMaxAge=num("s-maxage");
+    var swr=num("stale-while-revalidate"), sie=num("stale-if-error");
+
+    // Freshness lifetime per RFC 9111 precedence
+    // shared cache
+    var sharedFresh = null;
+    if(sMaxAge!==null) sharedFresh=sMaxAge;
+    else if(maxAge!==null) sharedFresh=maxAge;
+    // browser (private) cache — ignores s-maxage
+    var browserFresh = (maxAge!==null) ? maxAge : null;
+
+    // no-cache / no-store force revalidation-before-reuse => effective fresh 0
+    var forceZero = noCache || noStore;
+    var sharedEff = noStore ? -1 : (forceZero ? 0 : sharedFresh);
+    var browserEff = noStore ? -1 : (forceZero ? 0 : browserFresh);
+
+    // TTL cards
+    ttlgrid.innerHTML="";
+    function card(k,val,sub){
+      var c=document.createElement("div"); c.className="card";
+      c.innerHTML='<div class="k">'+k+'</div><div class="val">'+val+'</div><div class="sub">'+(sub||"")+'</div>';
+      ttlgrid.appendChild(c);
+    }
+    function fmtTTL(eff, declared){
+      if(eff===-1) return {v:"not stored", s:"no-store"};
+      if(eff===0) return {v:"0s", s:"revalidate every use"};
+      if(eff===null) return {v:"undefined", s:"no max-age → heuristic / immediate revalidation"};
+      return {v:eff+"s", s:humanDur(eff)};
+    }
+    if(scope!=="browser"){
+      var s=fmtTTL(sharedEff);
+      card("Shared cache TTL", s.v, s.s + (sMaxAge!==null?" — from s-maxage":(maxAge!==null?" — from max-age":"")));
+    }
+    if(scope!=="shared"){
+      var b=fmtTTL(browserEff);
+      card("Browser cache TTL", b.v, b.s + (maxAge!==null?" — from max-age":""));
+    }
+    if(swr!==null) card("stale-while-revalidate", swr+"s", "serve stale up to "+humanDur(swr)+" while refreshing");
+    if(sie!==null) card("stale-if-error", sie+"s", "serve stale up to "+humanDur(sie)+" on error");
+
+    // Verdict
+    var vClass="v-good", vText="", vSub="";
+    if(dirs.length===0){
+      vClass="v-warn"; vText="No Cache-Control header";
+      vSub="Without this header, caches fall back to heuristic freshness (often based on Last-Modified) or must revalidate.";
+    } else if(noStore){
+      vClass="v-bad"; vText="Not cacheable — no-store";
+      vSub="This response must not be written to any cache. Every request goes to the origin.";
+    } else {
+      var storable = isPublic || (maxAge!==null && maxAge>0) || (sMaxAge!==null && sMaxAge>0) || noCache || isPrivate;
+      var where = [];
+      if(scope!=="shared"){
+        if(browserEff===0) where.push("browser: stored but revalidated on every use");
+        else if(browserEff>0) where.push("browser: fresh for "+humanDur(browserEff));
+        else where.push("browser: no explicit lifetime (heuristic / revalidate)");
+      }
+      if(scope!=="browser"){
+        if(isPrivate) where.push("shared cache: blocked by <code>private</code>");
+        else if(sharedEff===0) where.push("shared: stored but revalidated on every use");
+        else if(sharedEff>0) where.push("shared: fresh for "+humanDur(sharedEff));
+        else where.push("shared: no explicit lifetime (heuristic / revalidate)");
+      }
+      if(noCache){
+        vClass="v-warn"; vText="Cacheable, but always revalidated (no-cache)";
+      } else if((scope==="browser"&&browserEff>0)||(scope==="shared"&&sharedEff>0)||(scope==="both"&&(browserEff>0||sharedEff>0))){
+        vClass="v-good"; vText="Cacheable &amp; fresh";
+      } else {
+        vClass="v-warn"; vText="Storable, but not fresh (immediate revalidation)";
+      }
+      if(immutable && ((browserEff>0)||(sharedEff>0))) vText+=" · immutable (no revalidation while fresh)";
+      vSub=where.join(" &nbsp;·&nbsp; ");
+    }
+    verdict.className="verdict "+vClass;
+    verdict.innerHTML=vText+'<small>'+vSub+'</small>';
+
+    // Warnings / analysis
+    msgs.innerHTML="";
+    function msg(type,html){
+      var li=document.createElement("li"); li.className=type; li.innerHTML=html; msgs.appendChild(li);
+    }
+    var any=false;
+    // errors from parsing
+    for(var j=0;j<dirs.length;j++){
+      if(dirs[j].status==="err" && dirs[j].note){ msg("err","<b>"+esc(dirs[j].name)+"</b>: "+esc(dirs[j].note)); any=true; }
+    }
+    // conflicts
+    if(noStore && (maxAge!==null || sMaxAge!==null || isPublic)){
+      msg("err","<b>Conflict:</b> <code>no-store</code> makes the response non-cacheable, so <code>max-age</code>/<code>s-maxage</code>/<code>public</code> are meaningless here. Drop one side."); any=true;
+    }
+    if(noStore && noCache){
+      msg("wrn","<b>Redundant:</b> <code>no-store</code> already forbids caching, so <code>no-cache</code> adds nothing."); any=true;
+    }
+    if(noCache && maxAge===0){
+      msg("wrn","<b>Redundant:</b> <code>no-cache</code> and <code>max-age=0</code> both force revalidation before reuse — one is enough."); any=true;
+    }
+    if(isPrivate && isPublic){
+      msg("err","<b>Conflict:</b> <code>private</code> and <code>public</code> contradict each other. Caches may treat this unpredictably."); any=true;
+    }
+    if(isPrivate && sMaxAge!==null){
+      msg("wrn","<b>Ignored:</b> <code>s-maxage</code> only applies to shared caches, but <code>private</code> forbids shared caching — the <code>s-maxage</code> value is dead weight."); any=true;
+    }
+    if(immutable && maxAge===null && sMaxAge===null){
+      msg("wrn","<b>Weak:</b> <code>immutable</code> only helps while a response is fresh, but there is no <code>max-age</code> to define freshness. Add <code>max-age</code>."); any=true;
+    }
+    if(immutable && (maxAge!==null && maxAge>0)){
+      msg("ok","<b>Good pairing:</b> <code>immutable</code> + <code>max-age</code> lets browsers skip revalidation on reload — ideal for fingerprinted static assets."); any=true;
+    }
+    if(mustRev && maxAge===null && sMaxAge===null){
+      msg("wrn","<b>Note:</b> <code>must-revalidate</code> governs behaviour once stale, but with no <code>max-age</code> the response is stale immediately — effectively always revalidating."); any=true;
+    }
+    if(swr!==null && maxAge===null && sMaxAge===null){
+      msg("wrn","<b>Note:</b> <code>stale-while-revalidate</code> begins after freshness expires, but no <code>max-age</code>/<code>s-maxage</code> is set, so there is no fresh window before it applies."); any=true;
+    }
+    if(maxAge!==null && maxAge>31536000){
+      msg("wrn","<b>Heads-up:</b> <code>max-age</code> exceeds one year ("+humanDur(maxAge)+"). RFC 9111 recommends capping at 1 year (31536000)."); any=true;
+    }
+    if((sMaxAge!==null && maxAge!==null) && sMaxAge<maxAge){
+      msg("ok","<b>Layered TTL:</b> shared caches expire sooner ("+humanDur(sMaxAge)+") than browsers ("+humanDur(maxAge)+"). Unusual but valid — double-check that is intended."); any=true;
+    }
+    if(dirs.length>0 && !any){
+      msg("ok","No conflicting or redundant directives detected — this header looks clean.");
+    }
+  }
+
+  cc.addEventListener("input", analyze);
+  ctx.addEventListener("change", analyze);
+  document.getElementById("examples").addEventListener("click", function(e){
+    var b=e.target.closest("button"); if(!b) return;
+    cc.value=b.getAttribute("data-cc"); analyze();
+  });
+
+  analyze();
+})();
+</script>
+</body>
+</html>

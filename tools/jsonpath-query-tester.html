@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JSONPath Query Tester</title>
+<meta name="description" content="Run JSONPath expressions against your JSON and see matched results live. Test $.store.book[*].author, filters, wildcards, and recursive descent instantly">
+<link rel="canonical" href="https://kappafy.com/tools/jsonpath-query-tester">
+<meta property="og:title" content="JSONPath Query Tester">
+<meta property="og:description" content="Run JSONPath expressions against your JSON and see matched results live. Test $.store.book[*].author, filters, wildcards, and recursive descent instantly">
+<meta property="og:url" content="https://kappafy.com/tools/jsonpath-query-tester">
+<meta property="og:type" content="website">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "JSONPath Query Tester",
+      "description": "Run JSONPath expressions against your JSON and see matched results and normalized paths live in the browser.",
+      "url": "https://kappafy.com/tools/jsonpath-query-tester",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://kappafy.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://kappafy.com/tools/" },
+        { "@type": "ListItem", "position": 3, "name": "JSONPath Query Tester", "item": "https://kappafy.com/tools/jsonpath-query-tester" }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c232d;
+    --border: #2d3540;
+    --text: #e6edf3;
+    --muted: #9aa7b4;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --err: #ff7b72;
+    --warn: #f0b429;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  nav {
+    display: flex;
+    gap: 20px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    font-size: 14px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 20px 60px; }
+  h1 { font-size: 1.9rem; margin: 18px 0 6px; line-height: 1.2; }
+  h2 { font-size: 1.3rem; margin: 34px 0 10px; }
+  .lede { color: var(--muted); font-size: 1.05rem; margin: 0 0 22px; max-width: 720px; }
+  section#tool {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+  }
+  label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-weight: 400; font-size: 0.82rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  textarea, input[type=text] {
+    width: 100%;
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    resize: vertical;
+  }
+  textarea:focus, input[type=text]:focus { outline: none; border-color: var(--accent); }
+  #json { min-height: 260px; }
+  #query { font-size: 15px; }
+  .row { margin-bottom: 16px; }
+  .status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+  .status.ok { background: rgba(126,231,135,.12); color: var(--accent2); }
+  .status.bad { background: rgba(255,123,114,.12); color: var(--err); }
+  .out {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    min-height: 60px;
+  }
+  .match { border-left: 3px solid var(--accent); padding: 8px 12px; margin: 8px 0; background: var(--panel2); border-radius: 0 8px 8px 0; }
+  .match .p { color: var(--accent2); font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .match .v { color: var(--text); font-family: var(--mono); font-size: 13px; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+  .count { font-family: var(--mono); font-size: 13px; color: var(--muted); margin: 10px 0; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .examples button {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .examples button:hover { border-color: var(--accent); }
+  .errbox { color: var(--err); font-family: var(--mono); font-size: 13px; margin-top: 8px; }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 22px 20px;
+    color: var(--muted);
+    font-size: 14px;
+    text-align: center;
+  }
+  footer a { margin: 0 8px; }
+  code { background: var(--panel2); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); font-size: 0.85em; }
+  .prose { max-width: 760px; }
+  .prose p { margin: 12px 0; }
+  ul.related { list-style: none; padding: 0; }
+  ul.related li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/">Home</a>
+  <a href="/tools/">Tools</a>
+</nav>
+
+<div class="wrap">
+  <h1>Test JSONPath Expressions Against Live JSON</h1>
+  <p class="lede">Paste any JSON document, type a JSONPath query, and instantly see every matched value alongside its normalized path. Supports wildcards, array slices, recursive descent, and filter predicates &mdash; all evaluated in your browser, nothing leaves the page.</p>
+
+  <section id="tool">
+    <div class="grid">
+      <div>
+        <div class="row">
+          <label for="json">JSON document <span class="hint">&mdash; the data to query</span></label>
+          <textarea id="json" spellcheck="false"></textarea>
+          <div id="jsonStatus" class="status ok" style="margin-top:8px;">valid JSON</div>
+        </div>
+      </div>
+      <div>
+        <div class="row">
+          <label for="query">JSONPath expression <span class="hint">&mdash; e.g. $.store.book[*].author</span></label>
+          <input type="text" id="query" spellcheck="false" autocomplete="off">
+          <div class="examples" id="examples"></div>
+        </div>
+        <div class="row">
+          <label>Matches</label>
+          <div class="count" id="count">&mdash;</div>
+          <div class="out" id="results"></div>
+        </div>
+      </div>
+    </div>
+    <div id="err" class="errbox"></div>
+  </section>
+
+  <div class="prose">
+    <h2>How the evaluator works</h2>
+    <p>JSONPath is the JSON analogue of XPath. Every query begins at the root symbol <code>$</code> and describes a walk down through objects and arrays. This tester implements a two-stage pipeline. First a <strong>tokenizer</strong> scans the expression left-to-right and splits it into ordered <em>segments</em>: dot-child (<code>.key</code>), bracket-child (<code>['key']</code>), array index (<code>[2]</code>), Python-style slice (<code>[start:end:step]</code>), wildcard (<code>[*]</code> or <code>.*</code>), recursive descent (<code>..</code>), and filter predicates such as <code>[?(@.price&lt;10)]</code>.</p>
+    <p>Second, an <strong>evaluator</strong> maintains a working set of <em>(path, value)</em> pairs, starting with just the root. For each segment it maps the current set to a new set by applying that segment to every node. A child segment keeps only nodes that own the named key; a wildcard expands an object or array into all of its members; a slice resolves negative indices and the step against the array length; recursive descent flattens the entire subtree so the following segment can match at any depth. Filter predicates evaluate a small comparison expression &mdash; <code>@</code> refers to the current element &mdash; and keep only the array items for which it is truthy.</p>
+    <p>Because the set is threaded segment by segment, the algorithm runs in roughly <code>O(N &times; S)</code> time, where <code>N</code> is the number of nodes visited and <code>S</code> is the segment count. Each surviving node carries its <strong>normalized path</strong> &mdash; the canonical <code>$['store']['book'][0]['author']</code> form &mdash; so you always know exactly where a value came from, not just what it is. Malformed JSON and invalid query syntax are reported live rather than throwing, so you can fix an expression character by character and watch the result set converge.</p>
+
+    <h2>Related Tools</h2>
+    <ul class="related">
+      <li><a href="/tools/json-formatter">JSON Formatter &amp; Validator</a></li>
+      <li><a href="/tools/json-to-yaml-converter">JSON to YAML Converter</a></li>
+      <li><a href="/tools/regex-tester">Regex Tester</a></li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  <a href="/">Home</a>
+  <a href="/tools/">Tools</a>
+  <a href="/about">About</a>
+  <br>
+  <span>&copy; 2026 kappafy.com</span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var DEFAULT_JSON = {
+    "store": {
+      "book": [
+        { "category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95 },
+        { "category": "fiction", "author": "Evelyn Waugh", "title": "Sword of Honour", "price": 12.99 },
+        { "category": "fiction", "author": "Herman Melville", "title": "Moby Dick", "isbn": "0-553-21311-3", "price": 8.99 },
+        { "category": "fiction", "author": "J. R. R. Tolkien", "title": "The Lord of the Rings", "isbn": "0-395-19395-8", "price": 22.99 }
+      ],
+      "bicycle": { "color": "red", "price": 19.95 }
+    },
+    "expensive": 10
+  };
+
+  var jsonEl = document.getElementById("json");
+  var queryEl = document.getElementById("query");
+  var jsonStatus = document.getElementById("jsonStatus");
+  var resultsEl = document.getElementById("results");
+  var countEl = document.getElementById("count");
+  var errEl = document.getElementById("err");
+  var examplesEl = document.getElementById("examples");
+
+  var EXAMPLES = [
+    "$.store.book[*].author",
+    "$..author",
+    "$.store..price",
+    "$.store.book[0]",
+    "$.store.book[-1:]",
+    "$.store.book[0:2]",
+    "$.store.book[?(@.price<10)].title",
+    "$.store.book[?(@.category=='fiction')].price",
+    "$.store.bicycle.color",
+    "$..*"
+  ];
+
+  // ---- Tokenizer ---------------------------------------------------------
+  // Splits a JSONPath string into ordered segment descriptors.
+  function tokenize(path) {
+    path = String(path).trim();
+    if (path[0] !== "$") throw new Error("Expression must start with the root symbol '$'.");
+    var i = 1, n = path.length, segs = [];
+    while (i < n) {
+      var c = path[i];
+      if (c === ".") {
+        if (path[i + 1] === ".") {
+          // recursive descent
+          segs.push({ t: "descend" });
+          i += 2;
+          if (i >= n || path[i] === "[" || path[i] === ".") continue;
+          if (path[i] === "*") { segs.push({ t: "wild" }); i++; continue; }
+          var nameR = readName(path, i);
+          segs.push({ t: "child", key: nameR.name });
+          i = nameR.i;
+        } else {
+          i++;
+          if (path[i] === "*") { segs.push({ t: "wild" }); i++; continue; }
+          var nameD = readName(path, i);
+          if (nameD.name === "") throw new Error("Empty name after '.' at position " + i + ".");
+          segs.push({ t: "child", key: nameD.name });
+          i = nameD.i;
+        }
+      } else if (c === "[") {
+        var close = matchBracket(path, i);
+        if (close < 0) throw new Error("Unclosed '[' at position " + i + ".");
+        var inner = path.slice(i + 1, close).trim();
+        segs.push(parseBracket(inner, i));
+        i = close + 1;
+      } else if (c === " ") {
+        i++;
+      } else {
+        throw new Error("Unexpected character '" + c + "' at position " + i + ".");
+      }
+    }
+    return segs;
+  }
+
+  function readName(path, i) {
+    var n = path.length, s = "";
+    while (i < n) {
+      var c = path[i];
+      if (c === "." || c === "[" || c === " ") break;
+      s += c; i++;
+    }
+    return { name: s, i: i };
+  }
+
+  // Finds the matching ']' respecting quotes and parentheses.
+  function matchBracket(path, i) {
+    var depth = 0, n = path.length, q = null;
+    for (var k = i; k < n; k++) {
+      var c = path[k];
+      if (q) { if (c === q && path[k - 1] !== "\\") q = null; continue; }
+      if (c === "'" || c === '"') { q = c; continue; }
+      if (c === "[" || c === "(") depth++;
+      else if (c === ")") depth--;
+      else if (c === "]") { depth--; if (depth === 0) return k; }
+    }
+    return -1;
+  }
+
+  function parseBracket(inner, pos) {
+    if (inner === "") throw new Error("Empty brackets '[]' at position " + pos + ".");
+    if (inner === "*") return { t: "wild" };
+
+    // filter predicate  [?(...)]
+    if (inner[0] === "?") {
+      var expr = inner.slice(1).trim();
+      if (expr[0] === "(" && expr[expr.length - 1] === ")") expr = expr.slice(1, -1).trim();
+      if (!expr) throw new Error("Empty filter predicate at position " + pos + ".");
+      return { t: "filter", expr: expr };
+    }
+
+    // quoted key ['key']  or ["key"]
+    if ((inner[0] === "'" && inner[inner.length - 1] === "'") ||
+        (inner[0] === '"' && inner[inner.length - 1] === '"')) {
+      return { t: "child", key: inner.slice(1, -1) };
+    }
+
+    // union of quoted keys  ['a','b']
+    if (inner.indexOf(",") >= 0 && /['"]/.test(inner)) {
+      var keys = splitTop(inner).map(function (s) {
+        s = s.trim();
+        return s.replace(/^['"]|['"]$/g, "");
+      });
+      return { t: "union", keys: keys };
+    }
+
+    // slice  start:end:step
+    if (inner.indexOf(":") >= 0) {
+      var parts = inner.split(":");
+      if (parts.length > 3) throw new Error("Invalid slice '" + inner + "'.");
+      var toNum = function (x) { x = x.trim(); return x === "" ? null : parseInt(x, 10); };
+      var sl = { t: "slice", start: toNum(parts[0]), end: toNum(parts[1]), step: parts.length === 3 ? toNum(parts[2]) : null };
+      if ((sl.start !== null && isNaN(sl.start)) || (sl.end !== null && isNaN(sl.end)) || (sl.step !== null && isNaN(sl.step)))
+        throw new Error("Invalid slice '" + inner + "'.");
+      return sl;
+    }
+
+    // numeric union  [0,2,3]
+    if (inner.indexOf(",") >= 0) {
+      var idxs = inner.split(",").map(function (s) {
+        var v = parseInt(s.trim(), 10);
+        if (isNaN(v)) throw new Error("Invalid index list '" + inner + "'.");
+        return v;
+      });
+      return { t: "indexList", idxs: idxs };
+    }
+
+    // single index  [2]  or [-1]
+    var num = parseInt(inner, 10);
+    if (!isNaN(num) && String(num) === inner) return { t: "index", idx: num };
+
+    // bare key inside brackets [key]
+    return { t: "child", key: inner };
+  }
+
+  // split on top-level commas (not inside quotes)
+  function splitTop(s) {
+    var out = [], cur = "", q = null;
+    for (var k = 0; k < s.length; k++) {
+      var c = s[k];
+      if (q) { if (c === q) q = null; cur += c; continue; }
+      if (c === "'" || c === '"') { q = c; cur += c; continue; }
+      if (c === ",") { out.push(cur); cur = ""; continue; }
+      cur += c;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  // ---- Path formatting ---------------------------------------------------
+  function fmtSeg(key) {
+    if (typeof key === "number") return "[" + key + "]";
+    return "['" + String(key).replace(/'/g, "\\'") + "']";
+  }
+  function normPath(parts) { return "$" + parts.map(fmtSeg).join(""); }
+
+  // ---- Evaluator ---------------------------------------------------------
+  function isObj(v) { return v && typeof v === "object" && !Array.isArray(v); }
+
+  function evaluate(root, segs) {
+    var cur = [{ path: [], val: root }];
+    for (var s = 0; s < segs.length; s++) {
+      var seg = segs[s], next = [];
+      for (var j = 0; j < cur.length; j++) {
+        applySeg(seg, cur[j], next);
+      }
+      cur = next;
+    }
+    return cur;
+  }
+
+  function applySeg(seg, node, out) {
+    var val = node.val, path = node.path;
+    switch (seg.t) {
+      case "child":
+        if (isObj(val) && Object.prototype.hasOwnProperty.call(val, seg.key))
+          out.push({ path: path.concat(seg.key), val: val[seg.key] });
+        else if (Array.isArray(val) && /^\d+$/.test(seg.key) && +seg.key < val.length)
+          out.push({ path: path.concat(+seg.key), val: val[+seg.key] });
+        break;
+      case "union":
+        seg.keys.forEach(function (k) {
+          if (isObj(val) && Object.prototype.hasOwnProperty.call(val, k))
+            out.push({ path: path.concat(k), val: val[k] });
+        });
+        break;
+      case "index":
+        if (Array.isArray(val)) {
+          var idx = seg.idx < 0 ? val.length + seg.idx : seg.idx;
+          if (idx >= 0 && idx < val.length) out.push({ path: path.concat(idx), val: val[idx] });
+        }
+        break;
+      case "indexList":
+        if (Array.isArray(val)) {
+          seg.idxs.forEach(function (raw) {
+            var idx = raw < 0 ? val.length + raw : raw;
+            if (idx >= 0 && idx < val.length) out.push({ path: path.concat(idx), val: val[idx] });
+          });
+        }
+        break;
+      case "slice":
+        if (Array.isArray(val)) {
+          var L = val.length;
+          var step = seg.step == null ? 1 : seg.step;
+          if (step === 0) break;
+          var start = seg.start, end = seg.end;
+          if (step > 0) {
+            start = start == null ? 0 : (start < 0 ? Math.max(L + start, 0) : Math.min(start, L));
+            end = end == null ? L : (end < 0 ? Math.max(L + end, 0) : Math.min(end, L));
+            for (var a = start; a < end; a += step)
+              out.push({ path: path.concat(a), val: val[a] });
+          } else {
+            start = start == null ? L - 1 : (start < 0 ? L + start : Math.min(start, L - 1));
+            end = end == null ? -1 : (end < 0 ? L + end : end);
+            for (var b = start; b > end; b += step)
+              if (b >= 0 && b < L) out.push({ path: path.concat(b), val: val[b] });
+          }
+        }
+        break;
+      case "wild":
+        if (Array.isArray(val)) val.forEach(function (v, i) { out.push({ path: path.concat(i), val: v }); });
+        else if (isObj(val)) Object.keys(val).forEach(function (k) { out.push({ path: path.concat(k), val: val[k] }); });
+        break;
+      case "descend":
+        // include self, then every descendant (pre-order)
+        (function recur(v, p) {
+          out.push({ path: p, val: v });
+          if (Array.isArray(v)) v.forEach(function (x, i) { recur(x, p.concat(i)); });
+          else if (isObj(v)) Object.keys(v).forEach(function (k) { recur(v[k], p.concat(k)); });
+        })(val, path);
+        break;
+      case "filter":
+        if (Array.isArray(val)) {
+          val.forEach(function (v, i) {
+            if (evalFilter(seg.expr, v)) out.push({ path: path.concat(i), val: v });
+          });
+        } else if (isObj(val)) {
+          Object.keys(val).forEach(function (k) {
+            if (evalFilter(seg.expr, val[k])) out.push({ path: path.concat(k), val: val[k] });
+          });
+        }
+        break;
+    }
+  }
+
+  // ---- Safe filter evaluator (no eval) -----------------------------------
+  // Supports:  @.field OP literal  |  @['field'] OP literal  |  @.field (existence)
+  // OP in  == != < <= > >=  ; literals: numbers, 'strings', true/false/null
+  function evalFilter(expr, item) {
+    expr = expr.trim();
+    var m = expr.match(/^(.+?)\s*(==|!=|<=|>=|<|>)\s*(.+)$/);
+    if (!m) {
+      // existence test:  @.field
+      var lhsOnly = resolveOperand(expr, item);
+      return lhsOnly !== undefined && lhsOnly !== false && lhsOnly !== null;
+    }
+    var lhs = resolveOperand(m[1].trim(), item);
+    var rhs = resolveOperand(m[3].trim(), item);
+    var op = m[2];
+    if (lhs === undefined) return false;
+    switch (op) {
+      case "==": return lhs == rhs;
+      case "!=": return lhs != rhs;
+      case "<": return lhs < rhs;
+      case "<=": return lhs <= rhs;
+      case ">": return lhs > rhs;
+      case ">=": return lhs >= rhs;
+    }
+    return false;
+  }
+
+  function resolveOperand(tok, item) {
+    tok = tok.trim();
+    // current-item reference
+    if (tok[0] === "@") {
+      var rest = tok.slice(1);
+      if (rest === "") return item;
+      // @.a.b  or  @['a']['b']
+      var keys = [];
+      var re = /\.([A-Za-z0-9_$]+)|\[\s*'([^']*)'\s*\]|\[\s*"([^"]*)"\s*\]|\[\s*(\d+)\s*\]/g, mm;
+      var consumed = 0;
+      while ((mm = re.exec(rest)) !== null) {
+        keys.push(mm[1] || mm[2] || mm[3] || mm[4]);
+        consumed = re.lastIndex;
+      }
+      if (consumed !== rest.length) return undefined; // unsupported form
+      var v = item;
+      for (var k = 0; k < keys.length; k++) {
+        if (v == null) return undefined;
+        v = v[keys[k]];
+      }
+      return v;
+    }
+    // string literal
+    if ((tok[0] === "'" && tok[tok.length - 1] === "'") || (tok[0] === '"' && tok[tok.length - 1] === '"'))
+      return tok.slice(1, -1);
+    // keyword literals
+    if (tok === "true") return true;
+    if (tok === "false") return false;
+    if (tok === "null") return null;
+    // numeric literal
+    var num = Number(tok);
+    if (!isNaN(num) && tok !== "") return num;
+    return tok; // bareword fallback
+  }
+
+  // ---- Rendering ---------------------------------------------------------
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;";
+    });
+  }
+
+  function preview(v) {
+    if (typeof v === "string") return JSON.stringify(v);
+    if (v === null) return "null";
+    if (typeof v !== "object") return String(v);
+    try {
+      var s = JSON.stringify(v, null, 2);
+      if (s.length > 600) s = s.slice(0, 600) + "\n… (truncated)";
+      return s;
+    } catch (e) { return String(v); }
+  }
+
+  function render() {
+    errEl.textContent = "";
+    var raw = jsonEl.value;
+    var data;
+    try {
+      data = JSON.parse(raw);
+      jsonStatus.className = "status ok";
+      jsonStatus.textContent = "valid JSON";
+    } catch (e) {
+      jsonStatus.className = "status bad";
+      jsonStatus.textContent = "invalid JSON";
+      resultsEl.textContent = "";
+      countEl.textContent = "—";
+      errEl.textContent = "JSON parse error: " + e.message;
+      return;
+    }
+
+    var q = queryEl.value.trim();
+    if (!q) { resultsEl.textContent = ""; countEl.textContent = "—"; return; }
+
+    var segs, results;
+    try {
+      segs = tokenize(q);
+      results = evaluate(data, segs);
+    } catch (e) {
+      resultsEl.textContent = "";
+      countEl.textContent = "—";
+      errEl.textContent = "Query error: " + e.message;
+      return;
+    }
+
+    countEl.textContent = results.length + (results.length === 1 ? " match" : " matches");
+    if (results.length === 0) {
+      resultsEl.innerHTML = '<span style="color:var(--muted)">No nodes matched this expression.</span>';
+      return;
+    }
+    var html = "";
+    var cap = Math.min(results.length, 200);
+    for (var i = 0; i < cap; i++) {
+      var r = results[i];
+      html += '<div class="match"><div class="p">' + esc(normPath(r.path)) +
+              '</div><div class="v">' + esc(preview(r.val)) + '</div></div>';
+    }
+    if (results.length > cap) html += '<div class="count">… ' + (results.length - cap) + ' more not shown</div>';
+    resultsEl.innerHTML = html;
+  }
+
+  // ---- Wire up -----------------------------------------------------------
+  EXAMPLES.forEach(function (ex) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = ex;
+    b.addEventListener("click", function () { queryEl.value = ex; render(); queryEl.focus(); });
+    examplesEl.appendChild(b);
+  });
+
+  jsonEl.value = JSON.stringify(DEFAULT_JSON, null, 2);
+  queryEl.value = "$.store.book[*].author";
+
+  jsonEl.addEventListener("input", render);
+  queryEl.addEventListener("input", render);
+
+  render();
+})();
+</script>
+</body>
+</html>

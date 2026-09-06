@@ -90,4 +90,8 @@
 <url><loc>https://kappafy.com/tools/cache-control-header-analyzer</loc><lastmod>2026-07-09</lastmod></url>
 <url><loc>https://kappafy.com/tools/jsonpath-query-tester</loc><lastmod>2026-07-09</lastmod></url>
 <url><loc>https://kappafy.com/tools/jwt-decoder-inspector</loc><lastmod>2026-07-09</lastmod></url>
+<url><loc>https://kappafy.com/tools/</loc><lastmod>2026-07-29</lastmod></url>
+<url><loc>https://kappafy.com/tools/api-pagination-performance-calculator</loc><lastmod>2026-06-09</lastmod></url>
+<url><loc>https://kappafy.com/tools/api-retry-exponential-backoff-calculator</loc><lastmod>2026-06-09</lastmod></url>
+<url><loc>https://kappafy.com/tools/api-versioning-deprecation-timeline-planner</loc><lastmod>2026-06-09</lastmod></url>
 </urlset>
